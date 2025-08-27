@@ -8,16 +8,7 @@ export default function Instructions() {
           <h1 className="text-4xl font-bold text-gray-800 mb-6 text-center">
             How to Make the Perfect PB&J Sandwich
           </h1>
-          
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Ingredients:</h2>
-            <ul className="list-disc list-inside space-y-2 text-gray-600">
-              <li>2 slices of bread (white, whole wheat, or your preference)</li>
-              <li>2-3 tablespoons of peanut butter</li>
-              <li>1-2 tablespoons of jelly or jam (grape, strawberry, or your favorite)</li>
-              <li>1 butter knife</li>
-            </ul>
-          </div>
+        
 
           <div className="mb-8">
             <h2 className="text-2xl font-semibold text-gray-700 mb-4">Instructions:</h2>
