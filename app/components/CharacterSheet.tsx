@@ -374,120 +374,186 @@ export default function CharacterSheet() {
         {/* Stats Tab */}
         {activeTab === 'Stats' && (
           <div className="space-y-8">
-            {/* Ability Scores - Top Horizontal */}
-            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-              <h3 className="text-xl font-semibold text-amber-300 mb-4">Ability Scores</h3>
-              <div className="grid grid-cols-6 gap-4">
-                {Object.entries(character.abilityScores).map(([ability, score]) => (
-                  <div key={ability} className="text-center">
-                    <div className="text-sm font-medium text-gray-300 mb-1 capitalize">{ability}</div>
-                    <div className={`p-4 rounded border text-center ${
-                      isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'
+            {/* Top Row - Level, Character Portrait, and Ability Scores */}
+            <div className="grid grid-cols-12 gap-4">
+              {/* Level Display */}
+              <div className="col-span-2">
+                <div className={`h-36 p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                  <div className="flex items-center justify-center h-full">
+                    <div className={`text-6xl font-bold text-center p-4 rounded-lg ${
+                      isDarkMode ? 'bg-gray-700 text-amber-400' : 'bg-gray-100 text-amber-600'
                     }`}>
-                      <div className="text-2xl font-bold">{score}</div>
-                      <div className="text-sm text-gray-400">
-                        {getModifier(score) >= 0 ? '+' : ''}{getModifier(score)}
-                      </div>
+                      {character.level}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Core Stats Row */}
-            <div className="grid grid-cols-3 gap-6">
-              {/* Hit Points */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-amber-300 mb-4">Hit Points</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span>Current</span>
-                    <input
-                      type="number"
-                      value={character.hitPoints.current}
-                      onChange={(e) => updateCharacter({
-                        hitPoints: { ...character.hitPoints, current: parseInt(e.target.value) || 0 }
-                      })}
-                      className={`w-20 text-center border rounded px-2 py-1 ${
-                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Maximum</span>
-                    <input
-                      type="number"
-                      value={character.hitPoints.maximum}
-                      onChange={(e) => updateCharacter({
-                        hitPoints: { ...character.hitPoints, maximum: parseInt(e.target.value) || 0 }
-                      })}
-                      className={`w-20 text-center border rounded px-2 py-1 ${
-                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Temporary</span>
-                    <input
-                      type="number"
-                      value={character.hitPoints.temporary}
-                      onChange={(e) => updateCharacter({
-                        hitPoints: { ...character.hitPoints, temporary: parseInt(e.target.value) || 0 }
-                      })}
-                      className={`w-20 text-center border rounded px-2 py-1 ${
-                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    />
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-500">Level</h3>
                   </div>
                 </div>
               </div>
 
-              {/* Armor Class & Initiative */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-amber-300 mb-4">Combat Stats</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span>Armor Class</span>
-                    <span className="text-2xl font-bold text-amber-400">{character.armorClass}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Initiative</span>
-                    <span className="text-2xl font-bold text-amber-400">+{character.initiative}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Speed</span>
-                    <span className="text-2xl font-bold text-amber-400">{character.speed} ft</span>
+              {/* Character Portrait */}
+              <div className="col-span-2">
+                <div className={`h-36 p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                  <div className={`w-full h-full rounded-lg border-2 border-dashed flex items-center justify-center ${
+                    isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-50'
+                  }`}>
+                    <div className="text-center">
+                      <div className="text-4xl mb-2">🖼️</div>
+                      <p className="text-xs text-gray-400">Click to upload</p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Proficiency & Experience */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-amber-300 mb-4">Progression</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span>Proficiency Bonus</span>
-                    <span className="text-2xl font-bold text-amber-400">+{character.proficiencyBonus}</span>
+              {/* Ability Scores */}
+              <div className="col-span-8">
+                <div className={`h-36 p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                  <div className="grid grid-cols-6 gap-3 h-full">
+                    {Object.entries(character.abilityScores).map(([ability, score]) => (
+                      <div key={ability} className="text-center flex flex-col justify-center">
+                        <div className="text-xs font-medium text-gray-400 mb-1 capitalize">{ability}</div>
+                        <div className={`p-3 rounded border text-center ${
+                          isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'
+                        }`}>
+                          <div className="text-xl font-bold">{score}</div>
+                          <div className="text-xs text-gray-400">
+                            {getModifier(score) >= 0 ? '+' : ''}{getModifier(score)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span>Experience</span>
-                    <span className="text-lg font-semibold text-green-400">{character.experiencePoints.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Hit Dice</span>
-                    <span className="text-lg font-semibold">{character.hitDice.total}</span>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-500">Ability Scores</h3>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Skills and Saving Throws */}
-            <div className="grid grid-cols-2 gap-6">
-              {/* Skills */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-amber-300 mb-4">Skills</h3>
-                <div className="space-y-1">
-                  <div className="grid grid-cols-1 gap-1 text-sm">
+            {/* 4-Column Row */}
+            <div className="grid grid-cols-4 gap-4">
+              {/* Column 1: Saving Throws */}
+              <div className="space-y-4">
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                  <div className="space-y-3 pb-8">
+                    {Object.entries(character.savingThrows).map(([save, proficient]) => {
+                      const abilityMap: { [key: string]: keyof typeof character.abilityScores } = {
+                        'Strength': 'strength', 'Dexterity': 'dexterity', 'Constitution': 'constitution',
+                        'Intelligence': 'intelligence', 'Wisdom': 'wisdom', 'Charisma': 'charisma'
+                      };
+                      const modifier = getSaveModifier(save, abilityMap[save]);
+                      return (
+                        <div key={save} className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className={`w-3 h-3 rounded-full mr-2 ${
+                              proficient ? 'bg-green-400' : 'bg-gray-600'
+                            }`}></div>
+                            <span className="text-sm">{save}</span>
+                          </div>
+                          <span className="font-mono text-sm">{modifier >= 0 ? '+' : ''}{modifier}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-500">Saving Throws</h3>
+                  </div>
+                </div>
+                
+                {/* Perception */}
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                  <div className="pb-8">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className={`w-3 h-3 rounded-full mr-2 ${
+                          character.skills.Perception.expertise ? 'bg-yellow-400' : 
+                          character.skills.Perception.proficient ? 'bg-green-400' : 'bg-gray-600'
+                        }`}></div>
+                        <span className="text-lg">Perception</span>
+                      </div>
+                      <span className="font-mono text-2xl font-bold text-amber-400">
+                        {getSkillModifier('Perception', 'wisdom') >= 0 ? '+' : ''}{getSkillModifier('Perception', 'wisdom')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-500">Perception</h3>
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2: Health and Hit Points */}
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                <div className="space-y-4 pb-8">
+                  {/* Hit Points */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span>Current HP</span>
+                      <input
+                        type="number"
+                        value={character.hitPoints.current}
+                        onChange={(e) => updateCharacter({
+                          hitPoints: { ...character.hitPoints, current: parseInt(e.target.value) || 0 }
+                        })}
+                        className={`w-20 text-center border rounded px-2 py-1 ${
+                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Max HP</span>
+                      <input
+                        type="number"
+                        value={character.hitPoints.maximum}
+                        onChange={(e) => updateCharacter({
+                          hitPoints: { ...character.hitPoints, maximum: parseInt(e.target.value) || 0 }
+                        })}
+                        className={`w-20 text-center border rounded px-2 py-1 ${
+                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Temp HP</span>
+                      <input
+                        type="number"
+                        value={character.hitPoints.temporary}
+                        onChange={(e) => updateCharacter({
+                          hitPoints: { ...character.hitPoints, temporary: parseInt(e.target.value) || 0 }
+                        })}
+                        className={`w-20 text-center border rounded px-2 py-1 ${
+                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Combat Stats */}
+                  <div className="space-y-2 pt-2 border-t border-gray-600">
+                    <div className="flex items-center justify-between">
+                      <span>AC</span>
+                      <span className="text-xl font-bold text-amber-400">{character.armorClass}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Initiative</span>
+                      <span className="text-xl font-bold text-amber-400">+{character.initiative}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Speed</span>
+                      <span className="text-xl font-bold text-amber-400">{character.speed} ft</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-500">Health & Combat</h3>
+                </div>
+              </div>
+
+              {/* Column 3: Skills */}
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                <div className="space-y-1 pb-8">
+                  <div className="grid grid-cols-1 gap-1 text-xs">
                     {Object.entries(character.skills).map(([skill, data]) => {
                       const abilityMap: { [key: string]: keyof typeof character.abilityScores } = {
                         'Acrobatics': 'dexterity', 'Animal Handling': 'wisdom', 'Arcana': 'intelligence',
@@ -499,9 +565,9 @@ export default function CharacterSheet() {
                       };
                       const modifier = getSkillModifier(skill, abilityMap[skill]);
                       return (
-                        <div key={skill} className="flex items-center justify-between py-1">
+                        <div key={skill} className="flex items-center justify-between py-0.5">
                           <div className="flex items-center">
-                            <div className={`w-3 h-3 rounded-full mr-2 ${
+                            <div className={`w-2 h-2 rounded-full mr-2 ${
                               data.expertise ? 'bg-yellow-400' : data.proficient ? 'bg-green-400' : 'bg-gray-600'
                             }`}></div>
                             <span>{skill}</span>
@@ -512,49 +578,68 @@ export default function CharacterSheet() {
                     })}
                   </div>
                 </div>
-              </div>
-
-              {/* Saving Throws */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-amber-300 mb-4">Saving Throws</h3>
-                <div className="space-y-3">
-                  {Object.entries(character.savingThrows).map(([save, proficient]) => {
-                    const abilityMap: { [key: string]: keyof typeof character.abilityScores } = {
-                      'Strength': 'strength', 'Dexterity': 'dexterity', 'Constitution': 'constitution',
-                      'Intelligence': 'intelligence', 'Wisdom': 'wisdom', 'Charisma': 'charisma'
-                    };
-                    const modifier = getSaveModifier(save, abilityMap[save]);
-                    return (
-                      <div key={save} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className={`w-3 h-3 rounded-full mr-2 ${
-                            proficient ? 'bg-green-400' : 'bg-gray-600'
-                          }`}></div>
-                          <span>{save}</span>
-                        </div>
-                        <span className="font-mono text-lg">{modifier >= 0 ? '+' : ''}{modifier}</span>
-                      </div>
-                    );
-                  })}
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-500">Skills</h3>
                 </div>
               </div>
-            </div>
 
-            {/* Features & Traits */}
-            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-              <h3 className="text-xl font-semibold text-amber-300 mb-4">Features & Traits</h3>
-              <div className="grid grid-cols-1 gap-4">
-                {character.features.map((feature, index) => (
-                  <div key={index} className={`p-4 rounded border ${
-                    isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'
-                  }`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-amber-300">{feature.name}</h4>
-                      <span className="text-sm text-gray-400">{feature.source}</span>
-                    </div>
-                    <p className="text-sm text-gray-300">{feature.description}</p>
+              {/* Column 4: Weather and Date */}
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                <div className="space-y-4 pb-8">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1">Date</label>
+                    <input
+                      type="text"
+                      placeholder="Campaign date"
+                      className={`w-full text-sm border rounded px-2 py-1 ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                      }`}
+                    />
                   </div>
-                ))}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1">Weather</label>
+                    <select className={`w-full text-sm border rounded px-2 py-1 ${
+                      isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                    }`}>
+                      <option>Clear</option>
+                      <option>Cloudy</option>
+                      <option>Overcast</option>
+                      <option>Light Rain</option>
+                      <option>Heavy Rain</option>
+                      <option>Storm</option>
+                      <option>Snow</option>
+                      <option>Fog</option>
+                      <option>Wind</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1">Temperature</label>
+                    <select className={`w-full text-sm border rounded px-2 py-1 ${
+                      isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                    }`}>
+                      <option>Frigid</option>
+                      <option>Cold</option>
+                      <option>Cool</option>
+                      <option>Mild</option>
+                      <option>Warm</option>
+                      <option>Hot</option>
+                      <option>Scorching</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1">Notes</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Session notes..."
+                      className={`w-full text-sm border rounded px-2 py-1 ${
+                        isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                      }`}
+                    />
+                  </div>
+                </div>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-500">Weather & Date</h3>
+                </div>
               </div>
             </div>
           </div>
