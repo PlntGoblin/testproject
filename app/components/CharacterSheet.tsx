@@ -436,44 +436,72 @@ export default function CharacterSheet() {
               {/* Column 1: Saving Throws */}
               <div className="space-y-4">
                 <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                  <div className="space-y-3 pb-8">
-                    {Object.entries(character.savingThrows).map(([save, proficient]) => {
-                      const abilityMap: { [key: string]: keyof typeof character.abilityScores } = {
-                        'Strength': 'strength', 'Dexterity': 'dexterity', 'Constitution': 'constitution',
-                        'Intelligence': 'intelligence', 'Wisdom': 'wisdom', 'Charisma': 'charisma'
-                      };
-                      const modifier = getSaveModifier(save, abilityMap[save]);
-                      return (
-                        <div key={save} className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className={`w-3 h-3 rounded-full mr-2 ${
-                              proficient ? 'bg-green-400' : 'bg-gray-600'
-                            }`}></div>
-                            <span className="text-sm">{save}</span>
+                  <div className="pb-8">
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(character.savingThrows).map(([save, proficient]) => {
+                        const abilityMap: { [key: string]: keyof typeof character.abilityScores } = {
+                          'Strength': 'strength', 'Dexterity': 'dexterity', 'Constitution': 'constitution',
+                          'Intelligence': 'intelligence', 'Wisdom': 'wisdom', 'Charisma': 'charisma'
+                        };
+                        const modifier = getSaveModifier(save, abilityMap[save]);
+                        return (
+                          <div key={save} className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className={`w-3 h-3 rounded-full mr-2 ${
+                                proficient ? 'bg-green-400' : 'bg-gray-600'
+                              }`}></div>
+                              <span className="text-sm">{save}</span>
+                            </div>
+                            <span className="font-mono text-sm">{modifier >= 0 ? '+' : ''}{modifier}</span>
                           </div>
-                          <span className="font-mono text-sm">{modifier >= 0 ? '+' : ''}{modifier}</span>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                   <div className="absolute bottom-2 left-0 right-0 text-center">
                     <h3 className="text-sm font-bold text-gray-500">Saving Throws</h3>
                   </div>
                 </div>
                 
-                {/* Perception */}
+                {/* Perception - All 3 Types */}
                 <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                  <div className="pb-8">
+                  <div className="pb-8 space-y-3">
+                    {/* Active Perception */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <div className={`w-3 h-3 rounded-full mr-2 ${
                           character.skills.Perception.expertise ? 'bg-yellow-400' : 
                           character.skills.Perception.proficient ? 'bg-green-400' : 'bg-gray-600'
                         }`}></div>
-                        <span className="text-lg">Perception</span>
+                        <span className="text-sm">Active</span>
                       </div>
-                      <span className="font-mono text-2xl font-bold text-amber-400">
+                      <span className="font-mono text-lg font-bold text-amber-400">
                         {getSkillModifier('Perception', 'wisdom') >= 0 ? '+' : ''}{getSkillModifier('Perception', 'wisdom')}
+                      </span>
+                    </div>
+                    
+                    {/* Passive Perception */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full mr-2 bg-blue-400"></div>
+                        <span className="text-sm">Passive</span>
+                      </div>
+                      <span className="font-mono text-lg font-bold text-blue-400">
+                        {10 + getSkillModifier('Perception', 'wisdom')}
+                      </span>
+                    </div>
+                    
+                    {/* Investigation (Passive Intelligence) */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className={`w-3 h-3 rounded-full mr-2 ${
+                          character.skills.Investigation.expertise ? 'bg-yellow-400' : 
+                          character.skills.Investigation.proficient ? 'bg-green-400' : 'bg-gray-600'
+                        }`}></div>
+                        <span className="text-sm">Investigation</span>
+                      </div>
+                      <span className="font-mono text-lg font-bold text-purple-400">
+                        {10 + getSkillModifier('Investigation', 'intelligence')}
                       </span>
                     </div>
                   </div>
@@ -486,46 +514,72 @@ export default function CharacterSheet() {
               {/* Column 2: Health and Hit Points */}
               <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                 <div className="space-y-4 pb-8">
-                  {/* Hit Points */}
+                  {/* Health Bar - At the top */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span>Current HP</span>
-                      <input
-                        type="number"
-                        value={character.hitPoints.current}
-                        onChange={(e) => updateCharacter({
-                          hitPoints: { ...character.hitPoints, current: parseInt(e.target.value) || 0 }
-                        })}
-                        className={`w-20 text-center border rounded px-2 py-1 ${
-                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
+                    <div className="text-xs font-medium text-gray-400 text-center">Health</div>
+                    <div className={`w-full h-6 border rounded-lg overflow-hidden ${
+                      isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-100'
+                    }`}>
+                      <div 
+                        className="h-full transition-all duration-500 rounded-lg"
+                        style={{
+                          width: `${Math.min(100, Math.max(0, (character.hitPoints.current / character.hitPoints.maximum) * 100))}%`,
+                          backgroundColor: 
+                            character.hitPoints.current <= character.hitPoints.maximum * 0.25 ? '#ef4444' :
+                            character.hitPoints.current <= character.hitPoints.maximum * 0.5 ? '#f59e0b' :
+                            character.hitPoints.current <= character.hitPoints.maximum * 0.75 ? '#eab308' :
+                            '#10b981'
+                        }}
+                      ></div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span>Max HP</span>
-                      <input
-                        type="number"
-                        value={character.hitPoints.maximum}
-                        onChange={(e) => updateCharacter({
-                          hitPoints: { ...character.hitPoints, maximum: parseInt(e.target.value) || 0 }
-                        })}
-                        className={`w-20 text-center border rounded px-2 py-1 ${
-                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
+                    <div className="text-xs text-center text-gray-400">
+                      {character.hitPoints.current} / {character.hitPoints.maximum} HP
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span>Temp HP</span>
-                      <input
-                        type="number"
-                        value={character.hitPoints.temporary}
-                        onChange={(e) => updateCharacter({
-                          hitPoints: { ...character.hitPoints, temporary: parseInt(e.target.value) || 0 }
-                        })}
-                        className={`w-20 text-center border rounded px-2 py-1 ${
-                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
+                  </div>
+                  
+                  {/* Hit Points */}
+                  <div className="space-y-4">
+                    {/* HP Section - Horizontal Layout */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-xs font-medium text-gray-400 mb-2">Current HP</div>
+                        <input
+                          type="number"
+                          value={character.hitPoints.current}
+                          onChange={(e) => updateCharacter({
+                            hitPoints: { ...character.hitPoints, current: parseInt(e.target.value) || 0 }
+                          })}
+                          className={`w-full text-center border rounded px-2 py-1 ${
+                            isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                        />
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs font-medium text-gray-400 mb-2">Max HP</div>
+                        <input
+                          type="number"
+                          value={character.hitPoints.maximum}
+                          onChange={(e) => updateCharacter({
+                            hitPoints: { ...character.hitPoints, maximum: parseInt(e.target.value) || 0 }
+                          })}
+                          className={`w-full text-center border rounded px-2 py-1 ${
+                            isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                        />
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs font-medium text-gray-400 mb-2">Temp HP</div>
+                        <input
+                          type="number"
+                          value={character.hitPoints.temporary}
+                          onChange={(e) => updateCharacter({
+                            hitPoints: { ...character.hitPoints, temporary: parseInt(e.target.value) || 0 }
+                          })}
+                          className={`w-full text-center border rounded px-2 py-1 ${
+                            isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                        />
+                      </div>
                     </div>
                   </div>
                   
@@ -846,8 +900,7 @@ export default function CharacterSheet() {
             <div className="grid grid-cols-5 gap-4">
               
               {/* 1. Encumbrance Box */}
-              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-lg font-semibold text-amber-300 mb-3">Encumbrance</h3>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                 <div className="grid grid-cols-3 gap-2 text-center text-sm mb-3">
                   <div>
                     <div className="text-xs text-gray-400">Open Slots</div>
@@ -862,17 +915,19 @@ export default function CharacterSheet() {
                     <div className="text-xl font-bold text-blue-400">{encumbrance.yourBulk}</div>
                   </div>
                 </div>
-                <div className="text-center">
+                <div className="text-center pb-8">
                   <div className="text-xs text-gray-400 mb-1">Status:</div>
                   <div className="bg-green-600 text-white px-2 py-1 rounded text-sm font-medium">
                     {encumbrance.status}
                   </div>
                 </div>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-500">Encumbrance</h3>
+                </div>
               </div>
 
               {/* 2. Purse Box */}
-              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-lg font-semibold text-amber-300 mb-3">Purse</h3>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
@@ -906,17 +961,19 @@ export default function CharacterSheet() {
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-2 text-center">
+                <div className="mt-2 text-center pb-8">
                   <div className="text-xs text-gray-400">Total Bulk = {calculatePurseBulk()}</div>
                   <div className="text-xs text-gray-400">Total Value = {calculateTotalValue().toFixed(1)} SP</div>
+                </div>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-500">Purse</h3>
                 </div>
               </div>
 
               {/* 3. Ration Box */}
               <div className="space-y-4">
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                  <h3 className="text-lg font-semibold text-amber-300 mb-3">Ration Box</h3>
-                  <div className="space-y-2">
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                  <div className="space-y-2 pb-8">
                     <div className="grid grid-cols-3 gap-1 text-xs text-gray-400 text-center">
                       <div># of Boxes</div>
                       <div># of Rations</div>
@@ -952,12 +1009,14 @@ export default function CharacterSheet() {
                       />
                     </div>
                   </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-500">Ration Box</h3>
+                  </div>
                 </div>
 
                 {/* 4. Waterskin Box (beneath Ration Box) */}
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                  <h3 className="text-lg font-semibold text-amber-300 mb-3">Waterskin</h3>
-                  <div className="space-y-2">
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                  <div className="space-y-2 pb-8">
                     <div className="grid grid-cols-3 gap-1 text-xs text-gray-400 text-center">
                       <div># of Skins</div>
                       <div># of Rations</div>
@@ -993,12 +1052,14 @@ export default function CharacterSheet() {
                       />
                     </div>
                   </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-500">Waterskin</h3>
+                  </div>
                 </div>
               </div>
 
               {/* 5. Magical Containers Box */}
-              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-lg font-semibold text-amber-300 mb-3">Magical Containers</h3>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
@@ -1032,11 +1093,13 @@ export default function CharacterSheet() {
                     </tbody>
                   </table>
                 </div>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-500">Magical Containers</h3>
+                </div>
               </div>
 
               {/* 6. Purchase Calculator Box */}
-              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-lg font-semibold text-amber-300 mb-3">Purchase Calculator</h3>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
@@ -1072,10 +1135,13 @@ export default function CharacterSheet() {
                 </div>
                 <button
                   onClick={handlePurchaseCalculation}
-                  className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded transition-colors"
+                  className="w-full mt-3 mb-8 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-2 px-3 rounded transition-colors"
                 >
                   Calculate
                 </button>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-500">Purchase Calculator</h3>
+                </div>
               </div>
 
             </div>
@@ -1087,8 +1153,7 @@ export default function CharacterSheet() {
               <div className="space-y-6">
                 
                 {/* 1. Equipped Items */}
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                  <h3 className="text-lg font-semibold text-amber-300 mb-3">Equipped Items</h3>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
@@ -1234,15 +1299,17 @@ export default function CharacterSheet() {
                   </div>
                   <button
                     onClick={addEquippedItem}
-                    className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium py-1 px-2 rounded transition-colors"
+                    className="w-full mt-2 mb-8 bg-green-600 hover:bg-green-700 text-white text-xs font-medium py-1 px-2 rounded transition-colors"
                   >
                     Add Item
                   </button>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-500">Equipped Items</h3>
+                  </div>
                 </div>
 
                 {/* 2. Attuned Items */}
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                  <h3 className="text-lg font-semibold text-amber-300 mb-3">Attuned Items</h3>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
@@ -1303,7 +1370,7 @@ export default function CharacterSheet() {
                       </tbody>
                     </table>
                   </div>
-                  <div className="mt-2 space-x-2">
+                  <div className="mt-2 mb-8 space-x-2">
                     <button
                       onClick={() => unlockAttunementSlot(4)}
                       disabled={attunedItems.find(slot => slot.slot === 4)?.unlocked}
@@ -1319,12 +1386,14 @@ export default function CharacterSheet() {
                       Unlock Slot 5?
                     </button>
                   </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-500">Attuned Items</h3>
+                  </div>
                 </div>
               </div>
 
               {/* Center Column: Inventory */}
-              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-lg font-semibold text-amber-300 mb-3">Inventory</h3>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
@@ -1421,15 +1490,17 @@ export default function CharacterSheet() {
                 </div>
                 <button
                   onClick={addInventoryItem}
-                  className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium py-1 px-2 rounded transition-colors"
+                  className="w-full mt-2 mb-8 bg-green-600 hover:bg-green-700 text-white text-xs font-medium py-1 px-2 rounded transition-colors"
                 >
                   Add Item
                 </button>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-500">Inventory</h3>
+                </div>
               </div>
 
               {/* Right Column: External Storage */}
-              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-lg font-semibold text-amber-300 mb-3">External Storage</h3>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
@@ -1493,10 +1564,13 @@ export default function CharacterSheet() {
                 </div>
                 <button
                   onClick={addExternalStorageItem}
-                  className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium py-1 px-2 rounded transition-colors"
+                  className="w-full mt-2 mb-8 bg-green-600 hover:bg-green-700 text-white text-xs font-medium py-1 px-2 rounded transition-colors"
                 >
                   Add Item
                 </button>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-500">External Storage</h3>
+                </div>
               </div>
 
             </div>
