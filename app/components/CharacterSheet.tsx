@@ -413,10 +413,19 @@ export default function CharacterSheet() {
                     {Object.entries(character.abilityScores).map(([ability, score]) => (
                       <div key={ability} className="text-center flex flex-col justify-center">
                         <div className="text-xs font-medium text-gray-400 mb-1 capitalize">{ability}</div>
-                        <div className={`p-3 rounded border text-center ${
+                        <div className={`p-2 rounded border text-center ${
                           isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'
                         }`}>
-                          <div className="text-xl font-bold">{score}</div>
+                          <input
+                            type="number"
+                            value={score}
+                            onChange={(e) => updateCharacter({
+                              abilityScores: { ...character.abilityScores, [ability]: parseInt(e.target.value) || 0 }
+                            })}
+                            className={`w-full text-center text-xl font-bold border-0 bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                              isDarkMode ? 'text-white' : 'text-gray-900'
+                            }`}
+                          />
                           <div className="text-xs text-gray-400">
                             {getModifier(score) >= 0 ? '+' : ''}{getModifier(score)}
                           </div>
@@ -511,8 +520,52 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
-              {/* Column 2: Health and Hit Points */}
-              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+              {/* Column 2: Combat Stats and Health */}
+              <div className="space-y-4">
+                {/* Combat Stats Box */}
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
+                  <div className="grid grid-cols-3 gap-4 pb-8">
+                    <div className="text-center">
+                      <div className="text-xs font-medium text-gray-400 mb-2">AC</div>
+                      <input
+                        type="number"
+                        value={character.armorClass}
+                        onChange={(e) => updateCharacter({ armorClass: parseInt(e.target.value) || 0 })}
+                        className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs font-medium text-gray-400 mb-2">Initiative</div>
+                      <input
+                        type="number"
+                        value={character.initiative}
+                        onChange={(e) => updateCharacter({ initiative: parseInt(e.target.value) || 0 })}
+                        className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs font-medium text-gray-400 mb-2">Speed</div>
+                      <input
+                        type="number"
+                        value={character.speed}
+                        onChange={(e) => updateCharacter({ speed: parseInt(e.target.value) || 0 })}
+                        className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-500">Combat Stats</h3>
+                  </div>
+                </div>
+                
+                {/* Health Box */}
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                 <div className="space-y-4 pb-8">
                   {/* Health Bar - At the top */}
                   <div className="space-y-2">
@@ -549,7 +602,7 @@ export default function CharacterSheet() {
                           onChange={(e) => updateCharacter({
                             hitPoints: { ...character.hitPoints, current: parseInt(e.target.value) || 0 }
                           })}
-                          className={`w-full text-center border rounded px-2 py-1 ${
+                          className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
                           }`}
                         />
@@ -562,7 +615,7 @@ export default function CharacterSheet() {
                           onChange={(e) => updateCharacter({
                             hitPoints: { ...character.hitPoints, maximum: parseInt(e.target.value) || 0 }
                           })}
-                          className={`w-full text-center border rounded px-2 py-1 ${
+                          className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
                           }`}
                         />
@@ -575,33 +628,18 @@ export default function CharacterSheet() {
                           onChange={(e) => updateCharacter({
                             hitPoints: { ...character.hitPoints, temporary: parseInt(e.target.value) || 0 }
                           })}
-                          className={`w-full text-center border rounded px-2 py-1 ${
+                          className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
                           }`}
                         />
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Combat Stats */}
-                  <div className="space-y-2 pt-2 border-t border-gray-600">
-                    <div className="flex items-center justify-between">
-                      <span>AC</span>
-                      <span className="text-xl font-bold text-amber-400">{character.armorClass}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Initiative</span>
-                      <span className="text-xl font-bold text-amber-400">+{character.initiative}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Speed</span>
-                      <span className="text-xl font-bold text-amber-400">{character.speed} ft</span>
-                    </div>
-                  </div>
                 </div>
                 <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <h3 className="text-sm font-bold text-gray-500">Health & Combat</h3>
+                  <h3 className="text-sm font-bold text-gray-500">Health</h3>
                 </div>
+              </div>
               </div>
 
               {/* Column 3: Skills */}
@@ -1588,67 +1626,64 @@ export default function CharacterSheet() {
               <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
                 <h3 className="text-xl font-semibold text-amber-300 mb-4">Hit Points</h3>
                 
-                {/* Level Headers Row 1 */}
-                <div className="mb-2">
-                  <div className="grid grid-cols-2 gap-1 text-xs font-bold text-gray-400 text-center mb-1">
-                    {Array.from({ length: 10 }, (_, i) => (
-                      <div key={i} className="py-1">{i + 1}</div>
-                    ))}
-                  </div>
-                  {/* HP Input Boxes Row 1 */}
-                  <div className="grid grid-cols-2 gap-1 mb-4">
-                    {Array.from({ length: 10 }, (_, i) => (
-                      <input
-                        key={i}
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={hitPointRolls[i] || ''}
-                        onChange={(e) => {
-                          const newRolls = [...hitPointRolls];
-                          newRolls[i] = parseInt(e.target.value) || 0;
-                          setHitPointRolls(newRolls);
-                        }}
-                        className={`w-full text-center text-sm border rounded px-1 py-1 ${
-                          isDarkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                        placeholder="0"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Level Headers Row 2 */}
-                <div className="mb-2">
-                  <div className="grid grid-cols-2 gap-1 text-xs font-bold text-gray-400 text-center mb-1">
-                    {Array.from({ length: 10 }, (_, i) => (
-                      <div key={i + 10} className="py-1">{i + 11}</div>
-                    ))}
-                  </div>
-                  {/* HP Input Boxes Row 2 */}
-                  <div className="grid grid-cols-2 gap-1 mb-4">
-                    {Array.from({ length: 10 }, (_, i) => (
-                      <input
-                        key={i + 10}
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={hitPointRolls[i + 10] || ''}
-                        onChange={(e) => {
-                          const newRolls = [...hitPointRolls];
-                          newRolls[i + 10] = parseInt(e.target.value) || 0;
-                          setHitPointRolls(newRolls);
-                        }}
-                        className={`w-full text-center text-sm border rounded px-1 py-1 ${
-                          isDarkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                        placeholder="0"
-                      />
-                    ))}
+                {/* HP Levels 1-10 and 11-20 in two columns */}
+                <div className="mb-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Left Column: Levels 1-10 */}
+                    <div className="space-y-1">
+                      {Array.from({ length: 10 }, (_, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <div className="w-6 text-xs font-bold text-gray-400 text-center">
+                            {i + 1}
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={hitPointRolls[i] || ''}
+                            onChange={(e) => {
+                              const newRolls = [...hitPointRolls];
+                              newRolls[i] = parseInt(e.target.value) || 0;
+                              setHitPointRolls(newRolls);
+                            }}
+                            className={`w-12 text-center text-sm border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                              isDarkMode
+                                ? 'bg-gray-700 border-gray-600 text-white'
+                                : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Right Column: Levels 11-20 */}
+                    <div className="space-y-1">
+                      {Array.from({ length: 10 }, (_, i) => (
+                        <div key={i + 10} className="flex items-center gap-2">
+                          <div className="w-6 text-xs font-bold text-gray-400 text-center">
+                            {i + 11}
+                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={hitPointRolls[i + 10] || ''}
+                            onChange={(e) => {
+                              const newRolls = [...hitPointRolls];
+                              newRolls[i + 10] = parseInt(e.target.value) || 0;
+                              setHitPointRolls(newRolls);
+                            }}
+                            className={`w-12 text-center text-sm border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                              isDarkMode
+                                ? 'bg-gray-700 border-gray-600 text-white'
+                                : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
