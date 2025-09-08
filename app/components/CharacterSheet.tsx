@@ -206,6 +206,53 @@ export default function CharacterSheet() {
   const [additionalHPBonuses, setAdditionalHPBonuses] = useState(0);
   const [hasToughness, setHasToughness] = useState(false);
   const [isPHBHillDwarf, setIsPHBHillDwarf] = useState(false);
+  const [currentHitDice, setCurrentHitDice] = useState(0);
+  const [maxHitDice, setMaxHitDice] = useState(0);
+  const [damageReduction, setDamageReduction] = useState(0);
+
+  // Fantasy Calendar State
+  const [currentDate, setCurrentDate] = useState({
+    day: 14,
+    season: 'Early Spring',
+    year: 4122
+  });
+
+  // Fantasy Calendar System
+  const seasons = [
+    { name: 'Early Spring', days: 30 },
+    { name: 'Midspring', days: 31 },
+    { name: 'Late Spring', days: 30 },
+    { name: 'Early Summer', days: 31 },
+    { name: 'Midsummer', days: 30 },
+    { name: 'Late Summer', days: 31 },
+    { name: 'Early Autumn', days: 30 },
+    { name: 'Midautumn', days: 31 },
+    { name: 'Late Autumn', days: 30 },
+    { name: 'Early Winter', days: 30 },
+    { name: 'Midwinter', days: 31 },
+    { name: 'Late Winter', days: 30 }
+  ];
+
+  const getMaxDaysForSeason = (season: string) => {
+    const foundSeason = seasons.find(s => s.name === season);
+    return foundSeason ? foundSeason.days : 30;
+  };
+
+  const getOrdinalNumber = (num: number) => {
+    const remainder10 = num % 10;
+    const remainder100 = num % 100;
+    
+    if (remainder100 >= 11 && remainder100 <= 13) {
+      return num + 'th';
+    }
+    
+    switch (remainder10) {
+      case 1: return num + 'st';
+      case 2: return num + 'nd';
+      case 3: return num + 'rd';
+      default: return num + 'th';
+    }
+  };
   
   const [speeds, setSpeeds] = useState({
     walk: 30,
@@ -371,71 +418,72 @@ export default function CharacterSheet() {
           ))}
         </div>
 
-        {/* Main Header Box - Two Section Layout */}
-        <div className="bg-slate-800 border-2 border-orange-500 rounded-lg p-6 mb-8">
-          <div className="grid grid-cols-2 gap-8">
-            {/* Left Section - Level & Portrait */}
-            <div className="flex items-center gap-6">
-              {/* Level */}
-              <div className="bg-slate-700 rounded-lg p-4 text-center">
-                <div className="text-4xl font-bold text-white">{character.level}</div>
-                <div className="text-sm text-gray-400">Level</div>
-              </div>
-
-              {/* Character Portrait */}
-              <div className="w-24 h-24 bg-slate-700 rounded-lg border-2 border-slate-600 flex items-center justify-center">
-                <span className="text-lg text-gray-400">IMG</span>
-              </div>
-            </div>
-
-            {/* Right Section - Ability Scores */}
-            <div className="flex items-center justify-end gap-2">
-              {Object.entries(character.abilityScores).map(([ability, score], index) => {
-                const borderColors = [
-                  'border-red-400',     // STR
-                  'border-emerald-400', // DEX
-                  'border-orange-400',  // CON
-                  'border-blue-400',    // INT
-                  'border-purple-400',  // WIS
-                  'border-pink-400'     // CHA
-                ];
-                const textColors = [
-                  'text-red-400',       // STR
-                  'text-emerald-400',   // DEX
-                  'text-orange-400',    // CON
-                  'text-blue-400',      // INT
-                  'text-purple-400',    // WIS
-                  'text-pink-400'       // CHA
-                ];
-                return (
-                  <div key={ability} className={`bg-slate-700 ${borderColors[index]} rounded-xl border-2 p-3 text-center shadow-lg transform transition-transform hover:scale-105 min-w-16`}>
-                    <div className={`text-xs font-bold ${textColors[index]} mb-1`}>{ability.slice(0, 3).toUpperCase()}</div>
-                    <input
-                      type="number"
-                      value={score}
-                      onChange={(e) => updateCharacter({
-                        abilityScores: { ...character.abilityScores, [ability]: parseInt(e.target.value) || 0 }
-                      })}
-                      className="w-full text-2xl font-bold text-white bg-transparent border-0 text-center rounded-lg py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-slate-600/50"
-                    />
-                    <div className="text-sm font-semibold text-white/90 mt-1">
-                      {getModifier(score) >= 0 ? '+' : ''}{getModifier(score)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
 
         {/* Stats Tab */}
         {activeTab === 'Stats' && (
           <div className="space-y-8">
+            {/* Character Header Section */}
+            <div className="bg-slate-800 border-2 border-orange-500 rounded-lg p-6">
+              <div className="grid grid-cols-2 gap-8">
+                {/* Left Column - Level & Portrait */}
+                <div className="flex items-center gap-6">
+                  {/* Level */}
+                  <div className="bg-slate-700 rounded-lg p-4 text-center">
+                    <div className="text-4xl font-bold text-white">{character.level}</div>
+                    <div className="text-sm text-gray-400">Level</div>
+                  </div>
+
+                  {/* Character Portrait */}
+                  <div className="w-24 h-24 bg-slate-700 rounded-lg border-2 border-slate-600 flex items-center justify-center">
+                    <span className="text-lg text-gray-400">IMG</span>
+                  </div>
+                </div>
+
+                {/* Right Column - Ability Scores */}
+                <div className="flex items-center justify-end gap-2">
+                  {Object.entries(character.abilityScores).map(([ability, score], index) => {
+                    const borderColors = [
+                      'border-red-400',     // STR
+                      'border-emerald-400', // DEX
+                      'border-orange-400',  // CON
+                      'border-blue-400',    // INT
+                      'border-purple-400',  // WIS
+                      'border-pink-400'     // CHA
+                    ];
+                    const textColors = [
+                      'text-red-400',       // STR
+                      'text-emerald-400',   // DEX
+                      'text-orange-400',    // CON
+                      'text-blue-400',      // INT
+                      'text-purple-400',    // WIS
+                      'text-pink-400'       // CHA
+                    ];
+                    return (
+                      <div key={ability} className={`bg-slate-700 ${borderColors[index]} rounded-xl border-2 p-3 text-center shadow-lg transform transition-transform hover:scale-105 min-w-16`}>
+                        <div className={`text-xs font-bold ${textColors[index]} mb-1`}>{ability.slice(0, 3).toUpperCase()}</div>
+                        <input
+                          type="number"
+                          value={score}
+                          onChange={(e) => updateCharacter({
+                            abilityScores: { ...character.abilityScores, [ability]: parseInt(e.target.value) || 0 }
+                          })}
+                          className="w-full text-2xl font-bold text-white bg-transparent border-0 text-center rounded-lg py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-slate-600/50"
+                        />
+                        <div className="text-sm font-semibold text-white/90 mt-1">
+                          {getModifier(score) >= 0 ? '+' : ''}{getModifier(score)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
             {/* 4-Column Row */}
             <div className="grid grid-cols-4 gap-4">
               {/* Column 1: Saving Throws */}
               <div className="space-y-4">
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <div className="pb-8">
                     <div className="grid grid-cols-2 gap-3">
                       {Object.entries(character.savingThrows).map(([save, proficient]) => {
@@ -449,23 +497,23 @@ export default function CharacterSheet() {
                         };
                         const modifier = getSaveModifier(save, abilityMap[save]);
                         return (
-                          <div key={save} className={`flex items-center justify-between px-3 py-2 rounded-full border-2 ${
+                          <div key={save} className={`flex items-center justify-between px-2 py-1 rounded-full border-2 transform transition-all duration-200 hover:scale-105 ${
                             proficient 
                               ? 'bg-green-500/20 border-green-400' 
                               : 'bg-slate-700 border-slate-600'
                           }`}>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
                               <input
                                 type="checkbox"
                                 checked={proficient}
                                 onChange={(e) => updateCharacter({
                                   savingThrows: { ...character.savingThrows, [save]: e.target.checked }
                                 })}
-                                className="w-4 h-4 accent-green-500 rounded focus:ring-2 focus:ring-green-400"
+                                className="w-3 h-3 accent-green-500 rounded focus:ring-2 focus:ring-green-400"
                               />
-                              <span className="text-sm font-medium">{abbreviations[save]}</span>
+                              <span className="text-xs font-medium">{abbreviations[save]}</span>
                             </div>
-                            <span className="font-mono text-sm font-bold">{modifier >= 0 ? '+' : ''}{modifier}</span>
+                            <span className="font-mono text-xs font-bold">{modifier >= 0 ? '+' : ''}{modifier}</span>
                           </div>
                         );
                       })}
@@ -476,44 +524,44 @@ export default function CharacterSheet() {
                   </div>
                 </div>
                 
-                {/* Skills - Passive Skills */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                {/* Passive Skills */}
+                <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <div className="pb-8 space-y-3">
                     {/* Passive Perception */}
-                    <div className={`flex items-center justify-between px-3 py-2 rounded-full border-2 bg-slate-700 border-slate-600`}>
+                    <div className={`flex items-center justify-between px-2 py-1 rounded-full border-2 bg-slate-700 border-slate-600 transform transition-all duration-200 hover:scale-105`}>
                       <div className="flex items-center">
-                        <span className="mr-2">👁️</span>
-                        <span className="text-sm">Passive Perception</span>
+                        <span className="mr-1 text-xs">👁️</span>
+                        <span className="text-xs">Passive Perception</span>
                       </div>
-                      <span className="font-mono text-lg font-bold text-blue-400">
+                      <span className="font-mono text-sm font-bold text-blue-400">
                         {10 + getSkillModifier('Perception', 'wisdom')}
                       </span>
                     </div>
                     
                     {/* Passive Investigation */}
-                    <div className={`flex items-center justify-between px-3 py-2 rounded-full border-2 bg-slate-700 border-slate-600`}>
+                    <div className={`flex items-center justify-between px-2 py-1 rounded-full border-2 bg-slate-700 border-slate-600 transform transition-all duration-200 hover:scale-105`}>
                       <div className="flex items-center">
-                        <span className="mr-2">🔍</span>
-                        <span className="text-sm">Passive Investigation</span>
+                        <span className="mr-1 text-xs">🔍</span>
+                        <span className="text-xs">Passive Investigation</span>
                       </div>
-                      <span className="font-mono text-lg font-bold text-purple-400">
+                      <span className="font-mono text-sm font-bold text-purple-400">
                         {10 + getSkillModifier('Investigation', 'intelligence')}
                       </span>
                     </div>
                     
                     {/* Passive Insight */}
-                    <div className={`flex items-center justify-between px-3 py-2 rounded-full border-2 bg-slate-700 border-slate-600`}>
+                    <div className={`flex items-center justify-between px-2 py-1 rounded-full border-2 bg-slate-700 border-slate-600 transform transition-all duration-200 hover:scale-105`}>
                       <div className="flex items-center">
-                        <span className="mr-2">🧠</span>
-                        <span className="text-sm">Passive Insight</span>
+                        <span className="mr-1 text-xs">🧠</span>
+                        <span className="text-xs">Passive Insight</span>
                       </div>
-                      <span className="font-mono text-lg font-bold text-green-400">
+                      <span className="font-mono text-sm font-bold text-green-400">
                         {10 + getSkillModifier('Insight', 'wisdom')}
                       </span>
                     </div>
                   </div>
                   <div className="absolute bottom-2 left-0 right-0 text-center">
-                    <h3 className="text-sm font-bold text-gray-400">Skills</h3>
+                    <h3 className="text-sm font-bold text-gray-400">Passive</h3>
                   </div>
                 </div>
               </div>
@@ -524,7 +572,7 @@ export default function CharacterSheet() {
                 <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <div className="grid grid-cols-3 gap-4 pb-8">
                     <div className="text-center">
-                      <div className="text-xs font-medium text-gray-400 mb-2">AC</div>
+                      <div className="text-xs font-bold text-white mb-2">AC</div>
                       <input
                         type="number"
                         value={character.armorClass}
@@ -535,7 +583,7 @@ export default function CharacterSheet() {
                       />
                     </div>
                     <div className="text-center">
-                      <div className="text-xs font-medium text-gray-400 mb-2">Initiative</div>
+                      <div className="text-xs font-bold text-white mb-2">Initiative</div>
                       <input
                         type="number"
                         value={character.initiative}
@@ -546,7 +594,7 @@ export default function CharacterSheet() {
                       />
                     </div>
                     <div className="text-center">
-                      <div className="text-xs font-medium text-gray-400 mb-2">Speed</div>
+                      <div className="text-xs font-bold text-white mb-2">Speed</div>
                       <input
                         type="number"
                         value={character.speed}
@@ -567,8 +615,7 @@ export default function CharacterSheet() {
                 <div className="space-y-4 pb-8">
                   {/* Health Bar - At the top */}
                   <div className="space-y-2">
-                    <div className="text-xs font-medium text-gray-400 text-center">Health</div>
-                    <div className={`w-full h-6 border rounded-lg overflow-hidden ${
+                    <div className={`w-full h-6 border rounded-lg overflow-hidden relative ${
                       isDarkMode ? 'border-slate-600 bg-slate-700' : 'border-gray-300 bg-gray-100'
                     }`}>
                       <div 
@@ -582,9 +629,9 @@ export default function CharacterSheet() {
                             '#10b981'
                         }}
                       ></div>
-                    </div>
-                    <div className="text-xs text-center text-gray-400">
-                      {character.hitPoints.current} / {character.hitPoints.maximum} HP
+                      <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+                        {Math.round((character.hitPoints.current / character.hitPoints.maximum) * 100)}%
+                      </div>
                     </div>
                   </div>
                   
@@ -593,7 +640,7 @@ export default function CharacterSheet() {
                     {/* HP Section - Horizontal Layout */}
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center">
-                        <div className="text-xs font-medium text-gray-400 mb-2">Current HP</div>
+                        <div className="text-xs font-bold text-white mb-2">Current HP</div>
                         <input
                           type="number"
                           value={character.hitPoints.current}
@@ -606,7 +653,7 @@ export default function CharacterSheet() {
                         />
                       </div>
                       <div className="text-center">
-                        <div className="text-xs font-medium text-gray-400 mb-2">Max HP</div>
+                        <div className="text-xs font-bold text-white mb-2">Max HP</div>
                         <input
                           type="number"
                           value={character.hitPoints.maximum}
@@ -619,13 +666,50 @@ export default function CharacterSheet() {
                         />
                       </div>
                       <div className="text-center">
-                        <div className="text-xs font-medium text-gray-400 mb-2">Temp HP</div>
+                        <div className="text-xs font-bold text-white mb-2">Temp HP</div>
                         <input
                           type="number"
                           value={character.hitPoints.temporary}
                           onChange={(e) => updateCharacter({
                             hitPoints: { ...character.hitPoints, temporary: parseInt(e.target.value) || 0 }
                           })}
+                          className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Hit Dice Section */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-xs font-bold text-white mb-2">Hit Dice</div>
+                        <input
+                          type="number"
+                          value={currentHitDice}
+                          onChange={(e) => setCurrentHitDice(parseInt(e.target.value) || 0)}
+                          className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                        />
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs font-bold text-white mb-2">Max Dice</div>
+                        <input
+                          type="number"
+                          value={maxHitDice}
+                          onChange={(e) => setMaxHitDice(parseInt(e.target.value) || 0)}
+                          className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                        />
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs font-bold text-white mb-2">Reduction</div>
+                        <input
+                          type="number"
+                          value={damageReduction}
+                          onChange={(e) => setDamageReduction(parseInt(e.target.value) || 0)}
                           className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
@@ -655,7 +739,7 @@ export default function CharacterSheet() {
                       };
                       const modifier = getSkillModifier(skill, abilityMap[skill]);
                       return (
-                        <div key={skill} className="flex items-center justify-between py-0.5">
+                        <div key={skill} className="flex items-center justify-between py-0.5 transform transition-all duration-200 hover:scale-105">
                           <div className="flex items-center">
                             <div className={`w-2 h-2 rounded-full mr-2 ${
                               data.expertise ? 'bg-yellow-400' : data.proficient ? 'bg-green-400' : 'bg-gray-600'
@@ -673,62 +757,21 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
-              {/* Column 4: Weather and Date */}
+              {/* Column 4: Current Date Display */}
               <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <div className="space-y-4 pb-8">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">Date</label>
-                    <input
-                      type="text"
-                      placeholder="Campaign date"
-                      className={`w-full text-sm border rounded px-2 py-1 ${
-                        isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">Weather</label>
-                    <select className={`w-full text-sm border rounded px-2 py-1 ${
-                      isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                    }`}>
-                      <option>Clear</option>
-                      <option>Cloudy</option>
-                      <option>Overcast</option>
-                      <option>Light Rain</option>
-                      <option>Heavy Rain</option>
-                      <option>Storm</option>
-                      <option>Snow</option>
-                      <option>Fog</option>
-                      <option>Wind</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">Temperature</label>
-                    <select className={`w-full text-sm border rounded px-2 py-1 ${
-                      isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                    }`}>
-                      <option>Frigid</option>
-                      <option>Cold</option>
-                      <option>Cool</option>
-                      <option>Mild</option>
-                      <option>Warm</option>
-                      <option>Hot</option>
-                      <option>Scorching</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">Notes</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Session notes..."
-                      className={`w-full text-sm border rounded px-2 py-1 ${
-                        isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    />
+                <div className="pb-8">
+                  {/* Current Date Display */}
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-orange-400 mb-2">
+                      {getOrdinalNumber(currentDate.day)} of {currentDate.season}
+                    </div>
+                    <div className="text-sm text-gray-300">
+                      {currentDate.year} Year of the Ivory
+                    </div>
                   </div>
                 </div>
                 <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <h3 className="text-sm font-bold text-gray-400">Weather & Date</h3>
+                  <h3 className="text-sm font-bold text-gray-400">Current Date</h3>
                 </div>
               </div>
             </div>
@@ -1860,11 +1903,81 @@ export default function CharacterSheet() {
                 </select>
               </div>
 
-              {/* Column 4: Additional Data */}
+              {/* Column 4: Calendar Settings */}
               <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-orange-400 mb-4">Additional Data</h3>
-                <div className="text-center text-gray-400 py-12">
-                  <p>Additional character data coming soon...</p>
+                <h3 className="text-xl font-semibold text-orange-400 mb-4">Calendar Settings</h3>
+                
+                {/* Current Date Display */}
+                <div className="text-center mb-6">
+                  <div className="text-lg font-bold text-orange-400 mb-2">
+                    {getOrdinalNumber(currentDate.day)} of {currentDate.season}
+                  </div>
+                  <div className="text-sm text-gray-300">
+                    {currentDate.year} Year of the Ivory
+                  </div>
+                </div>
+
+                {/* Date Controls */}
+                <div className="space-y-4">
+                  {/* Day and Year Inputs - Side by Side */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1">Day</label>
+                      <select
+                        value={currentDate.day}
+                        onChange={(e) => setCurrentDate({
+                          ...currentDate,
+                          day: parseInt(e.target.value)
+                        })}
+                        className={`w-full text-center text-sm border rounded px-2 py-1 ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      >
+                        {Array.from({ length: getMaxDaysForSeason(currentDate.season) }, (_, i) => i + 1).map(day => (
+                          <option key={day} value={day}>
+                            {getOrdinalNumber(day)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1">Year</label>
+                      <input
+                        type="number"
+                        value={currentDate.year}
+                        onChange={(e) => setCurrentDate({
+                          ...currentDate,
+                          year: parseInt(e.target.value) || 4122
+                        })}
+                        className={`w-full text-center text-sm border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Season Dropdown */}
+                  <div>
+                    <label className="block text-xs font-bold text-white mb-1">Season</label>
+                    <select
+                      value={currentDate.season}
+                      onChange={(e) => setCurrentDate({
+                        ...currentDate,
+                        season: e.target.value,
+                        day: Math.min(currentDate.day, getMaxDaysForSeason(e.target.value))
+                      })}
+                      className={`w-full text-sm border rounded px-2 py-1 ${
+                        isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                      }`}
+                    >
+                      {seasons.map(season => (
+                        <option key={season.name} value={season.name}>
+                          {season.name} ({season.days} days)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
