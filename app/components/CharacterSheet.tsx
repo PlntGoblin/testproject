@@ -217,6 +217,9 @@ export default function CharacterSheet() {
     year: 4122
   });
 
+  // Weather State
+  const [currentWeather, setCurrentWeather] = useState(0); // 0=morning, 1=day, 2=evening, 3=night, 4=rainy, 5=snowy
+
   // Fantasy Calendar System
   const seasons = [
     { name: 'Early Spring', days: 30 },
@@ -251,6 +254,135 @@ export default function CharacterSheet() {
       case 2: return num + 'nd';
       case 3: return num + 'rd';
       default: return num + 'th';
+    }
+  };
+
+  // Weather Functions
+  const weatherTypes = ['morning', 'day', 'evening', 'night', 'rainy', 'snowy'];
+  
+  const cycleWeather = () => {
+    setCurrentWeather((prev) => (prev + 1) % weatherTypes.length);
+  };
+
+  const WeatherIcon = ({ type }: { type: number }) => {
+    const iconStyle = "w-16 h-16 cursor-pointer transition-transform hover:scale-110";
+    
+    switch (type) {
+      case 0: // Morning - Sun behind mountains
+        return (
+          <div className={iconStyle} onClick={cycleWeather}>
+            <div className="relative w-full h-full">
+              {/* Sun positioned behind mountains - only showing 2/3s */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                <div className="w-8 h-8 bg-yellow-400 rounded-full shadow-lg shadow-yellow-400/50"></div>
+              </div>
+              {/* Mountains using CSS triangles - positioned to cover 1/3 of sun */}
+              <div className="absolute bottom-0 left-1 w-0 h-0" 
+                   style={{
+                     borderLeft: '12px solid transparent',
+                     borderRight: '12px solid transparent', 
+                     borderBottom: '24px solid #374151'
+                   }}></div>
+              <div className="absolute bottom-0 left-6 w-0 h-0" 
+                   style={{
+                     borderLeft: '16px solid transparent',
+                     borderRight: '16px solid transparent', 
+                     borderBottom: '32px solid #4b5563'
+                   }}></div>
+              <div className="absolute bottom-0 right-1 w-0 h-0" 
+                   style={{
+                     borderLeft: '12px solid transparent',
+                     borderRight: '12px solid transparent', 
+                     borderBottom: '24px solid #374151'
+                   }}></div>
+            </div>
+          </div>
+        );
+      case 1: // Day - Yellow sun with centered glow effect
+        return (
+          <div className={iconStyle} onClick={cycleWeather}>
+            <div className="relative w-full h-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-yellow-400 rounded-full animate-pulse" 
+                   style={{
+                     boxShadow: '0 0 20px 8px rgba(251, 191, 36, 0.6)'
+                   }}></div>
+            </div>
+          </div>
+        );
+      case 2: // Evening - Orange/red sun
+        return (
+          <div className={iconStyle} onClick={cycleWeather}>
+            <div className="relative w-full h-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-orange-500 rounded-full animate-pulse shadow-xl shadow-orange-500/50"></div>
+            </div>
+          </div>
+        );
+      case 3: // Night - Crescent moon with stars
+        return (
+          <div className={iconStyle} onClick={cycleWeather}>
+            <div className="relative w-full h-full">
+              {/* Stars */}
+              <div className="absolute top-2 left-2 w-1 h-1 bg-white rounded-full animate-pulse"></div>
+              <div className="absolute top-4 right-3 w-1 h-1 bg-white rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+              <div className="absolute top-6 left-4 w-1 h-1 bg-white rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+              <div className="absolute bottom-4 right-2 w-1 h-1 bg-white rounded-full animate-pulse" style={{animationDelay: '1.5s'}}></div>
+              {/* Crescent Moon */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <div className="w-8 h-8 bg-gray-300 rounded-full relative">
+                  <div className="absolute top-1 left-2 w-6 h-6 bg-slate-800 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 4: // Rainy - Fluffy cloud with rain
+        return (
+          <div className={iconStyle} onClick={cycleWeather}>
+            <div className="relative w-full h-full">
+              {/* Fluffy Cloud */}
+              <div className="absolute top-2 left-1/2 transform -translate-x-1/2">
+                {/* Main cloud body */}
+                <div className="w-12 h-6 bg-gray-400 rounded-full relative">
+                  {/* Cloud puffs */}
+                  <div className="absolute -left-2 top-0 w-5 h-5 bg-gray-400 rounded-full"></div>
+                  <div className="absolute -right-2 top-0 w-5 h-5 bg-gray-400 rounded-full"></div>
+                  <div className="absolute left-1 -top-2 w-4 h-4 bg-gray-300 rounded-full"></div>
+                  <div className="absolute right-1 -top-2 w-4 h-4 bg-gray-300 rounded-full"></div>
+                  <div className="absolute left-3 -top-3 w-6 h-6 bg-gray-300 rounded-full"></div>
+                  <div className="absolute left-0 top-2 w-3 h-3 bg-gray-500 rounded-full"></div>
+                  <div className="absolute right-0 top-2 w-3 h-3 bg-gray-500 rounded-full"></div>
+                </div>
+              </div>
+              {/* Rain drops */}
+              <div className="absolute top-8 left-6 w-0.5 h-4 bg-blue-300 animate-pulse"></div>
+              <div className="absolute top-9 left-8 w-0.5 h-3 bg-blue-300 animate-pulse" style={{animationDelay: '0.3s'}}></div>
+              <div className="absolute top-8 left-10 w-0.5 h-4 bg-blue-300 animate-pulse" style={{animationDelay: '0.6s'}}></div>
+              <div className="absolute top-10 left-7 w-0.5 h-3 bg-blue-300 animate-pulse" style={{animationDelay: '0.9s'}}></div>
+            </div>
+          </div>
+        );
+      case 5: // Snowy - Cloud with snow
+        return (
+          <div className={iconStyle} onClick={cycleWeather}>
+            <div className="relative w-full h-full">
+              {/* Cloud */}
+              <div className="absolute top-2 left-1/2 transform -translate-x-1/2">
+                <div className="w-12 h-6 bg-gray-300 rounded-full relative">
+                  <div className="absolute -left-1 top-1 w-4 h-4 bg-gray-300 rounded-full"></div>
+                  <div className="absolute -right-1 top-1 w-4 h-4 bg-gray-300 rounded-full"></div>
+                </div>
+              </div>
+              {/* Snow flakes */}
+              <div className="absolute top-8 left-5 w-1 h-1 bg-white rounded-full animate-bounce"></div>
+              <div className="absolute top-10 left-7 w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              <div className="absolute top-9 left-9 w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+              <div className="absolute top-11 left-6 w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '0.6s'}}></div>
+              <div className="absolute top-8 left-10 w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '0.8s'}}></div>
+            </div>
+          </div>
+        );
+      default:
+        return <div className={iconStyle} onClick={cycleWeather}></div>;
     }
   };
   
@@ -760,6 +892,11 @@ export default function CharacterSheet() {
               {/* Column 4: Current Date Display */}
               <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                 <div className="pb-8">
+                  {/* Weather Icon */}
+                  <div className="flex justify-center mb-4">
+                    <WeatherIcon type={currentWeather} />
+                  </div>
+                  
                   {/* Current Date Display */}
                   <div className="text-center">
                     <div className="text-lg font-bold text-orange-400 mb-2">
