@@ -273,6 +273,25 @@ export default function CharacterSheet() {
     setCharacter(prev => ({ ...prev, ...updates }));
   };
 
+  const updateAmmunition = (index: number, field: keyof typeof ammunition[0], value: string) => {
+    const newAmmunition = [...ammunition];
+    newAmmunition[index] = { ...newAmmunition[index], [field]: value };
+    setAmmunition(newAmmunition);
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, setImage: (value: string) => void) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setImage(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Helper functions for ability score calculations
   const calculateRolledScore = (rolls: number[]): number => {
     return rolls.sort((a, b) => b - a).slice(0, 3).reduce((sum, roll) => sum + roll, 0);
@@ -301,6 +320,25 @@ export default function CharacterSheet() {
   const [currentHitDice, setCurrentHitDice] = useState(0);
   const [maxHitDice, setMaxHitDice] = useState(0);
   const [damageReduction, setDamageReduction] = useState(0);
+  
+  // Death saves state
+  const [deathSaves, setDeathSaves] = useState({
+    successes: [false, false, false],
+    failures: [false, false, false]
+  });
+
+  // Ammunition state
+  const [ammunition, setAmmunition] = useState([
+    { name: '', weapon: '', amount: '' },
+    { name: '', weapon: '', amount: '' },
+    { name: '', weapon: '', amount: '' }
+  ]);
+
+  // Image state
+  const [statsImage, setStatsImage] = useState<string>('');
+  const [backgroundImage, setBackgroundImage] = useState<string>('');
+  const [backgroundBlur, setBackgroundBlur] = useState<number>(0);
+  const [characterImage, setCharacterImage] = useState<string>('');
 
   // Ability Score Rolling Tracking
   const [abilityScoreRolls, setAbilityScoreRolls] = useState({
@@ -634,16 +672,29 @@ export default function CharacterSheet() {
   const tabs = ['Stats', 'Inventory', 'Character', 'Spells', 'Library', 'Data'];
 
   return (
-    <div className={`min-h-screen p-4 font-sans ${isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-black'}`}>
+    <div 
+      className={`min-h-screen p-4 font-sans relative ${isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-black'}`}
+      style={{
+        backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {backgroundImage && (
+        <div 
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            filter: `blur(${backgroundBlur}px)`
+          }}
+        />
+      )}
+      <div className="relative z-10">
       <div className="max-w-5xl mx-auto">
-        {/* Character Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold text-orange-400 mb-2">{character.name}</h1>
-          <p className="text-xl text-gray-300">
-            Level {character.level} {character.race} {character.class} • {character.background} • {character.alignment}
-          </p>
-        </div>
-
         {/* Tab Navigation - Above Main Box */}
         <div className="flex justify-center mb-4 space-x-2">
           {tabs.map((tab) => (
@@ -668,7 +719,7 @@ export default function CharacterSheet() {
             {/* Character Header Section */}
             <div className="bg-slate-800 border-2 border-orange-500 rounded-lg p-6">
               <div className="grid grid-cols-2 gap-8">
-                {/* Left Column - Level & Portrait */}
+                {/* Left Column - Level, Portrait & Character Info */}
                 <div className="flex items-center gap-6">
                   {/* Level */}
                   <div className="bg-slate-700 rounded-lg p-4 text-center">
@@ -677,8 +728,25 @@ export default function CharacterSheet() {
                   </div>
 
                   {/* Character Portrait */}
-                  <div className="w-24 h-24 bg-slate-700 rounded-lg border-2 border-slate-600 flex items-center justify-center">
-                    <span className="text-lg text-gray-400">IMG</span>
+                  <div className="w-24 h-24 bg-slate-700 rounded-lg border-2 border-slate-600 flex items-center justify-center overflow-hidden">
+                    {statsImage ? (
+                      <img 
+                        src={statsImage} 
+                        alt="Character portrait" 
+                        className="w-full h-full object-cover"
+                        style={{filter: `blur(${backgroundBlur}px)`}}
+                      />
+                    ) : (
+                      <span className="text-lg text-gray-400">IMG</span>
+                    )}
+                  </div>
+
+                  {/* Character Info */}
+                  <div className="flex flex-col justify-center">
+                    <h1 className="text-2xl font-bold text-orange-400 mb-1">{character.name}</h1>
+                    <p className="text-sm text-gray-300">
+                      {character.race} {character.class} • {character.alignment}
+                    </p>
                   </div>
                 </div>
 
@@ -838,7 +906,7 @@ export default function CharacterSheet() {
                         }`}
                       />
                     </div>
-                    <div className="text-center">
+                    <div className="text-center relative group">
                       <div className="text-xs font-bold text-white mb-2">Speed</div>
                       <input
                         type="number"
@@ -848,6 +916,36 @@ export default function CharacterSheet() {
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       />
+                      
+                      {/* Speed Pie Chart Tooltip */}
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                        <div className="relative w-24 h-24 bg-slate-800 border-2 border-orange-500 rounded-full overflow-hidden">
+                          {/* Pie segments using CSS clip-path for 4 quarters */}
+                          <div className="absolute inset-0 bg-blue-600 opacity-70" style={{clipPath: 'polygon(50% 50%, 50% 0%, 100% 0%, 100% 50%)'}}></div>
+                          <div className="absolute inset-0 bg-green-600 opacity-70" style={{clipPath: 'polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%)'}}></div>
+                          <div className="absolute inset-0 bg-yellow-600 opacity-70" style={{clipPath: 'polygon(50% 50%, 50% 100%, 0% 100%, 0% 50%)'}}></div>
+                          <div className="absolute inset-0 bg-purple-600 opacity-70" style={{clipPath: 'polygon(50% 50%, 0% 50%, 0% 0%, 50% 0%)'}}></div>
+                          
+                          {/* Speed labels positioned in each quarter */}
+                          <div className="absolute top-1 right-1 text-xs font-bold text-white">
+                            C:{speeds.climb}
+                          </div>
+                          <div className="absolute bottom-1 right-1 text-xs font-bold text-white">
+                            S:{speeds.swim}
+                          </div>
+                          <div className="absolute bottom-1 left-1 text-xs font-bold text-white">
+                            B:{speeds.burrow}
+                          </div>
+                          <div className="absolute top-1 left-1 text-xs font-bold text-white">
+                            F:{speeds.fly}
+                          </div>
+                          
+                          {/* Center circle */}
+                          <div className="absolute inset-6 bg-slate-800 rounded-full border border-slate-600 flex items-center justify-center">
+                            <div className="text-xs font-bold text-orange-400">Spd</div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="absolute bottom-2 left-0 right-0 text-center">
@@ -961,6 +1059,57 @@ export default function CharacterSheet() {
                         />
                       </div>
                     </div>
+                    
+                    {/* Resistance and Death Saves Section */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center">
+                        <div className="text-xs font-bold text-white mb-2">Resistance</div>
+                        <textarea
+                          placeholder="Resistances..."
+                          rows={3}
+                          className={`w-full text-xs text-center border rounded px-2 py-1 resize-none ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                        />
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs font-bold text-white mb-2">Death Saves</div>
+                        <div className="space-y-2">
+                          <div className="flex justify-center space-x-2">
+                            <span className="text-sm">☠️</span>
+                            {deathSaves.failures.map((failed, i) => (
+                              <div 
+                                key={i} 
+                                onClick={() => {
+                                  const newFailures = [...deathSaves.failures];
+                                  newFailures[i] = !newFailures[i];
+                                  setDeathSaves({...deathSaves, failures: newFailures});
+                                }}
+                                className={`w-5 h-5 border-2 border-slate-600 rounded cursor-pointer transition-colors ${
+                                  failed ? 'bg-red-600 border-red-500' : 'bg-slate-700 hover:bg-red-600'
+                                }`}
+                              ></div>
+                            ))}
+                          </div>
+                          <div className="flex justify-center space-x-2">
+                            <span className="text-sm">❤️</span>
+                            {deathSaves.successes.map((succeeded, i) => (
+                              <div 
+                                key={i} 
+                                onClick={() => {
+                                  const newSuccesses = [...deathSaves.successes];
+                                  newSuccesses[i] = !newSuccesses[i];
+                                  setDeathSaves({...deathSaves, successes: newSuccesses});
+                                }}
+                                className={`w-5 h-5 border-2 border-slate-600 rounded cursor-pointer transition-colors ${
+                                  succeeded ? 'bg-green-600 border-green-500' : 'bg-slate-700 hover:bg-green-600'
+                                }`}
+                              ></div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="absolute bottom-2 left-0 right-0 text-center">
@@ -970,9 +1119,8 @@ export default function CharacterSheet() {
               </div>
 
               {/* Weapons Box - Spans both columns (Passive and Health) */}
-              <div className={`col-span-2 p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-lg font-semibold text-orange-400 mb-4">Weapons</h3>
-                <div className="space-y-3">
+              <div className={`col-span-2 p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className="space-y-3 pb-8">
                   {/* Column Headers */}
                   <div className="grid gap-2 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600" style={{gridTemplateColumns: "2fr 0.6fr 0.4fr 1fr 0.8fr 0.7fr 1.2fr 0.6fr"}}>
                     <div className="text-center">Name</div>
@@ -1188,12 +1336,17 @@ export default function CharacterSheet() {
                     </button>
                   </div>
                 </div>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-400">Weapons</h3>
+                </div>
               </div>
               </div>
               
               {/* Right Block: 2 Columns */}
               <div className="grid grid-cols-2 gap-4">
-              {/* Column 3: Skills */}
+              {/* Column 3: Skills and Ammunition */}
+              <div className="space-y-4">
+              {/* Skills */}
               <div className={`p-4 rounded-lg border relative self-start ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                 <div className="space-y-1 pb-8">
                   <div className="grid grid-cols-1 gap-1 text-xs">
@@ -1226,6 +1379,61 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
+              {/* Ammunition */}
+              <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className="pb-8 space-y-3">
+                  <div className="grid grid-cols-10 gap-1 text-xs font-bold text-white mb-2">
+                    <div className="col-span-3 text-center">Name</div>
+                    <div className="col-span-4 text-center">Corr. Weapon</div>
+                    <div className="col-span-3 text-center">Dice/Qty</div>
+                  </div>
+                  {ammunition.map((ammo, index) => (
+                    <div key={index} className="grid grid-cols-10 gap-1">
+                      <input
+                        type="text"
+                        value={ammo.name}
+                        onChange={(e) => updateAmmunition(index, 'name', e.target.value)}
+                        className={`col-span-3 text-center border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="Ammo name"
+                      />
+                      <input
+                        type="text"
+                        value={ammo.weapon}
+                        onChange={(e) => updateAmmunition(index, 'weapon', e.target.value)}
+                        className={`col-span-4 text-center border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="Weapon"
+                      />
+                      <select
+                        value={ammo.amount}
+                        onChange={(e) => updateAmmunition(index, 'amount', e.target.value)}
+                        className={`col-span-3 text-center border rounded px-2 py-1 text-xs appearance-none ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        style={{
+                          backgroundImage: 'none'
+                        }}
+                      >
+                        <option value="">Select Die</option>
+                        <option value="d4">d4</option>
+                        <option value="d6">d6</option>
+                        <option value="d8">d8</option>
+                        <option value="d10">d10</option>
+                        <option value="d12">d12</option>
+                        <option value="d20">d20</option>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-400">Ammunition</h3>
+                </div>
+              </div>
+              </div>
+
               {/* Column 4: Current Date and Survival Conditions */}
               <div className="space-y-4">
                 {/* Current Date Display - Compact */}
@@ -1251,16 +1459,19 @@ export default function CharacterSheet() {
                 <div className="pb-8">
                 <div className="space-y-2">
                   {/* Headers */}
-                  <div className="grid grid-cols-3 gap-1 text-xs font-semibold text-gray-400 pb-1 border-b border-slate-600">
+                  <div className="grid gap-1 text-xs font-semibold text-gray-400 pb-1 border-b border-slate-600" style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
                     <div>Need</div>
-                    <div>Stage</div>
-                    <div>Effect</div>
+                    <div className="text-center">Stage</div>
+                    <div className="text-center">Effect</div>
                   </div>
                   
                   {/* Hunger */}
-                  <div className="grid grid-cols-3 gap-1 text-xs">
+                  <div className={`grid gap-1 text-xs rounded px-2 py-1 ${
+                    character.survivalConditions.hunger.effect === -1 ? 'bg-green-500/20' :
+                    character.survivalConditions.hunger.effect === 1 ? 'bg-red-500/20' : ''
+                  }`} style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
                     <div className="text-gray-300">Hunger</div>
-                    <div>
+                    <div className="text-center">
                       <select
                         value={character.survivalConditions.hunger.stage}
                         onChange={(e) => {
@@ -1274,7 +1485,7 @@ export default function CharacterSheet() {
                             }
                           });
                         }}
-                        className={`w-full text-xs rounded px-1 py-0.5 ${
+                        className={`w-full text-xs text-center rounded px-1 py-0.5 appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       >
@@ -1297,7 +1508,7 @@ export default function CharacterSheet() {
                             hunger: { ...character.survivalConditions.hunger, effect: parseInt(e.target.value) || 0 }
                           }
                         })}
-                        className={`w-full text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        className={`w-4/5 text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       />
@@ -1305,9 +1516,12 @@ export default function CharacterSheet() {
                   </div>
                   
                   {/* Thirst */}
-                  <div className="grid grid-cols-3 gap-1 text-xs">
+                  <div className={`grid gap-1 text-xs rounded px-2 py-1 ${
+                    character.survivalConditions.thirst.effect === -1 ? 'bg-green-500/20' :
+                    character.survivalConditions.thirst.effect === 1 ? 'bg-red-500/20' : ''
+                  }`} style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
                     <div className="text-gray-300">Thirst</div>
-                    <div>
+                    <div className="text-center">
                       <select
                         value={character.survivalConditions.thirst.stage}
                         onChange={(e) => {
@@ -1321,7 +1535,7 @@ export default function CharacterSheet() {
                             }
                           });
                         }}
-                        className={`w-full text-xs rounded px-1 py-0.5 ${
+                        className={`w-full text-xs text-center rounded px-1 py-0.5 appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       >
@@ -1344,7 +1558,7 @@ export default function CharacterSheet() {
                             thirst: { ...character.survivalConditions.thirst, effect: parseInt(e.target.value) || 0 }
                           }
                         })}
-                        className={`w-full text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        className={`w-4/5 text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       />
@@ -1352,9 +1566,12 @@ export default function CharacterSheet() {
                   </div>
                   
                   {/* Fatigue */}
-                  <div className="grid grid-cols-3 gap-1 text-xs">
+                  <div className={`grid gap-1 text-xs rounded px-2 py-1 ${
+                    character.survivalConditions.fatigue.effect === -1 ? 'bg-green-500/20' :
+                    character.survivalConditions.fatigue.effect === 1 ? 'bg-red-500/20' : ''
+                  }`} style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
                     <div className="text-gray-300">Fatigue</div>
-                    <div>
+                    <div className="text-center">
                       <select
                         value={character.survivalConditions.fatigue.stage}
                         onChange={(e) => {
@@ -1368,7 +1585,7 @@ export default function CharacterSheet() {
                             }
                           });
                         }}
-                        className={`w-full text-xs rounded px-1 py-0.5 ${
+                        className={`w-full text-xs text-center rounded px-1 py-0.5 appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       >
@@ -1391,7 +1608,7 @@ export default function CharacterSheet() {
                             fatigue: { ...character.survivalConditions.fatigue, effect: parseInt(e.target.value) || 0 }
                           }
                         })}
-                        className={`w-full text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        className={`w-4/5 text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       />
@@ -1399,7 +1616,7 @@ export default function CharacterSheet() {
                   </div>
                   
                   {/* Additional Exhaustion */}
-                  <div className="grid grid-cols-3 gap-1 text-xs">
+                  <div className="grid gap-1 text-xs rounded px-2 py-1" style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
                     <div className="text-gray-300">Addt'l Exhaustion</div>
                     <div></div>
                     <div className="text-center">
@@ -1412,7 +1629,7 @@ export default function CharacterSheet() {
                             additionalExhaustion: parseInt(e.target.value) || 0
                           }
                         })}
-                        className={`w-full text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        className={`w-4/5 text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       />
@@ -1420,7 +1637,7 @@ export default function CharacterSheet() {
                   </div>
                   
                   {/* Total Exhaustion */}
-                  <div className="grid grid-cols-3 gap-1 text-xs border-t border-slate-600 pt-1">
+                  <div className="grid gap-1 text-xs border-t border-slate-600 pt-1 rounded px-2 py-1" style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
                     <div className="text-gray-300 font-semibold">Total Exhaustion</div>
                     <div></div>
                     <div className="text-center">
@@ -2778,6 +2995,80 @@ export default function CharacterSheet() {
                     <option value="Gargantuan">Gargantuan</option>
                   </select>
                 </div>
+
+                {/* Images Box */}
+                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                  <h3 className="text-lg font-semibold text-orange-400 mb-2">Images</h3>
+                  <p className="text-xs text-gray-400 mb-4">Upload images for character display and background.</p>
+                  
+                  <div className="space-y-4">
+                    {/* Stats Image Upload */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Stats Page Image</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, setStatsImage)}
+                        className={`w-full text-sm border rounded px-3 py-2 ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white file:bg-slate-600 file:border-0 file:text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                      {statsImage && (
+                        <div className="mt-2">
+                          <img src={statsImage} alt="Stats preview" className="w-full h-20 object-cover rounded border" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Background Image Upload with Opacity */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Background Image</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, setBackgroundImage)}
+                        className={`w-full text-sm border rounded px-3 py-2 mb-2 ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white file:bg-slate-600 file:border-0 file:text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                      <div className="mt-2">
+                        <label className="block text-xs font-medium text-gray-400 mb-1">Blur: {backgroundBlur}px</label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="20"
+                          step="1"
+                          value={backgroundBlur}
+                          onChange={(e) => setBackgroundBlur(parseInt(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+                      {backgroundImage && (
+                        <div className="mt-2">
+                          <img src={backgroundImage} alt="Background preview" className="w-full h-20 object-cover rounded border" style={{filter: `blur(${backgroundBlur}px)`}} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Character Image Upload */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Character Tab Image</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, setCharacterImage)}
+                        className={`w-full text-sm border rounded px-3 py-2 ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white file:bg-slate-600 file:border-0 file:text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                      {characterImage && (
+                        <div className="mt-2">
+                          <img src={characterImage} alt="Character preview" className="w-full h-20 object-cover rounded border" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
             </div>
@@ -2798,6 +3089,7 @@ export default function CharacterSheet() {
             {isDarkMode ? '☀️' : '🌙'}
           </div>
         </button>
+      </div>
       </div>
     </div>
   );
