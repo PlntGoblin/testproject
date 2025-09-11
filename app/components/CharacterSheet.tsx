@@ -2,6 +2,35 @@
 
 import { useState } from 'react';
 
+// D&D 5e Player's Handbook Classes
+const DND_CLASSES = [
+  'Barbarian',
+  'Bard', 
+  'Cleric',
+  'Druid',
+  'Fighter',
+  'Monk',
+  'Paladin',
+  'Ranger',
+  'Rogue',
+  'Sorcerer',
+  'Warlock',
+  'Wizard'
+];
+
+// D&D 5e Player's Handbook Races
+const DND_RACES = [
+  'Dragonborn',
+  'Dwarf',
+  'Elf',
+  'Gnome',
+  'Half-Elf',
+  'Half-Orc',
+  'Halfling',
+  'Human',
+  'Tiefling'
+];
+
 interface Character {
   name: string;
   class: string;
@@ -244,6 +273,26 @@ export default function CharacterSheet() {
     setCharacter(prev => ({ ...prev, ...updates }));
   };
 
+  // Helper functions for ability score calculations
+  const calculateRolledScore = (rolls: number[]): number => {
+    return rolls.sort((a, b) => b - a).slice(0, 3).reduce((sum, roll) => sum + roll, 0);
+  };
+
+  const getRacialBonus = (ability: string, race: string): number => {
+    const racialBonuses: { [key: string]: { [key: string]: number } } = {
+      'Human': { strength: 1, dexterity: 1, constitution: 1, intelligence: 1, wisdom: 1, charisma: 1 },
+      'Dwarf': { constitution: 2, wisdom: 1 },
+      'Elf': { dexterity: 2, intelligence: 1 },
+      'Halfling': { dexterity: 2, charisma: 1 },
+      'Dragonborn': { strength: 2, charisma: 1 },
+      'Gnome': { intelligence: 2, constitution: 1 },
+      'Half-Elf': { charisma: 2 }, // +1 to two others (will be handled separately)
+      'Half-Orc': { strength: 2, constitution: 1 },
+      'Tiefling': { intelligence: 1, charisma: 2 }
+    };
+    return racialBonuses[race]?.[ability] || 0;
+  };
+
   // Additional state for new Data tab fields
   const [hitPointRolls, setHitPointRolls] = useState<number[]>(Array(20).fill(0));
   const [additionalHPBonuses, setAdditionalHPBonuses] = useState(0);
@@ -252,6 +301,25 @@ export default function CharacterSheet() {
   const [currentHitDice, setCurrentHitDice] = useState(0);
   const [maxHitDice, setMaxHitDice] = useState(0);
   const [damageReduction, setDamageReduction] = useState(0);
+
+  // Ability Score Rolling Tracking
+  const [abilityScoreRolls, setAbilityScoreRolls] = useState({
+    strength: [0, 0, 0, 0],
+    dexterity: [0, 0, 0, 0],
+    constitution: [0, 0, 0, 0],
+    intelligence: [0, 0, 0, 0],
+    wisdom: [0, 0, 0, 0],
+    charisma: [0, 0, 0, 0]
+  });
+
+  // Feat/ASI Tracking (levels 4, 8, 12, 16, 19)
+  const [asiChoices, setAsiChoices] = useState({
+    level4: { type: 'ASI', abilityIncreases: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 }, featName: '' },
+    level8: { type: 'ASI', abilityIncreases: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 }, featName: '' },
+    level12: { type: 'ASI', abilityIncreases: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 }, featName: '' },
+    level16: { type: 'ASI', abilityIncreases: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 }, featName: '' },
+    level19: { type: 'ASI', abilityIncreases: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 }, featName: '' }
+  });
 
   // Fantasy Calendar State
   const [currentDate, setCurrentDate] = useState({
@@ -654,8 +722,10 @@ export default function CharacterSheet() {
               </div>
             </div>
 
-            {/* 4-Column Row */}
-            <div className="grid grid-cols-4 gap-4">
+            {/* Two 2-Column Blocks Side by Side */}
+            <div className="grid grid-cols-2 gap-8">
+              {/* Left Block: 2 Columns */}
+              <div className="grid grid-cols-2 gap-4">
               {/* Column 1: Saving Throws */}
               <div className="space-y-4">
                 <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
@@ -899,8 +969,231 @@ export default function CharacterSheet() {
               </div>
               </div>
 
+              {/* Weapons Box - Spans both columns (Passive and Health) */}
+              <div className={`col-span-2 p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <h3 className="text-lg font-semibold text-orange-400 mb-4">Weapons</h3>
+                <div className="space-y-3">
+                  {/* Column Headers */}
+                  <div className="grid gap-2 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600" style={{gridTemplateColumns: "2fr 0.6fr 0.4fr 1fr 0.8fr 0.7fr 1.2fr 0.6fr"}}>
+                    <div className="text-center">Name</div>
+                    <div className="text-center">Prof</div>
+                    <div className="text-center">Notch</div>
+                    <div className="text-center">Range</div>
+                    <div className="text-center">Ability</div>
+                    <div className="text-center">ATK Bon</div>
+                    <div className="text-center">Damage</div>
+                    <div className="text-center">Roll</div>
+                  </div>
+                  
+                  {character.weapons.map((weapon, index) => (
+                    <div key={index} className="grid gap-2 items-center text-sm" style={{gridTemplateColumns: "2fr 0.6fr 0.4fr 1fr 0.8fr 0.7fr 1.2fr 0.6fr"}}>
+                      {/* Name */}
+                      <div>
+                        <input
+                          type="text"
+                          value={weapon.name}
+                          onChange={(e) => {
+                            const newWeapons = [...character.weapons];
+                            newWeapons[index] = { ...weapon, name: e.target.value };
+                            updateCharacter({ weapons: newWeapons });
+                          }}
+                          className={`w-full border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="Weapon name"
+                        />
+                      </div>
+                      
+                      {/* Proficiency Checkbox */}
+                      <div className="flex justify-center">
+                        <input
+                          type="checkbox"
+                          checked={weapon.proficient}
+                          onChange={(e) => {
+                            const newWeapons = [...character.weapons];
+                            newWeapons[index] = { ...weapon, proficient: e.target.checked };
+                            updateCharacter({ weapons: newWeapons });
+                          }}
+                          className="w-3 h-3 accent-green-500 rounded focus:ring-1 focus:ring-green-400"
+                        />
+                      </div>
+                      
+                      {/* Notches */}
+                      <div>
+                        <input
+                          type="text"
+                          value={weapon.notches}
+                          onChange={(e) => {
+                            const newWeapons = [...character.weapons];
+                            newWeapons[index] = { ...weapon, notches: e.target.value };
+                            updateCharacter({ weapons: newWeapons });
+                          }}
+                          className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="+"
+                        />
+                      </div>
+                      
+                      {/* Range */}
+                      <div>
+                        <input
+                          type="text"
+                          value={weapon.range}
+                          onChange={(e) => {
+                            const newWeapons = [...character.weapons];
+                            newWeapons[index] = { ...weapon, range: e.target.value };
+                            updateCharacter({ weapons: newWeapons });
+                          }}
+                          className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="Range"
+                        />
+                      </div>
+                      
+                      {/* Ability */}
+                      <div>
+                        <input
+                          type="text"
+                          value={weapon.ability}
+                          onChange={(e) => {
+                            const newWeapons = [...character.weapons];
+                            newWeapons[index] = { ...weapon, ability: e.target.value };
+                            updateCharacter({ weapons: newWeapons });
+                          }}
+                          className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="STR"
+                        />
+                      </div>
+                      
+                      {/* ATK Bonus */}
+                      <div>
+                        <input
+                          type="text"
+                          value={weapon.atkBonus}
+                          onChange={(e) => {
+                            const newWeapons = [...character.weapons];
+                            newWeapons[index] = { ...weapon, atkBonus: e.target.value };
+                            updateCharacter({ weapons: newWeapons });
+                          }}
+                          className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="+0"
+                        />
+                      </div>
+                      
+                      {/* Damage */}
+                      <div>
+                        <input
+                          type="text"
+                          value={weapon.damage}
+                          onChange={(e) => {
+                            const newWeapons = [...character.weapons];
+                            newWeapons[index] = { ...weapon, damage: e.target.value };
+                            updateCharacter({ weapons: newWeapons });
+                          }}
+                          className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="1d6"
+                        />
+                      </div>
+                      
+                      {/* D20 Roll Button */}
+                      <div className="flex justify-center">
+                        <button
+                          onClick={() => {
+                            const d20Roll = Math.floor(Math.random() * 20) + 1;
+                            const atkBonus = parseInt(weapon.atkBonus.replace(/[^-\d]/g, '')) || 0;
+                            const totalAttack = d20Roll + atkBonus;
+                            
+                            // Parse damage (e.g., "1d6+2" or "1d8")
+                            const damageMatch = weapon.damage.match(/(\d+)d(\d+)([+-]\d+)?/);
+                            let damageRoll = 0;
+                            if (damageMatch) {
+                              const numDice = parseInt(damageMatch[1]);
+                              const dieSize = parseInt(damageMatch[2]);
+                              const bonus = parseInt(damageMatch[3]) || 0;
+                              
+                              for (let i = 0; i < numDice; i++) {
+                                damageRoll += Math.floor(Math.random() * dieSize) + 1;
+                              }
+                              damageRoll += bonus;
+                            }
+                            
+                            alert(`${weapon.name || 'Weapon'} Roll:\n\nAttack: d20(${d20Roll}) + ${atkBonus} = ${totalAttack}\nDamage: ${damageRoll > 0 ? damageRoll : 'Invalid damage format'}`);
+                          }}
+                          className="w-6 h-6 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors"
+                          style={{
+                            clipPath: 'polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)'
+                          }}
+                          title="Roll d20 attack and damage"
+                        >
+                          d20
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Add/Remove Weapon Buttons */}
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => {
+                        if (character.weapons.length < 5) {
+                          updateCharacter({
+                            weapons: [...character.weapons, {
+                              name: '',
+                              proficient: false,
+                              notches: '',
+                              range: '',
+                              ability: '',
+                              atkBonus: '',
+                              damage: ''
+                            }]
+                          });
+                        }
+                      }}
+                      disabled={character.weapons.length >= 5}
+                      className={`flex-1 py-1 px-3 text-xs rounded transition-colors ${
+                        character.weapons.length >= 5 
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                          : 'bg-orange-600 hover:bg-orange-700 text-white'
+                      }`}
+                      title={character.weapons.length >= 5 ? "Maximum 5 weapons allowed" : "Add weapon"}
+                    >
+                      {character.weapons.length >= 5 ? 'Max Weapons (5)' : 'Add Weapon'}
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        if (character.weapons.length > 2) {
+                          const newWeapons = character.weapons.slice(0, -1);
+                          updateCharacter({ weapons: newWeapons });
+                        }
+                      }}
+                      disabled={character.weapons.length <= 2}
+                      className={`flex-1 py-1 px-3 text-xs rounded transition-colors ${
+                        character.weapons.length <= 2 
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                          : 'bg-red-600 hover:bg-red-700 text-white'
+                      }`}
+                      title={character.weapons.length <= 2 ? "Cannot remove - minimum 2 weapons required" : "Remove last weapon"}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+              </div>
+              
+              {/* Right Block: 2 Columns */}
+              <div className="grid grid-cols-2 gap-4">
               {/* Column 3: Skills */}
-              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border relative self-start ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                 <div className="space-y-1 pb-8">
                   <div className="grid grid-cols-1 gap-1 text-xs">
                     {Object.entries(character.skills).map(([skill, data]) => {
@@ -1152,168 +1445,9 @@ export default function CharacterSheet() {
                 </div>
               </div>
               </div>
-              
-              {/* Weapons Section - Bottom Left (Columns 1-2) */}
-              <div className="col-span-2">
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                  <h3 className="text-lg font-semibold text-orange-400 mb-4">Weapons</h3>
-                  <div className="space-y-3">
-                    {/* Column Headers */}
-                    <div className="grid grid-cols-7 gap-2 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600">
-                      <div className="col-span-2 text-center">Name</div>
-                      <div className="text-center">Prof</div>
-                      <div className="text-center">Notches</div>
-                      <div className="text-center">Range</div>
-                      <div className="text-center">Ability</div>
-                      <div className="text-center">ATK Bon</div>
-                      <div className="text-center">Damage</div>
-                    </div>
-                    
-                    {character.weapons.map((weapon, index) => (
-                      <div key={index} className="grid grid-cols-7 gap-2 items-center text-sm">
-                        {/* Name */}
-                        <div className="col-span-2">
-                          <input
-                            type="text"
-                            value={weapon.name}
-                            onChange={(e) => {
-                              const newWeapons = [...character.weapons];
-                              newWeapons[index] = { ...weapon, name: e.target.value };
-                              updateCharacter({ weapons: newWeapons });
-                            }}
-                            className={`w-full border rounded px-2 py-1 text-xs ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                            placeholder="Weapon name"
-                          />
-                        </div>
-                        
-                        {/* Proficiency Checkbox */}
-                        <div className="flex justify-center">
-                          <input
-                            type="checkbox"
-                            checked={weapon.proficient}
-                            onChange={(e) => {
-                              const newWeapons = [...character.weapons];
-                              newWeapons[index] = { ...weapon, proficient: e.target.checked };
-                              updateCharacter({ weapons: newWeapons });
-                            }}
-                            className="w-3 h-3 accent-green-500 rounded focus:ring-1 focus:ring-green-400"
-                          />
-                        </div>
-                        
-                        {/* Notches */}
-                        <div>
-                          <input
-                            type="text"
-                            value={weapon.notches}
-                            onChange={(e) => {
-                              const newWeapons = [...character.weapons];
-                              newWeapons[index] = { ...weapon, notches: e.target.value };
-                              updateCharacter({ weapons: newWeapons });
-                            }}
-                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                            placeholder="+"
-                          />
-                        </div>
-                        
-                        {/* Range */}
-                        <div>
-                          <input
-                            type="text"
-                            value={weapon.range}
-                            onChange={(e) => {
-                              const newWeapons = [...character.weapons];
-                              newWeapons[index] = { ...weapon, range: e.target.value };
-                              updateCharacter({ weapons: newWeapons });
-                            }}
-                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                            placeholder="Range"
-                          />
-                        </div>
-                        
-                        {/* Ability */}
-                        <div>
-                          <input
-                            type="text"
-                            value={weapon.ability}
-                            onChange={(e) => {
-                              const newWeapons = [...character.weapons];
-                              newWeapons[index] = { ...weapon, ability: e.target.value };
-                              updateCharacter({ weapons: newWeapons });
-                            }}
-                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                            placeholder="STR"
-                          />
-                        </div>
-                        
-                        {/* ATK Bonus */}
-                        <div>
-                          <input
-                            type="text"
-                            value={weapon.atkBonus}
-                            onChange={(e) => {
-                              const newWeapons = [...character.weapons];
-                              newWeapons[index] = { ...weapon, atkBonus: e.target.value };
-                              updateCharacter({ weapons: newWeapons });
-                            }}
-                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                            placeholder="+0"
-                          />
-                        </div>
-                        
-                        {/* Damage */}
-                        <div>
-                          <input
-                            type="text"
-                            value={weapon.damage}
-                            onChange={(e) => {
-                              const newWeapons = [...character.weapons];
-                              newWeapons[index] = { ...weapon, damage: e.target.value };
-                              updateCharacter({ weapons: newWeapons });
-                            }}
-                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                            placeholder="1d6"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {/* Add Weapon Button */}
-                    <button
-                      onClick={() => updateCharacter({
-                        weapons: [...character.weapons, {
-                          name: '',
-                          proficient: false,
-                          notches: '',
-                          range: '',
-                          ability: '',
-                          atkBonus: '',
-                          damage: ''
-                        }]
-                      })}
-                      className="w-full mt-2 py-1 px-3 text-xs bg-orange-600 hover:bg-orange-700 text-white rounded transition-colors"
-                    >
-                      Add Weapon
-                    </button>
-                  </div>
-                </div>
               </div>
-              
-              {/* Empty columns 3-4 */}
-              <div></div>
-              <div></div>
             </div>
+            
           </div>
         )}
 
@@ -1339,14 +1473,19 @@ export default function CharacterSheet() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-1">Class</label>
-                      <input
-                        type="text"
+                      <select
                         value={character.class}
                         onChange={(e) => updateCharacter({ class: e.target.value })}
                         className={`w-full border rounded px-3 py-2 ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
-                      />
+                      >
+                        {DND_CLASSES.map((className) => (
+                          <option key={className} value={className}>
+                            {className}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-1">Level</label>
@@ -1363,14 +1502,19 @@ export default function CharacterSheet() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-1">Race</label>
-                      <input
-                        type="text"
+                      <select
                         value={character.race}
                         onChange={(e) => updateCharacter({ race: e.target.value })}
                         className={`w-full border rounded px-3 py-2 ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
-                      />
+                      >
+                        {DND_RACES.map((raceName) => (
+                          <option key={raceName} value={raceName}>
+                            {raceName}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-1">Background</label>
@@ -2420,7 +2564,7 @@ export default function CharacterSheet() {
                         </label>
                         <input
                           type="checkbox"
-                          checked={isChecked}
+                          checked={isChecked as boolean}
                           onChange={(e) => setInitiativeModifiers({
                             ...initiativeModifiers,
                             [modifier]: e.target.checked
@@ -2450,103 +2594,188 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
-              {/* Column 3: Carrying Size */}
+              {/* Column 3: Feat/ASI Choices */}
               <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-orange-400 mb-4">Carrying Size</h3>
-                <p className="text-sm text-gray-400 mb-4">Select the size you count as when determining carrying capacity.</p>
-                <select
-                  value={carryingSize}
-                  onChange={(e) => setCarryingSize(e.target.value)}
-                  className={`w-full border rounded px-3 py-2 ${
-                    isDarkMode
-                      ? 'bg-slate-700 border-slate-600 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  }`}
-                >
-                  <option value="Tiny">Tiny</option>
-                  <option value="Small">Small</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Large">Large</option>
-                  <option value="Huge">Huge</option>
-                  <option value="Gargantuan">Gargantuan</option>
-                </select>
+                <h3 className="text-xl font-semibold text-orange-400 mb-4">Feat/ASI Choices</h3>
+                <p className="text-xs text-gray-400 mb-4">Track your ability score improvements and feats by level.</p>
+                
+                <div className="space-y-4">
+                  {Object.entries(asiChoices).map(([levelKey, choice]) => (
+                    <div key={levelKey} className="border border-slate-600 rounded p-3">
+                      <h4 className="text-sm font-semibold text-white mb-2">Level {levelKey.replace('level', '')}</h4>
+                      
+                      <div className="space-y-2">
+                        {/* ASI/Feat Toggle */}
+                        <div className="flex items-center gap-4">
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name={`${levelKey}-type`}
+                              checked={choice.type === 'ASI'}
+                              onChange={() => {
+                                setAsiChoices(prev => ({
+                                  ...prev,
+                                  [levelKey]: { ...prev[levelKey as keyof typeof prev], type: 'ASI' }
+                                }));
+                              }}
+                              className="mr-1"
+                            />
+                            <span className="text-xs text-gray-300">ASI</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name={`${levelKey}-type`}
+                              checked={choice.type === 'Feat'}
+                              onChange={() => {
+                                setAsiChoices(prev => ({
+                                  ...prev,
+                                  [levelKey]: { ...prev[levelKey as keyof typeof prev], type: 'Feat' }
+                                }));
+                              }}
+                              className="mr-1"
+                            />
+                            <span className="text-xs text-gray-300">Feat</span>
+                          </label>
+                        </div>
+
+                        {choice.type === 'ASI' ? (
+                          <div className="grid grid-cols-3 gap-1">
+                            {Object.entries(choice.abilityIncreases).map(([ability, increase]) => (
+                              <label key={ability} className="flex items-center text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={increase > 0}
+                                  onChange={(e) => {
+                                    setAsiChoices(prev => ({
+                                      ...prev,
+                                      [levelKey]: {
+                                        ...prev[levelKey as keyof typeof prev],
+                                        abilityIncreases: {
+                                          ...prev[levelKey as keyof typeof prev].abilityIncreases,
+                                          [ability]: e.target.checked ? 1 : 0
+                                        }
+                                      }
+                                    }));
+                                  }}
+                                  className="mr-1 scale-75"
+                                />
+                                <span className="text-gray-300">{ability.slice(0, 3).toUpperCase()}</span>
+                              </label>
+                            ))}
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="Feat name..."
+                            value={choice.featName}
+                            onChange={(e) => {
+                              setAsiChoices(prev => ({
+                                ...prev,
+                                [levelKey]: { ...prev[levelKey as keyof typeof prev], featName: e.target.value }
+                              }));
+                            }}
+                            className={`w-full text-xs border rounded px-2 py-1 ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* Column 4: Calendar Settings */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-orange-400 mb-4">Calendar Settings</h3>
-                
-                {/* Current Date Display */}
-                <div className="text-center mb-6">
-                  <div className="text-lg font-bold text-orange-400 mb-2">
-                    {getOrdinalNumber(currentDate.day)} of {currentDate.season}
-                  </div>
-                  <div className="text-sm text-gray-300">
-                    {currentDate.year} Year of the Ivory
-                  </div>
-                </div>
+              {/* Column 4: Calendar & Carrying Size */}
+              <div className="space-y-6">
+                {/* Calendar Box */}
+                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                  <h3 className="text-lg font-semibold text-orange-400 mb-2">Calendar</h3>
+                  <p className="text-xs text-gray-400 mb-4">Set the current game date.</p>
+                  
+                  <div className="space-y-3">
+                    {/* Day and Year Inputs - Side by Side */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-300 mb-1">Day</label>
+                        <select
+                          value={currentDate.day}
+                          onChange={(e) => setCurrentDate({
+                            ...currentDate,
+                            day: parseInt(e.target.value)
+                          })}
+                          className={`w-full text-center text-sm border rounded px-2 py-1 ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                        >
+                          {Array.from({ length: getMaxDaysForSeason(currentDate.season) }, (_, i) => i + 1).map(day => (
+                            <option key={day} value={day}>
+                              {day}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-300 mb-1">Year</label>
+                        <input
+                          type="number"
+                          value={currentDate.year}
+                          onChange={(e) => setCurrentDate({
+                            ...currentDate,
+                            year: parseInt(e.target.value) || 4122
+                          })}
+                          className={`w-full text-center text-sm border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                        />
+                      </div>
+                    </div>
 
-                {/* Date Controls */}
-                <div className="space-y-4">
-                  {/* Day and Year Inputs - Side by Side */}
-                  <div className="grid grid-cols-2 gap-3">
+                    {/* Season Dropdown */}
                     <div>
-                      <label className="block text-xs font-bold text-white mb-1">Day</label>
+                      <label className="block text-xs font-medium text-gray-300 mb-1">Season</label>
                       <select
-                        value={currentDate.day}
+                        value={currentDate.season}
                         onChange={(e) => setCurrentDate({
                           ...currentDate,
-                          day: parseInt(e.target.value)
+                          season: e.target.value,
+                          day: Math.min(currentDate.day, getMaxDaysForSeason(e.target.value))
                         })}
-                        className={`w-full text-center text-sm border rounded px-2 py-1 ${
+                        className={`w-full text-sm border rounded px-2 py-1 ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       >
-                        {Array.from({ length: getMaxDaysForSeason(currentDate.season) }, (_, i) => i + 1).map(day => (
-                          <option key={day} value={day}>
-                            {getOrdinalNumber(day)}
+                        {seasons.map(season => (
+                          <option key={season.name} value={season.name}>
+                            {season.name}
                           </option>
                         ))}
                       </select>
                     </div>
-                    
-                    <div>
-                      <label className="block text-xs font-bold text-white mb-1">Year</label>
-                      <input
-                        type="number"
-                        value={currentDate.year}
-                        onChange={(e) => setCurrentDate({
-                          ...currentDate,
-                          year: parseInt(e.target.value) || 4122
-                        })}
-                        className={`w-full text-center text-sm border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
-                    </div>
                   </div>
+                </div>
 
-                  {/* Season Dropdown */}
-                  <div>
-                    <label className="block text-xs font-bold text-white mb-1">Season</label>
-                    <select
-                      value={currentDate.season}
-                      onChange={(e) => setCurrentDate({
-                        ...currentDate,
-                        season: e.target.value,
-                        day: Math.min(currentDate.day, getMaxDaysForSeason(e.target.value))
-                      })}
-                      className={`w-full text-sm border rounded px-2 py-1 ${
-                        isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      {seasons.map(season => (
-                        <option key={season.name} value={season.name}>
-                          {season.name} ({season.days} days)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                {/* Carrying Size Box */}
+                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                  <h3 className="text-lg font-semibold text-orange-400 mb-2">Carrying Size</h3>
+                  <p className="text-xs text-gray-400 mb-4">Select the size you count as when determining carrying capacity.</p>
+                  <select
+                    value={carryingSize}
+                    onChange={(e) => setCarryingSize(e.target.value)}
+                    className={`w-full border rounded px-3 py-2 ${
+                      isDarkMode
+                        ? 'bg-slate-700 border-slate-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="Tiny">Tiny</option>
+                    <option value="Small">Small</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Large">Large</option>
+                    <option value="Huge">Huge</option>
+                    <option value="Gargantuan">Gargantuan</option>
+                  </select>
                 </div>
               </div>
 
