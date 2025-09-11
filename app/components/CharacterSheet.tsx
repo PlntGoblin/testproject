@@ -1127,9 +1127,10 @@ export default function CharacterSheet() {
                             
                             alert(`${weapon.name || 'Weapon'} Roll:\n\nAttack: d20(${d20Roll}) + ${atkBonus} = ${totalAttack}\nDamage: ${damageRoll > 0 ? damageRoll : 'Invalid damage format'}`);
                           }}
-                          className="w-6 h-6 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors"
+                          className="w-6 h-6 bg-purple-600 hover:bg-purple-700 text-white font-bold transition-colors rounded-sm"
                           style={{
-                            clipPath: 'polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)'
+                            clipPath: 'polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)',
+                            fontSize: '0.64rem'
                           }}
                           title="Roll d20 attack and damage"
                         >
