@@ -214,7 +214,7 @@ export default function CharacterSheet() {
       ideals: 'Knowledge is power, and the key to all other forms of power.',
       bonds: 'The library where I learned to read was my sanctuary. I must protect it.',
       flaws: 'I overlook obvious solutions in favor of complicated ones.',
-      backstoryText: 'Elara grew up in the great library of Candlekeep, surrounded by ancient tomes and scrolls. Her thirst for knowledge led her to master the arcane arts at a young age. Now she travels the world, seeking lost magic and forgotten lore.',
+      backstoryText: 'Elara was raised in the shadowed halls of Candlekeep, where dust-laden tomes whispered secrets of forgotten ages. Surrounded by the endless hush of parchment and ink, she fed her restless hunger for knowledge until the arcane bent willingly to her will. The library became less a sanctuary and more a crucible, shaping her mind into a weapon of runes and power.\n\nNow she wanders the world, a silhouette against storm and moonlight, chasing the echoes of spells long buried. Her journey is not for riches nor fame, but for the shards of magic the world itself has tried to forget. Wherever she walks, shadows stir—and those who cross her path learn that knowledge, once unearthed, can be as dangerous as any blade.',
     },
     weapons: [
       {
@@ -279,6 +279,13 @@ export default function CharacterSheet() {
     setAmmunition(newAmmunition);
   };
 
+  const updateArmor = (section: keyof typeof armor, field: string, value: string) => {
+    setArmor(prev => ({
+      ...prev,
+      [section]: { ...prev[section], [field]: value }
+    }));
+  };
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, setImage: (value: string) => void) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -333,6 +340,13 @@ export default function CharacterSheet() {
     { name: '', weapon: '', amount: '' },
     { name: '', weapon: '', amount: '' }
   ]);
+
+  // Armor state
+  const [armor, setArmor] = useState({
+    armorType: { item: 'Studded Leather', karuta: 'Karuta (Studded Leather)', plus: '', notches: '' },
+    shieldType: { item: 'None', plus: '', notches: '' },
+    magicalAttire: { plus: '', notches: '' }
+  });
 
   // Image state
   const [statsImage, setStatsImage] = useState<string>('');
@@ -877,6 +891,60 @@ export default function CharacterSheet() {
                     <h3 className="text-sm font-bold text-gray-400">Passive</h3>
                   </div>
                 </div>
+
+                {/* Ammunition */}
+                <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                  <div className="pb-8 space-y-3">
+                    <div className="grid grid-cols-10 gap-1 text-xs font-bold text-white mb-2">
+                      <div className="col-span-3 text-center">Name</div>
+                      <div className="col-span-4 text-center">Corr. Weapon</div>
+                      <div className="col-span-3 text-center">Dice/Qty</div>
+                    </div>
+                    {ammunition.map((ammo, index) => (
+                      <div key={index} className="grid grid-cols-10 gap-1">
+                        <input
+                          type="text"
+                          value={ammo.name}
+                          onChange={(e) => updateAmmunition(index, 'name', e.target.value)}
+                          className={`col-span-3 text-center border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="Ammo name"
+                        />
+                        <input
+                          type="text"
+                          value={ammo.weapon}
+                          onChange={(e) => updateAmmunition(index, 'weapon', e.target.value)}
+                          className={`col-span-4 text-center border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="Weapon"
+                        />
+                        <select
+                          value={ammo.amount}
+                          onChange={(e) => updateAmmunition(index, 'amount', e.target.value)}
+                          className={`col-span-3 text-center border rounded px-2 py-1 text-xs appearance-none ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          style={{
+                            backgroundImage: 'none'
+                          }}
+                        >
+                          <option value="">Select Die</option>
+                          <option value="d4">d4</option>
+                          <option value="d6">d6</option>
+                          <option value="d8">d8</option>
+                          <option value="d10">d10</option>
+                          <option value="d12">d12</option>
+                          <option value="d20">d20</option>
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-400">Ammunition</h3>
+                  </div>
+                </div>
               </div>
 
               {/* Column 2: Combat Stats and Health */}
@@ -1340,8 +1408,142 @@ export default function CharacterSheet() {
                   <h3 className="text-sm font-bold text-gray-400">Weapons</h3>
                 </div>
               </div>
+
+              {/* Armor Box - Spans both columns (Passive and Health) */}
+              <div className={`col-span-2 p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className="space-y-4 pb-8">
+
+                  {/* Armor Type Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-24 text-xs font-semibold text-gray-400">Armor Type</div>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <div className="w-32 text-xs font-semibold text-gray-400 text-center">Item</div>
+                        <div className="w-12 text-xs font-semibold text-gray-400 text-center">+</div>
+                        <div className="w-16 text-xs font-semibold text-gray-400 text-center">Notches</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-24 text-xs">Studded Leather</div>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <input
+                          type="text"
+                          value={armor.armorType.karuta}
+                          onChange={(e) => updateArmor('armorType', 'karuta', e.target.value)}
+                          className={`w-32 border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="Karuta (Studded Leather)"
+                        />
+                        <input
+                          type="text"
+                          value={armor.armorType.plus}
+                          onChange={(e) => updateArmor('armorType', 'plus', e.target.value)}
+                          className={`w-12 text-center border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="+"
+                        />
+                        <input
+                          type="text"
+                          value={armor.armorType.notches}
+                          onChange={(e) => updateArmor('armorType', 'notches', e.target.value)}
+                          className={`w-16 text-center border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="Notches"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Shield Type Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-24 text-xs font-semibold text-gray-400">Shield Type</div>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <div className="w-32 text-xs font-semibold text-gray-400 text-center">Item</div>
+                        <div className="w-12 text-xs font-semibold text-gray-400 text-center">+</div>
+                        <div className="w-16 text-xs font-semibold text-gray-400 text-center">Notches</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-24 text-xs">None</div>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <input
+                          type="text"
+                          value={armor.shieldType.item}
+                          onChange={(e) => updateArmor('shieldType', 'item', e.target.value)}
+                          className={`w-32 border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder=""
+                        />
+                        <input
+                          type="text"
+                          value={armor.shieldType.plus}
+                          onChange={(e) => updateArmor('shieldType', 'plus', e.target.value)}
+                          className={`w-12 text-center border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="+"
+                        />
+                        <input
+                          type="text"
+                          value={armor.shieldType.notches}
+                          onChange={(e) => updateArmor('shieldType', 'notches', e.target.value)}
+                          className={`w-16 text-center border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="Notches"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Magical Attire Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-24 text-xs font-semibold text-gray-400">Magical Attire</div>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <div className="w-32"></div>
+                        <div className="w-12 text-xs font-semibold text-gray-400 text-center">+</div>
+                        <div className="w-16 text-xs font-semibold text-gray-400 text-center">Notches</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-24"></div>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <div className="w-32"></div>
+                        <input
+                          type="text"
+                          value={armor.magicalAttire.plus}
+                          onChange={(e) => updateArmor('magicalAttire', 'plus', e.target.value)}
+                          className={`w-12 text-center border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="+"
+                        />
+                        <input
+                          type="text"
+                          value={armor.magicalAttire.notches}
+                          onChange={(e) => updateArmor('magicalAttire', 'notches', e.target.value)}
+                          className={`w-16 text-center border rounded px-2 py-1 text-xs ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="Notches"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-400">Armor</h3>
+                </div>
               </div>
-              
+              </div>
+
               {/* Right Block: 2 Columns */}
               <div className="grid grid-cols-2 gap-4">
               {/* Column 3: Skills and Ammunition */}
@@ -1379,59 +1581,6 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
-              {/* Ammunition */}
-              <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <div className="pb-8 space-y-3">
-                  <div className="grid grid-cols-10 gap-1 text-xs font-bold text-white mb-2">
-                    <div className="col-span-3 text-center">Name</div>
-                    <div className="col-span-4 text-center">Corr. Weapon</div>
-                    <div className="col-span-3 text-center">Dice/Qty</div>
-                  </div>
-                  {ammunition.map((ammo, index) => (
-                    <div key={index} className="grid grid-cols-10 gap-1">
-                      <input
-                        type="text"
-                        value={ammo.name}
-                        onChange={(e) => updateAmmunition(index, 'name', e.target.value)}
-                        className={`col-span-3 text-center border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                        placeholder="Ammo name"
-                      />
-                      <input
-                        type="text"
-                        value={ammo.weapon}
-                        onChange={(e) => updateAmmunition(index, 'weapon', e.target.value)}
-                        className={`col-span-4 text-center border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                        placeholder="Weapon"
-                      />
-                      <select
-                        value={ammo.amount}
-                        onChange={(e) => updateAmmunition(index, 'amount', e.target.value)}
-                        className={`col-span-3 text-center border rounded px-2 py-1 text-xs appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                        style={{
-                          backgroundImage: 'none'
-                        }}
-                      >
-                        <option value="">Select Die</option>
-                        <option value="d4">d4</option>
-                        <option value="d6">d6</option>
-                        <option value="d8">d8</option>
-                        <option value="d10">d10</option>
-                        <option value="d12">d12</option>
-                        <option value="d20">d20</option>
-                      </select>
-                    </div>
-                  ))}
-                </div>
-                <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <h3 className="text-sm font-bold text-gray-400">Ammunition</h3>
-                </div>
-              </div>
               </div>
 
               {/* Column 4: Current Date and Survival Conditions */}
@@ -1671,140 +1820,216 @@ export default function CharacterSheet() {
 
         {/* Character Tab */}
         {activeTab === 'Character' && (
-          <div className="space-y-8">
-            {/* Character Details */}
-            <div className="grid grid-cols-2 gap-6">
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-orange-400 mb-4">Character Details</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Name</label>
-                    <input
-                      type="text"
-                      value={character.name}
-                      onChange={(e) => updateCharacter({ name: e.target.value })}
-                      className={`w-full border rounded px-3 py-2 ${
-                        isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
+          <div className={`min-h-screen p-8 font-serif ${isDarkMode ? 'bg-slate-900 text-stone-200' : 'bg-stone-100 text-stone-800'}`}>
+            {/* Decorative Header */}
+            <div className={`text-center border-b-2 border-t-2 py-6 ${isDarkMode ? 'border-orange-400' : 'border-stone-400'}`}>
+              <div className="mb-3">
+                <textarea
+                  value={character.backstory.personalityTraits || "I am eager to learn new things and ask many questions. I speak in metaphors and parables."}
+                  onChange={(e) => updateCharacter({
+                    backstory: { ...character.backstory, personalityTraits: e.target.value }
+                  })}
+                  className={`w-full bg-transparent italic text-lg text-center border-none outline-none resize-none ${isDarkMode ? 'text-stone-300' : 'text-stone-600'} placeholder-stone-400`}
+                  placeholder="Character description..."
+                  rows={2}
+                />
+              </div>
+              <h1 className="text-6xl font-extrabold tracking-wider mb-4 font-serif">
+                {character.name.toUpperCase() || 'CHARACTER NAME'}
+              </h1>
+              <div className={`py-1 px-8 inline-block rounded shadow-lg ${isDarkMode ? 'bg-orange-600 text-white' : 'bg-red-700 text-white'}`}>
+                <input
+                  type="text"
+                  value={character.name}
+                  onChange={(e) => updateCharacter({ name: e.target.value })}
+                  className="bg-transparent font-semibold text-lg text-center border-none outline-none text-white placeholder-white/70"
+                  placeholder="Full Character Name"
+                />
+              </div>
+            </div>
+
+            {/* Bio + Character Image Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mt-12">
+              {/* Bio Text and Profile Details */}
+              <div className="md:col-span-2 space-y-8">
+                {/* Bio Text */}
+                <div className="leading-relaxed text-sm space-y-3">
+                  <div className="prose prose-sm max-w-none">
+                    <textarea
+                      value={character.backstory.backstoryText ||
+                       `Elara was raised in the shadowed halls of Candlekeep, where dust-laden tomes whispered secrets of forgotten ages. Surrounded by the endless hush of parchment and ink, she fed her restless hunger for knowledge until the arcane bent willingly to her will. The library became less a sanctuary and more a crucible, shaping her mind into a weapon of runes and power.\n\nNow she wanders the world, a silhouette against storm and moonlight, chasing the echoes of spells long buried. Her journey is not for riches nor fame, but for the shards of magic the world itself has tried to forget. Wherever she walks, shadows stir—and those who cross her path learn that knowledge, once unearthed, can be as dangerous as any blade.\n\nIdeals: Knowledge is power, and the key to all other forms of power.\n\nBonds: The library where I learned to read was my sanctuary. I must protect it.\n\nFlaws: I overlook obvious solutions in favor of complicated ones.`}
+                      onChange={(e) => updateCharacter({
+                        backstory: { ...character.backstory, backstoryText: e.target.value }
+                      })}
+                      className={`w-full bg-transparent border-none outline-none resize-none leading-relaxed text-sm ${isDarkMode ? 'text-stone-200' : 'text-stone-800'} placeholder-stone-400`}
+                      placeholder="Character backstory..."
+                      rows={12}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Class</label>
-                      <select
-                        value={character.class}
-                        onChange={(e) => updateCharacter({ class: e.target.value })}
-                        className={`w-full border rounded px-3 py-2 ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      >
-                        {DND_CLASSES.map((className) => (
-                          <option key={className} value={className}>
-                            {className}
-                          </option>
-                        ))}
-                      </select>
+                </div>
+
+                {/* Profile Details Section */}
+                <div className={`border-2 p-6 rounded-lg shadow-xl ${isDarkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-stone-300'}`}>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="space-y-2">
+                      <p><span className="font-bold">Full Name:</span> {character.name}</p>
+                      <p><span className="font-bold">Class:</span> {character.class}</p>
+                      <p><span className="font-bold">Level:</span> {character.level}</p>
+                      <p><span className="font-bold">Race:</span> {character.race}</p>
+                      <p><span className="font-bold">Background:</span> {character.background}</p>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Level</label>
-                      <input
-                        type="number"
-                        value={character.level}
-                        onChange={(e) => updateCharacter({ level: parseInt(e.target.value) || 1 })}
-                        className={`w-full border rounded px-3 py-2 ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
+
+                    <div className="space-y-2">
+                      <p><span className="font-bold">Alignment:</span> {character.alignment}</p>
+                      <p><span className="font-bold">Experience:</span> {character.experiencePoints.toLocaleString()} XP</p>
+                      <p><span className="font-bold">Proficiency:</span> +{character.proficiencyBonus}</p>
+                      <p><span className="font-bold">Armor Class:</span> {character.armorClass}</p>
+                      <p><span className="font-bold">Hit Points:</span> {character.hitPoints.current}/{character.hitPoints.maximum}</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Race</label>
-                      <select
-                        value={character.race}
-                        onChange={(e) => updateCharacter({ race: e.target.value })}
-                        className={`w-full border rounded px-3 py-2 ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      >
-                        {DND_RACES.map((raceName) => (
-                          <option key={raceName} value={raceName}>
-                            {raceName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Background</label>
-                      <input
-                        type="text"
-                        value={character.background}
-                        onChange={(e) => updateCharacter({ background: e.target.value })}
-                        className={`w-full border rounded px-3 py-2 ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
+
+                  {/* Ability Scores Radar Chart */}
+                  <div className="mt-6 pt-4 border-t border-stone-300">
+                    <h3 className={`font-bold text-lg mb-3 text-center ${isDarkMode ? 'text-orange-400' : 'text-stone-700'}`}>
+                      Ability Scores
+                    </h3>
+                    <div className="flex justify-center">
+                      <div className="w-80 h-80 relative">
+                        <svg viewBox="0 0 320 320" className="w-full h-full">
+                          {/* Background circles */}
+                          {[1, 2, 3, 4, 5].map((level) => (
+                            <circle
+                              key={level}
+                              cx="160"
+                              cy="160"
+                              r={level * 30}
+                              fill="none"
+                              stroke={isDarkMode ? '#475569' : '#d1d5db'}
+                              strokeWidth="1"
+                              opacity="0.3"
+                            />
+                          ))}
+
+                          {/* Grid lines */}
+                          {Object.entries(character.abilityScores).map(([ability, score], index) => {
+                            const angle = (index * 60 - 90) * (Math.PI / 180);
+                            const x2 = 160 + Math.cos(angle) * 150;
+                            const y2 = 160 + Math.sin(angle) * 150;
+
+                            return (
+                              <line
+                                key={ability}
+                                x1="160"
+                                y1="160"
+                                x2={x2}
+                                y2={y2}
+                                stroke={isDarkMode ? '#475569' : '#d1d5db'}
+                                strokeWidth="1"
+                                opacity="0.3"
+                              />
+                            );
+                          })}
+
+                          {/* Data polygon */}
+                          <polygon
+                            points={Object.entries(character.abilityScores).map(([ability, score], index) => {
+                              const normalizedScore = Math.min(score, 20) * 7.5; // Scale 1-20 to 0-150 radius
+                              const angle = (index * 60 - 90) * (Math.PI / 180);
+                              const x = 160 + Math.cos(angle) * normalizedScore;
+                              const y = 160 + Math.sin(angle) * normalizedScore;
+                              return `${x},${y}`;
+                            }).join(' ')}
+                            fill={isDarkMode ? 'rgba(249, 115, 22, 0.2)' : 'rgba(239, 68, 68, 0.2)'}
+                            stroke={isDarkMode ? '#f97316' : '#ef4444'}
+                            strokeWidth="2"
+                          />
+
+                          {/* Data points */}
+                          {Object.entries(character.abilityScores).map(([ability, score], index) => {
+                            const normalizedScore = Math.min(score, 20) * 7.5;
+                            const angle = (index * 60 - 90) * (Math.PI / 180);
+                            const x = 160 + Math.cos(angle) * normalizedScore;
+                            const y = 160 + Math.sin(angle) * normalizedScore;
+
+                            return (
+                              <circle
+                                key={ability}
+                                cx={x}
+                                cy={y}
+                                r="4"
+                                fill={isDarkMode ? '#f97316' : '#ef4444'}
+                              />
+                            );
+                          })}
+
+                          {/* Labels */}
+                          {Object.entries(character.abilityScores).map(([ability, score], index) => {
+                            const angle = (index * 60 - 90) * (Math.PI / 180);
+                            const labelX = 160 + Math.cos(angle) * 170;
+                            const labelY = 160 + Math.sin(angle) * 170;
+                            const modifier = Math.floor((score - 10) / 2);
+
+                            return (
+                              <g key={ability}>
+                                <text
+                                  x={labelX}
+                                  y={labelY - 5}
+                                  textAnchor="middle"
+                                  className={`text-xs font-semibold ${isDarkMode ? 'fill-stone-200' : 'fill-stone-800'}`}
+                                >
+                                  {ability.slice(0, 3).toUpperCase()}
+                                </text>
+                                <text
+                                  x={labelX}
+                                  y={labelY + 8}
+                                  textAnchor="middle"
+                                  className={`text-sm font-bold ${isDarkMode ? 'fill-orange-400' : 'fill-red-600'}`}
+                                >
+                                  {score}
+                                </text>
+                                <text
+                                  x={labelX}
+                                  y={labelY + 20}
+                                  textAnchor="middle"
+                                  className={`text-xs ${isDarkMode ? 'fill-stone-400' : 'fill-stone-600'}`}
+                                >
+                                  {modifier >= 0 ? '+' : ''}{modifier}
+                                </text>
+                              </g>
+                            );
+                          })}
+
+                          {/* Value scale indicators */}
+                          <text x="170" y="40" className={`text-xs ${isDarkMode ? 'fill-stone-400' : 'fill-stone-600'}`}>20</text>
+                          <text x="170" y="70" className={`text-xs ${isDarkMode ? 'fill-stone-400' : 'fill-stone-600'}`}>15</text>
+                          <text x="170" y="100" className={`text-xs ${isDarkMode ? 'fill-stone-400' : 'fill-stone-600'}`}>10</text>
+                          <text x="170" y="130" className={`text-xs ${isDarkMode ? 'fill-stone-400' : 'fill-stone-600'}`}>5</text>
+                        </svg>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Character Backstory */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-orange-400 mb-4">Character Backstory</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Personality Traits</label>
-                    <textarea
-                      value={character.backstory.personalityTraits}
-                      onChange={(e) => updateCharacter({
-                        backstory: { ...character.backstory, personalityTraits: e.target.value }
-                      })}
-                      rows={2}
-                      className={`w-full border rounded px-3 py-2 ${
-                        isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
+              {/* Character Illustration - Full Height */}
+              <div className="flex justify-center items-start">
+                <div className={`rounded-lg shadow-2xl overflow-hidden border-4 w-full ${isDarkMode ? 'border-orange-400 bg-slate-800' : 'border-stone-300 bg-white'}`}>
+                  {characterImage ? (
+                    <img
+                      src={characterImage}
+                      alt="Character portrait"
+                      className="w-full h-full object-cover min-h-[600px]"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Ideals</label>
-                    <textarea
-                      value={character.backstory.ideals}
-                      onChange={(e) => updateCharacter({
-                        backstory: { ...character.backstory, ideals: e.target.value }
-                      })}
-                      rows={2}
-                      className={`w-full border rounded px-3 py-2 ${
-                        isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Bonds</label>
-                    <textarea
-                      value={character.backstory.bonds}
-                      onChange={(e) => updateCharacter({
-                        backstory: { ...character.backstory, bonds: e.target.value }
-                      })}
-                      rows={2}
-                      className={`w-full border rounded px-3 py-2 ${
-                        isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Flaws</label>
-                    <textarea
-                      value={character.backstory.flaws}
-                      onChange={(e) => updateCharacter({
-                        backstory: { ...character.backstory, flaws: e.target.value }
-                      })}
-                      rows={2}
-                      className={`w-full border rounded px-3 py-2 ${
-                        isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    />
-                  </div>
+                  ) : (
+                    <div className={`w-full h-[600px] flex items-center justify-center ${isDarkMode ? 'bg-slate-700 text-stone-400' : 'bg-stone-200 text-stone-500'}`}>
+                      <div className="text-center">
+                        <div className="text-6xl mb-4">🎭</div>
+                        <p className="text-sm">Character Portrait</p>
+                        <p className="text-xs mt-2">Upload image in Data tab</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2595,8 +2820,8 @@ export default function CharacterSheet() {
             <div className="grid grid-cols-4 gap-6">
               
               {/* Column 1: Hit Points */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-orange-400 mb-4">Hit Points</h3>
+              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <h3 className="text-lg font-semibold text-orange-400 mb-2">Hit Points</h3>
                 
                 {/* HP Levels 1-10 and 11-20 in two columns */}
                 <div className="mb-4">
@@ -2813,48 +3038,49 @@ export default function CharacterSheet() {
               </div>
 
               {/* Column 3: Feat/ASI Choices */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-xl font-semibold text-orange-400 mb-4">Feat/ASI Choices</h3>
+              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <h3 className="text-lg font-semibold text-orange-400 mb-2">Feat/ASI Choices</h3>
                 <p className="text-xs text-gray-400 mb-4">Track your ability score improvements and feats by level.</p>
                 
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {Object.entries(asiChoices).map(([levelKey, choice]) => (
-                    <div key={levelKey} className="border border-slate-600 rounded p-3">
-                      <h4 className="text-sm font-semibold text-white mb-2">Level {levelKey.replace('level', '')}</h4>
-                      
-                      <div className="space-y-2">
-                        {/* ASI/Feat Toggle */}
-                        <div className="flex items-center gap-4">
-                          <label className="flex items-center">
-                            <input
-                              type="radio"
-                              name={`${levelKey}-type`}
-                              checked={choice.type === 'ASI'}
-                              onChange={() => {
-                                setAsiChoices(prev => ({
-                                  ...prev,
-                                  [levelKey]: { ...prev[levelKey as keyof typeof prev], type: 'ASI' }
-                                }));
-                              }}
-                              className="mr-1"
-                            />
-                            <span className="text-xs text-gray-300">ASI</span>
-                          </label>
-                          <label className="flex items-center">
-                            <input
-                              type="radio"
-                              name={`${levelKey}-type`}
-                              checked={choice.type === 'Feat'}
-                              onChange={() => {
-                                setAsiChoices(prev => ({
-                                  ...prev,
-                                  [levelKey]: { ...prev[levelKey as keyof typeof prev], type: 'Feat' }
-                                }));
-                              }}
-                              className="mr-1"
-                            />
-                            <span className="text-xs text-gray-300">Feat</span>
-                          </label>
+                    <div key={levelKey} className="border border-slate-600 rounded p-2">
+                      <div className="space-y-1">
+                        {/* Level and ASI/Feat Toggle on same row */}
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-white">Level {levelKey.replace('level', '')}</h4>
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center">
+                              <input
+                                type="radio"
+                                name={`${levelKey}-type`}
+                                checked={choice.type === 'ASI'}
+                                onChange={() => {
+                                  setAsiChoices(prev => ({
+                                    ...prev,
+                                    [levelKey]: { ...prev[levelKey as keyof typeof prev], type: 'ASI' }
+                                  }));
+                                }}
+                                className="mr-1"
+                              />
+                              <span className="text-xs text-gray-300">ASI</span>
+                            </label>
+                            <label className="flex items-center">
+                              <input
+                                type="radio"
+                                name={`${levelKey}-type`}
+                                checked={choice.type === 'Feat'}
+                                onChange={() => {
+                                  setAsiChoices(prev => ({
+                                    ...prev,
+                                    [levelKey]: { ...prev[levelKey as keyof typeof prev], type: 'Feat' }
+                                  }));
+                                }}
+                                className="mr-1"
+                              />
+                              <span className="text-xs text-gray-300">Feat</span>
+                            </label>
+                          </div>
                         </div>
 
                         {choice.type === 'ASI' ? (
@@ -3004,15 +3230,20 @@ export default function CharacterSheet() {
                   <div className="space-y-4">
                     {/* Stats Image Upload */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Stats Page Image</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(e, setStatsImage)}
-                        className={`w-full text-sm border rounded px-3 py-2 ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white file:bg-slate-600 file:border-0 file:text-white' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-gray-300">Stats Page Image</label>
+                        <label className={`cursor-pointer px-3 py-1 text-xs rounded border transition-colors ${
+                          isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
+                        }`}>
+                          Choose Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, setStatsImage)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
                       {statsImage && (
                         <div className="mt-2">
                           <img src={statsImage} alt="Stats preview" className="w-full h-20 object-cover rounded border" />
@@ -3022,15 +3253,20 @@ export default function CharacterSheet() {
 
                     {/* Background Image Upload with Opacity */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Background Image</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(e, setBackgroundImage)}
-                        className={`w-full text-sm border rounded px-3 py-2 mb-2 ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white file:bg-slate-600 file:border-0 file:text-white' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-gray-300">Background Image</label>
+                        <label className={`cursor-pointer px-3 py-1 text-xs rounded border transition-colors ${
+                          isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
+                        }`}>
+                          Choose Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, setBackgroundImage)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
                       <div className="mt-2">
                         <label className="block text-xs font-medium text-gray-400 mb-1">Blur: {backgroundBlur}px</label>
                         <input
@@ -3052,15 +3288,20 @@ export default function CharacterSheet() {
 
                     {/* Character Image Upload */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Character Tab Image</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(e, setCharacterImage)}
-                        className={`w-full text-sm border rounded px-3 py-2 ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white file:bg-slate-600 file:border-0 file:text-white' : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-gray-300">Character Tab Image</label>
+                        <label className={`cursor-pointer px-3 py-1 text-xs rounded border transition-colors ${
+                          isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
+                        }`}>
+                          Choose Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, setCharacterImage)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
                       {characterImage && (
                         <div className="mt-2">
                           <img src={characterImage} alt="Character preview" className="w-full h-20 object-cover rounded border" />
