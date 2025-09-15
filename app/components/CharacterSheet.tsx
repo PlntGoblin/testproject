@@ -493,7 +493,7 @@ export default function CharacterSheet() {
     localStorage.setItem('dnd-asi-choices', JSON.stringify(asiChoices));
   }, [asiChoices]);
 
-  // Save images to localStorage
+  // Save images to localStorage with error handling
   useEffect(() => {
     const images = {
       statsImage,
@@ -501,7 +501,28 @@ export default function CharacterSheet() {
       characterImage,
       backgroundBlur
     };
-    localStorage.setItem('dnd-images', JSON.stringify(images));
+
+    try {
+      const imageData = JSON.stringify(images);
+      // Check if the data size is too large (approximate check)
+      if (imageData.length > 5000000) { // 5MB limit
+        console.warn('Image data too large for localStorage, skipping save');
+        // Clear previous saved images if they exist
+        localStorage.removeItem('dnd-images');
+        return;
+      }
+      localStorage.setItem('dnd-images', imageData);
+    } catch (error) {
+      if (error instanceof DOMException && error.code === DOMException.QUOTA_EXCEEDED_ERR) {
+        console.warn('localStorage quota exceeded, clearing image data');
+        // Clear all images from localStorage to free up space
+        localStorage.removeItem('dnd-images');
+        // Optionally notify user
+        alert('Image storage limit exceeded. Please use smaller images or fewer images.');
+      } else {
+        console.warn('Failed to save images to localStorage:', error);
+      }
+    }
   }, [statsImage, backgroundImage, characterImage, backgroundBlur]);
 
   // Fantasy Calendar System
@@ -582,22 +603,33 @@ export default function CharacterSheet() {
             </div>
           </div>
         );
-      case 1: // Day - Yellow sun with centered glow effect
+      case 1: // Day - Yellow sun with animated glow effect
         return (
           <div className={iconStyle} onClick={cycleWeather}>
             <div className="relative w-full h-full flex items-center justify-center">
-              <div className="w-10 h-10 bg-yellow-400 rounded-full animate-pulse" 
+              {/* Animated background glow */}
+              <div className="absolute w-16 h-16 rounded-full animate-pulse"
                    style={{
-                     boxShadow: '0 0 20px 8px rgba(251, 191, 36, 0.6)'
+                     background: 'radial-gradient(circle, rgba(251, 191, 36, 0.4) 0%, rgba(251, 191, 36, 0.2) 40%, transparent 70%)'
                    }}></div>
+              {/* Solid sun circle */}
+              <div className="relative w-10 h-10 bg-yellow-400 rounded-full shadow-lg"></div>
             </div>
           </div>
         );
-      case 2: // Evening - Orange/red sun
+      case 2: // Evening - Orange/red sun with horizon line
         return (
           <div className={iconStyle} onClick={cycleWeather}>
-            <div className="relative w-full h-full flex items-center justify-center">
-              <div className="w-10 h-10 bg-orange-500 rounded-full animate-pulse shadow-xl shadow-orange-500/50"></div>
+            <div className="relative w-full h-full">
+              {/* Animated background glow */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full animate-pulse"
+                   style={{
+                     background: 'radial-gradient(circle, rgba(249, 115, 22, 0.4) 0%, rgba(249, 115, 22, 0.2) 40%, rgba(251, 146, 60, 0.1) 70%, transparent 100%)'
+                   }}></div>
+              {/* Solid sun circle - positioned to be partially covered by horizon */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-orange-500 rounded-full shadow-lg"></div>
+              {/* Horizon line covering bottom third */}
+              <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-b from-gray-600 via-gray-700/50 to-transparent"></div>
             </div>
           </div>
         );
@@ -619,49 +651,65 @@ export default function CharacterSheet() {
             </div>
           </div>
         );
-      case 4: // Rainy - Fluffy cloud with rain
+      case 4: // Rainy - Storm cloud with rain
         return (
           <div className={iconStyle} onClick={cycleWeather}>
             <div className="relative w-full h-full">
-              {/* Fluffy Cloud */}
-              <div className="absolute top-2 left-1/2 transform -translate-x-1/2">
-                {/* Main cloud body */}
-                <div className="w-12 h-6 bg-gray-400 rounded-full relative">
-                  {/* Cloud puffs */}
-                  <div className="absolute -left-2 top-0 w-5 h-5 bg-gray-400 rounded-full"></div>
-                  <div className="absolute -right-2 top-0 w-5 h-5 bg-gray-400 rounded-full"></div>
-                  <div className="absolute left-1 -top-2 w-4 h-4 bg-gray-300 rounded-full"></div>
-                  <div className="absolute right-1 -top-2 w-4 h-4 bg-gray-300 rounded-full"></div>
-                  <div className="absolute left-3 -top-3 w-6 h-6 bg-gray-300 rounded-full"></div>
-                  <div className="absolute left-0 top-2 w-3 h-3 bg-gray-500 rounded-full"></div>
-                  <div className="absolute right-0 top-2 w-3 h-3 bg-gray-500 rounded-full"></div>
+              {/* Storm Cloud */}
+              <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
+                {/* Main cloud body - darker for storm */}
+                <div className="w-14 h-7 bg-gray-600 rounded-full relative shadow-lg">
+                  {/* Cloud layers for depth */}
+                  <div className="absolute -left-3 top-1 w-6 h-6 bg-gray-700 rounded-full"></div>
+                  <div className="absolute -right-3 top-1 w-6 h-6 bg-gray-700 rounded-full"></div>
+                  <div className="absolute left-2 -top-2 w-5 h-5 bg-gray-500 rounded-full"></div>
+                  <div className="absolute right-2 -top-2 w-5 h-5 bg-gray-500 rounded-full"></div>
+                  <div className="absolute left-4 -top-3 w-7 h-7 bg-gray-600 rounded-full"></div>
+                  {/* Highlights for dimensionality */}
+                  <div className="absolute left-1 top-0 w-3 h-2 bg-gray-400 rounded-full opacity-60"></div>
+                  <div className="absolute right-1 top-0 w-3 h-2 bg-gray-400 rounded-full opacity-60"></div>
                 </div>
               </div>
-              {/* Rain drops */}
-              <div className="absolute top-8 left-6 w-0.5 h-4 bg-blue-300 animate-pulse"></div>
-              <div className="absolute top-9 left-8 w-0.5 h-3 bg-blue-300 animate-pulse" style={{animationDelay: '0.3s'}}></div>
-              <div className="absolute top-8 left-10 w-0.5 h-4 bg-blue-300 animate-pulse" style={{animationDelay: '0.6s'}}></div>
-              <div className="absolute top-10 left-7 w-0.5 h-3 bg-blue-300 animate-pulse" style={{animationDelay: '0.9s'}}></div>
+              {/* Rain drops - more realistic */}
+              <div className="absolute top-8 left-5 w-0.5 h-5 bg-blue-400 rounded-full animate-pulse transform rotate-12"></div>
+              <div className="absolute top-9 left-7 w-0.5 h-4 bg-blue-500 rounded-full animate-pulse transform rotate-6" style={{animationDelay: '0.2s'}}></div>
+              <div className="absolute top-8 left-9 w-0.5 h-5 bg-blue-400 rounded-full animate-pulse transform -rotate-6" style={{animationDelay: '0.4s'}}></div>
+              <div className="absolute top-10 left-6 w-0.5 h-3 bg-blue-500 rounded-full animate-pulse transform rotate-12" style={{animationDelay: '0.6s'}}></div>
+              <div className="absolute top-8 left-11 w-0.5 h-4 bg-blue-400 rounded-full animate-pulse transform -rotate-12" style={{animationDelay: '0.8s'}}></div>
+              <div className="absolute top-11 left-8 w-0.5 h-3 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
             </div>
           </div>
         );
-      case 5: // Snowy - Cloud with snow
+      case 5: // Snowy - Fluffy snow cloud
         return (
           <div className={iconStyle} onClick={cycleWeather}>
             <div className="relative w-full h-full">
-              {/* Cloud */}
-              <div className="absolute top-2 left-1/2 transform -translate-x-1/2">
-                <div className="w-12 h-6 bg-gray-300 rounded-full relative">
-                  <div className="absolute -left-1 top-1 w-4 h-4 bg-gray-300 rounded-full"></div>
-                  <div className="absolute -right-1 top-1 w-4 h-4 bg-gray-300 rounded-full"></div>
+              {/* Snow Cloud - Light and fluffy */}
+              <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
+                <div className="w-13 h-7 bg-gray-200 rounded-full relative shadow-md">
+                  {/* Cloud puffs for fluffy appearance */}
+                  <div className="absolute -left-2 top-1 w-5 h-5 bg-gray-100 rounded-full"></div>
+                  <div className="absolute -right-2 top-1 w-5 h-5 bg-gray-100 rounded-full"></div>
+                  <div className="absolute left-1 -top-2 w-4 h-4 bg-white rounded-full opacity-90"></div>
+                  <div className="absolute right-1 -top-2 w-4 h-4 bg-white rounded-full opacity-90"></div>
+                  <div className="absolute left-3 -top-3 w-6 h-6 bg-gray-100 rounded-full"></div>
+                  <div className="absolute right-3 -top-3 w-6 h-6 bg-gray-100 rounded-full"></div>
+                  {/* Additional fluffy bits */}
+                  <div className="absolute left-0 top-2 w-3 h-3 bg-gray-200 rounded-full"></div>
+                  <div className="absolute right-0 top-2 w-3 h-3 bg-gray-200 rounded-full"></div>
+                  {/* Light highlights */}
+                  <div className="absolute left-2 top-0 w-2 h-1 bg-white rounded-full opacity-80"></div>
+                  <div className="absolute right-2 top-0 w-2 h-1 bg-white rounded-full opacity-80"></div>
                 </div>
               </div>
-              {/* Snow flakes */}
-              <div className="absolute top-8 left-5 w-1 h-1 bg-white rounded-full animate-bounce"></div>
-              <div className="absolute top-10 left-7 w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-              <div className="absolute top-9 left-9 w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
-              <div className="absolute top-11 left-6 w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '0.6s'}}></div>
-              <div className="absolute top-8 left-10 w-1 h-1 bg-white rounded-full animate-bounce" style={{animationDelay: '0.8s'}}></div>
+              {/* Snowflakes - more detailed */}
+              <div className="absolute top-8 left-4 text-white text-xs animate-bounce">❄</div>
+              <div className="absolute top-10 left-6 text-white text-xs animate-bounce" style={{animationDelay: '0.3s'}}>❅</div>
+              <div className="absolute top-9 left-8 text-white text-xs animate-bounce" style={{animationDelay: '0.6s'}}>❄</div>
+              <div className="absolute top-11 left-5 text-white text-xs animate-bounce" style={{animationDelay: '0.9s'}}>❅</div>
+              <div className="absolute top-8 left-10 text-white text-xs animate-bounce" style={{animationDelay: '1.2s'}}>❄</div>
+              <div className="absolute top-12 left-7 text-white text-xs animate-bounce" style={{animationDelay: '1.5s'}}>❅</div>
+              <div className="absolute top-10 left-9 text-white text-xs animate-bounce" style={{animationDelay: '1.8s'}}>❄</div>
             </div>
           </div>
         );
@@ -784,18 +832,36 @@ export default function CharacterSheet() {
     { item: '', bulk: 0, location: '' }
   ]);
 
-  const itemTypes = ['Armor', 'Weapon', 'Shield', 'Tool', 'Wondrous Item', 'Potion', 'Scroll', 'Ring', 'Wand', 'Staff', 'Rod'];
+  const itemTypes = ['Armor', 'Ammunition', 'Attire', 'Ring', 'Shield', 'Weapon', 'Spell Focus'];
 
   const addEquippedItem = () => {
     setEquippedItems([...equippedItems, { type: '', item: '', itemBonus: '', range: '', notches: '', valueSP: 0, bulk: 0, reqAtt: false }]);
+  };
+
+  const removeEquippedItem = () => {
+    if (equippedItems.length > 1) {
+      setEquippedItems(equippedItems.slice(0, -1));
+    }
   };
 
   const addInventoryItem = () => {
     setInventoryItems([...inventoryItems, { item: '', details: '', amount: 0, valueSP: 0, bulk: 0 }]);
   };
 
+  const removeInventoryItem = () => {
+    if (inventoryItems.length > 1) {
+      setInventoryItems(inventoryItems.slice(0, -1));
+    }
+  };
+
   const addExternalStorageItem = () => {
     setExternalStorage([...externalStorage, { item: '', bulk: 0, location: '' }]);
+  };
+
+  const removeExternalStorageItem = () => {
+    if (externalStorage.length > 1) {
+      setExternalStorage(externalStorage.slice(0, -1));
+    }
   };
 
   const unlockAttunementSlot = (slotNumber: number) => {
@@ -2793,10 +2859,10 @@ export default function CharacterSheet() {
 
             </div>
 
-            {/* Equipment Sections - 3 Column Layout with narrower External Storage */}
-            <div className="grid gap-6" style={{gridTemplateColumns: '1fr 1fr 0.7fr'}}>
-              
-              {/* Left Column: Equipped Items + Attuned Items */}
+            {/* Equipment Sections - 2 Column Layout */}
+            <div className="grid gap-6" style={{gridTemplateColumns: '1fr 1.15fr'}}>
+
+              {/* Left Column: Equipped Items + External Storage + Attuned Items */}
               <div className="space-y-6">
                 
                 {/* 1. Equipped Items */}
@@ -2819,26 +2885,22 @@ export default function CharacterSheet() {
                         {equippedItems.map((equippedItem, index) => (
                           <tr key={index} className="border-b border-slate-600">
                             <td className="py-1">
-                              {index === 0 ? (
-                                <span className="text-gray-300">Armor</span>
-                              ) : (
-                                <select
-                                  value={equippedItem.type}
-                                  onChange={(e) => {
-                                    const newItems = [...equippedItems];
-                                    newItems[index].type = e.target.value;
-                                    setEquippedItems(newItems);
-                                  }}
-                                  className={`w-full text-xs border rounded px-1 ${
-                                    isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                                  }`}
-                                >
-                                  <option value="">-</option>
-                                  {itemTypes.map(type => (
-                                    <option key={type} value={type}>{type}</option>
-                                  ))}
-                                </select>
-                              )}
+                              <select
+                                value={equippedItem.type}
+                                onChange={(e) => {
+                                  const newItems = [...equippedItems];
+                                  newItems[index].type = e.target.value;
+                                  setEquippedItems(newItems);
+                                }}
+                                className={`w-full text-xs border rounded px-1 ${
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                }`}
+                              >
+                                <option value="">-</option>
+                                {itemTypes.map(type => (
+                                  <option key={type} value={type}>{type}</option>
+                                ))}
+                              </select>
                             </td>
                             <td className="py-1">
                               <input
@@ -2944,18 +3006,122 @@ export default function CharacterSheet() {
                       </tbody>
                     </table>
                   </div>
-                  <button
-                    onClick={addEquippedItem}
-                    className="w-full mt-2 mb-8 bg-green-500 hover:bg-green-600 text-white text-xs font-medium py-1 px-2 rounded transition-colors"
-                  >
-                    Add Item
-                  </button>
+                  <div className="flex gap-2 mt-2 mb-8">
+                    <button
+                      onClick={addEquippedItem}
+                      className="w-3/5 py-1 px-3 text-xs rounded transition-colors bg-green-500 hover:bg-green-600 text-white"
+                    >
+                      Add Item
+                    </button>
+
+                    <button
+                      onClick={removeEquippedItem}
+                      disabled={equippedItems.length <= 1}
+                      className={`w-2/5 py-1 px-3 text-xs rounded transition-colors ${
+                        equippedItems.length <= 1
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : 'bg-red-800 hover:bg-red-900 text-white'
+                      }`}
+                      title={equippedItems.length <= 1 ? "Cannot remove - minimum 1 item required" : "Remove last item"}
+                    >
+                      Remove
+                    </button>
+                  </div>
                   <div className="absolute bottom-2 left-0 right-0 text-center">
                     <h3 className="text-sm font-bold text-gray-400">Equipped Items</h3>
                   </div>
                 </div>
 
-                {/* 2. Attuned Items */}
+                {/* 2. External Storage */}
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-600">
+                          <th className="text-left py-1">Item</th>
+                          <th className="text-center py-1 w-10">Bulk</th>
+                          <th className="text-left py-1">Location</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {externalStorage.map((storageItem, index) => (
+                          <tr key={index} className="border-b border-slate-600">
+                            <td className="py-1">
+                              <input
+                                type="text"
+                                value={storageItem.item}
+                                onChange={(e) => {
+                                  const newItems = [...externalStorage];
+                                  newItems[index].item = e.target.value;
+                                  setExternalStorage(newItems);
+                                }}
+                                className={`w-full text-xs border rounded px-1 ${
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                }`}
+                              />
+                            </td>
+                            <td className="py-1">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value={storageItem.bulk}
+                                onChange={(e) => {
+                                  const newItems = [...externalStorage];
+                                  newItems[index].bulk = parseFloat(e.target.value) || 0;
+                                  setExternalStorage(newItems);
+                                }}
+                                className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                }`}
+                              />
+                            </td>
+                            <td className="py-1">
+                              <input
+                                type="text"
+                                value={storageItem.location}
+                                onChange={(e) => {
+                                  const newItems = [...externalStorage];
+                                  newItems[index].location = e.target.value;
+                                  setExternalStorage(newItems);
+                                }}
+                                className={`w-full text-xs border rounded px-1 ${
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                }`}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex gap-2 mt-2 mb-8">
+                    <button
+                      onClick={addExternalStorageItem}
+                      className="w-3/5 py-1 px-3 text-xs rounded transition-colors bg-green-500 hover:bg-green-600 text-white"
+                    >
+                      Add Item
+                    </button>
+
+                    <button
+                      onClick={removeExternalStorageItem}
+                      disabled={externalStorage.length <= 1}
+                      className={`w-2/5 py-1 px-3 text-xs rounded transition-colors ${
+                        externalStorage.length <= 1
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : 'bg-red-800 hover:bg-red-900 text-white'
+                      }`}
+                      title={externalStorage.length <= 1 ? "Cannot remove - minimum 1 item required" : "Remove last item"}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-400">External Storage</h3>
+                  </div>
+                </div>
+
+                {/* 3. Attuned Items */}
                 <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
@@ -3039,7 +3205,7 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
-              {/* Center Column: Inventory */}
+              {/* Right Column: Inventory */}
               <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
@@ -3047,9 +3213,9 @@ export default function CharacterSheet() {
                       <tr className="border-b border-slate-600">
                         <th className="text-left py-1 w-32">Item</th>
                         <th className="text-left py-1">Details</th>
-                        <th className="text-center py-1 w-12">Amount</th>
-                        <th className="text-center py-1 w-12">SP</th>
-                        <th className="text-center py-1 w-12">Bulk</th>
+                        <th className="text-center py-1 w-10">Amount</th>
+                        <th className="text-center py-1 w-10">SP</th>
+                        <th className="text-center py-1 w-10">Bulk</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3135,90 +3301,32 @@ export default function CharacterSheet() {
                     </tbody>
                   </table>
                 </div>
-                <button
-                  onClick={addInventoryItem}
-                  className="w-full mt-2 mb-8 bg-green-500 hover:bg-green-600 text-white text-xs font-medium py-1 px-2 rounded transition-colors"
-                >
-                  Add Item
-                </button>
+                <div className="flex gap-2 mt-2 mb-8">
+                  <button
+                    onClick={addInventoryItem}
+                    className="w-3/5 py-1 px-3 text-xs rounded transition-colors bg-green-500 hover:bg-green-600 text-white"
+                  >
+                    Add Item
+                  </button>
+
+                  <button
+                    onClick={removeInventoryItem}
+                    disabled={inventoryItems.length <= 1}
+                    className={`w-2/5 py-1 px-3 text-xs rounded transition-colors ${
+                      inventoryItems.length <= 1
+                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        : 'bg-red-800 hover:bg-red-900 text-white'
+                    }`}
+                    title={inventoryItems.length <= 1 ? "Cannot remove - minimum 1 item required" : "Remove last item"}
+                  >
+                    Remove
+                  </button>
+                </div>
                 <div className="absolute bottom-2 left-0 right-0 text-center">
                   <h3 className="text-sm font-bold text-gray-400">Inventory</h3>
                 </div>
               </div>
 
-              {/* Right Column: External Storage */}
-              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-600">
-                        <th className="text-left py-1">Item</th>
-                        <th className="text-center py-1 w-12">Bulk</th>
-                        <th className="text-left py-1">Location</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {externalStorage.map((storageItem, index) => (
-                        <tr key={index} className="border-b border-slate-600">
-                          <td className="py-1">
-                            <input
-                              type="text"
-                              value={storageItem.item}
-                              onChange={(e) => {
-                                const newItems = [...externalStorage];
-                                newItems[index].item = e.target.value;
-                                setExternalStorage(newItems);
-                              }}
-                              className={`w-full text-xs border rounded px-1 ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                              }`}
-                            />
-                          </td>
-                          <td className="py-1">
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.1"
-                              value={storageItem.bulk}
-                              onChange={(e) => {
-                                const newItems = [...externalStorage];
-                                newItems[index].bulk = parseFloat(e.target.value) || 0;
-                                setExternalStorage(newItems);
-                              }}
-                              className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                              }`}
-                            />
-                          </td>
-                          <td className="py-1">
-                            <input
-                              type="text"
-                              value={storageItem.location}
-                              onChange={(e) => {
-                                const newItems = [...externalStorage];
-                                newItems[index].location = e.target.value;
-                                setExternalStorage(newItems);
-                              }}
-                              className={`w-full text-xs border rounded px-1 ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                              }`}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <button
-                  onClick={addExternalStorageItem}
-                  className="w-full mt-2 mb-8 bg-green-500 hover:bg-green-600 text-white text-xs font-medium py-1 px-2 rounded transition-colors"
-                >
-                  Add Item
-                </button>
-                <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <h3 className="text-sm font-bold text-gray-400">External Storage</h3>
-                </div>
-              </div>
 
             </div>
 
