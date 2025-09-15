@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // D&D 5e Player's Handbook Classes
 const DND_CLASSES = [
@@ -31,6 +31,27 @@ const DND_RACES = [
   'Tiefling'
 ];
 
+// D&D 5e Alignments
+const DND_ALIGNMENTS = [
+  'Lawful Good',
+  'Neutral Good',
+  'Chaotic Good',
+  'Lawful Neutral',
+  'True Neutral',
+  'Chaotic Neutral',
+  'Lawful Evil',
+  'Neutral Evil',
+  'Chaotic Evil'
+];
+
+// Gender Options
+const GENDER_OPTIONS = [
+  'Male',
+  'Female',
+  'Non-binary',
+  'Other'
+];
+
 interface Character {
   name: string;
   class: string;
@@ -38,6 +59,18 @@ interface Character {
   background: string;
   alignment: string;
   level: number;
+  trueName: string;
+  age: string;
+  raceGender: string;
+  gender: string;
+  mantra: string;
+  birthplace: string;
+  family: string;
+  physique: string;
+  likes: string;
+  dislikes: string;
+  flaws: string;
+  nicknames: string;
   experiencePoints: number;
   hitPoints: {
     current: number;
@@ -216,6 +249,18 @@ export default function CharacterSheet() {
       flaws: 'I overlook obvious solutions in favor of complicated ones.',
       backstoryText: 'Elara was raised in the shadowed halls of Candlekeep, where dust-laden tomes whispered secrets of forgotten ages. Surrounded by the endless hush of parchment and ink, she fed her restless hunger for knowledge until the arcane bent willingly to her will. The library became less a sanctuary and more a crucible, shaping her mind into a weapon of runes and power.\n\nNow she wanders the world, a silhouette against storm and moonlight, chasing the echoes of spells long buried. Her journey is not for riches nor fame, but for the shards of magic the world itself has tried to forget. Wherever she walks, shadows stir—and those who cross her path learn that knowledge, once unearthed, can be as dangerous as any blade.',
     },
+    trueName: 'Marcille Donato',
+    age: '50 years old',
+    raceGender: 'Half-Elf / Female',
+    gender: 'Female',
+    mantra: 'Knowledge is the greatest treasure',
+    birthplace: 'Northern Continent',
+    family: 'Mother',
+    physique: 'Height, roughly 160cm',
+    likes: 'Seafood, nuts',
+    dislikes: 'Any sort of weird food',
+    flaws: '',
+    nicknames: '',
     weapons: [
       {
         name: 'Quarterstaff',
@@ -382,6 +427,82 @@ export default function CharacterSheet() {
 
   // Weather State
   const [currentWeather, setCurrentWeather] = useState(0); // 0=morning, 1=day, 2=evening, 3=night, 4=rainy, 5=snowy
+
+  // Load character data from localStorage on component mount
+  useEffect(() => {
+    const savedCharacter = localStorage.getItem('dnd-character-data');
+    const savedActiveTab = localStorage.getItem('dnd-active-tab');
+    const savedDarkMode = localStorage.getItem('dnd-dark-mode');
+    const savedAsiChoices = localStorage.getItem('dnd-asi-choices');
+    const savedImages = localStorage.getItem('dnd-images');
+
+    if (savedCharacter) {
+      try {
+        setCharacter(JSON.parse(savedCharacter));
+      } catch (error) {
+        console.warn('Failed to load character data from localStorage:', error);
+      }
+    }
+
+    if (savedActiveTab) {
+      setActiveTab(savedActiveTab);
+    }
+
+    if (savedDarkMode) {
+      setIsDarkMode(JSON.parse(savedDarkMode));
+    }
+
+    if (savedAsiChoices) {
+      try {
+        setAsiChoices(JSON.parse(savedAsiChoices));
+      } catch (error) {
+        console.warn('Failed to load ASI choices from localStorage:', error);
+      }
+    }
+
+    if (savedImages) {
+      try {
+        const images = JSON.parse(savedImages);
+        if (images.statsImage) setStatsImage(images.statsImage);
+        if (images.backgroundImage) setBackgroundImage(images.backgroundImage);
+        if (images.characterImage) setCharacterImage(images.characterImage);
+        if (images.backgroundBlur !== undefined) setBackgroundBlur(images.backgroundBlur);
+      } catch (error) {
+        console.warn('Failed to load images from localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Save character data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('dnd-character-data', JSON.stringify(character));
+  }, [character]);
+
+  // Save active tab to localStorage
+  useEffect(() => {
+    localStorage.setItem('dnd-active-tab', activeTab);
+  }, [activeTab]);
+
+  // Save dark mode preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('dnd-dark-mode', JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
+
+  // Save ASI choices to localStorage
+  useEffect(() => {
+    localStorage.setItem('dnd-asi-choices', JSON.stringify(asiChoices));
+  }, [asiChoices]);
+
+  // Save images to localStorage
+  useEffect(() => {
+    const images = {
+      statsImage,
+      backgroundImage,
+      characterImage,
+      backgroundBlur
+    };
+    localStorage.setItem('dnd-images', JSON.stringify(images));
+  }, [statsImage, backgroundImage, characterImage, backgroundBlur]);
 
   // Fantasy Calendar System
   const seasons = [
@@ -744,11 +865,10 @@ export default function CharacterSheet() {
                   {/* Character Portrait */}
                   <div className="w-24 h-24 bg-slate-700 rounded-lg border-2 border-slate-600 flex items-center justify-center overflow-hidden">
                     {statsImage ? (
-                      <img 
-                        src={statsImage} 
-                        alt="Character portrait" 
+                      <img
+                        src={statsImage}
+                        alt="Character portrait"
                         className="w-full h-full object-cover"
-                        style={{filter: `blur(${backgroundBlur}px)`}}
                       />
                     ) : (
                       <span className="text-lg text-gray-400">IMG</span>
@@ -1548,36 +1668,107 @@ export default function CharacterSheet() {
               <div className="grid grid-cols-2 gap-4">
               {/* Column 3: Skills and Ammunition */}
               <div className="space-y-4">
-              {/* Skills */}
+              {/* Editable Skills */}
               <div className={`p-4 rounded-lg border relative self-start ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <div className="space-y-1 pb-8">
-                  <div className="grid grid-cols-1 gap-1 text-xs">
-                    {Object.entries(character.skills).map(([skill, data]) => {
-                      const abilityMap: { [key: string]: keyof typeof character.abilityScores } = {
-                        'Acrobatics': 'dexterity', 'Animal Handling': 'wisdom', 'Arcana': 'intelligence',
-                        'Athletics': 'strength', 'Deception': 'charisma', 'History': 'intelligence',
-                        'Insight': 'wisdom', 'Intimidation': 'charisma', 'Investigation': 'intelligence',
-                        'Medicine': 'wisdom', 'Nature': 'intelligence', 'Perception': 'wisdom',
-                        'Performance': 'charisma', 'Persuasion': 'charisma', 'Religion': 'intelligence',
-                        'Sleight of Hand': 'dexterity', 'Stealth': 'dexterity', 'Survival': 'wisdom'
-                      };
-                      const modifier = getSkillModifier(skill, abilityMap[skill]);
-                      return (
-                        <div key={skill} className="flex items-center justify-between py-0.5 transform transition-all duration-200 hover:scale-105">
-                          <div className="flex items-center">
-                            <div className={`w-2 h-2 rounded-full mr-2 ${
-                              data.expertise ? 'bg-yellow-400' : data.proficient ? 'bg-green-400' : 'bg-gray-600'
-                            }`}></div>
-                            <span>{skill}</span>
-                          </div>
-                          <span className="font-mono">{modifier >= 0 ? '+' : ''}{modifier}</span>
+                <div className="space-y-1 text-xs pb-8">
+                  {Object.entries({
+                    'Acrobatics': 'dexterity', 'Animal Handling': 'wisdom', 'Arcana': 'intelligence',
+                    'Athletics': 'strength', 'Deception': 'charisma', 'History': 'intelligence',
+                    'Insight': 'wisdom', 'Intimidation': 'charisma', 'Investigation': 'intelligence',
+                    'Medicine': 'wisdom', 'Nature': 'intelligence', 'Perception': 'wisdom',
+                    'Performance': 'charisma', 'Persuasion': 'charisma', 'Religion': 'intelligence',
+                    'Sleight of Hand': 'dexterity', 'Stealth': 'dexterity', 'Survival': 'wisdom'
+                  }).map(([skill, ability]) => {
+                    const skillData = character.skills[skill] || { proficient: false, expertise: false };
+                    const modifier = getSkillModifier(skill, ability as keyof typeof character.abilityScores);
+                    const abilityMod = getModifier(character.abilityScores[ability as keyof typeof character.abilityScores]);
+
+                    return (
+                      <div key={skill} className="flex items-center gap-2 hover:bg-opacity-50 hover:bg-gray-600 rounded px-1 py-0.5">
+                        {/* Proficiency Checkbox - Blue Square */}
+                        <div
+                          onClick={() => {
+                            const newSkills = {
+                              ...character.skills,
+                              [skill]: {
+                                ...skillData,
+                                proficient: !skillData.proficient,
+                                expertise: !skillData.proficient ? false : skillData.expertise
+                              }
+                            };
+                            updateCharacter({ skills: newSkills });
+                          }}
+                          className={`w-4 h-4 border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                            skillData.proficient
+                              ? 'bg-blue-600 border-blue-600 shadow-sm'
+                              : 'border-blue-600 bg-transparent hover:border-blue-400'
+                          }`}
+                        >
+                          {skillData.proficient && (
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
+
+                        {/* Expertise Checkbox - Orange Circle */}
+                        <div
+                          onClick={() => {
+                            if (skillData.proficient) {
+                              const newSkills = {
+                                ...character.skills,
+                                [skill]: { ...skillData, expertise: !skillData.expertise }
+                              };
+                              updateCharacter({ skills: newSkills });
+                            }
+                          }}
+                          className={`w-4 h-4 border-2 rounded-full transition-all duration-200 flex items-center justify-center ${
+                            skillData.proficient
+                              ? skillData.expertise
+                                ? 'bg-orange-500 border-orange-500 shadow-sm cursor-pointer'
+                                : 'border-orange-500 bg-transparent hover:border-orange-400 cursor-pointer'
+                              : 'border-gray-400 bg-gray-300 opacity-40 cursor-not-allowed'
+                          }`}
+                        >
+                          {skillData.expertise && skillData.proficient && (
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          )}
+                        </div>
+
+                        {/* Skill Name */}
+                        <div className={`flex-1 ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>
+                          {skill}
+                        </div>
+
+                        {/* Modifier Display */}
+                        <div className={`w-8 text-center font-mono text-xs border rounded ${
+                          isDarkMode ? 'border-slate-600 bg-slate-700' : 'border-gray-300 bg-gray-50'
+                        }`}>
+                          {modifier >= 0 ? '+' : ''}{modifier}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <h3 className="text-sm font-bold text-gray-400">Skills</h3>
+
+                {/* Legend */}
+                <div className={`absolute bottom-2 left-0 right-0 px-4 ${isDarkMode ? 'text-stone-400' : 'text-stone-600'}`}>
+                  <div className="flex items-center justify-center gap-4 text-xs opacity-60">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 border-2 border-blue-600 bg-blue-600 flex items-center justify-center">
+                        <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <span>Prof</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 border-2 border-orange-500 rounded-full bg-orange-500 flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                      </div>
+                      <span>Exp</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1835,15 +2026,15 @@ export default function CharacterSheet() {
                 />
               </div>
               <h1 className="text-6xl font-extrabold tracking-wider mb-4 font-serif">
-                {character.name.toUpperCase() || 'CHARACTER NAME'}
+                {character.trueName?.toUpperCase() || 'CHARACTER NAME'}
               </h1>
-              <div className={`py-1 px-8 inline-block rounded shadow-lg ${isDarkMode ? 'bg-orange-600 text-white' : 'bg-red-700 text-white'}`}>
+              <div className={`py-1 px-3 inline-block rounded shadow-lg ${isDarkMode ? 'bg-orange-600 text-white' : 'bg-red-700 text-white'}`}>
                 <input
                   type="text"
-                  value={character.name}
-                  onChange={(e) => updateCharacter({ name: e.target.value })}
+                  value={character.mantra || 'Knowledge is the greatest treasure'}
+                  onChange={(e) => updateCharacter({ mantra: e.target.value })}
                   className="bg-transparent font-semibold text-lg text-center border-none outline-none text-white placeholder-white/70"
-                  placeholder="Full Character Name"
+                  placeholder="Character mantra or quote"
                 />
               </div>
             </div>
@@ -1872,30 +2063,184 @@ export default function CharacterSheet() {
                 <div className={`border-2 p-6 rounded-lg shadow-xl ${isDarkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-stone-300'}`}>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="space-y-2">
-                      <p><span className="font-bold">Full Name:</span> {character.name}</p>
-                      <p><span className="font-bold">Class:</span> {character.class}</p>
-                      <p><span className="font-bold">Level:</span> {character.level}</p>
-                      <p><span className="font-bold">Race:</span> {character.race}</p>
-                      <p><span className="font-bold">Background:</span> {character.background}</p>
+                    <div className="space-y-3">
+                      {/* True Name */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">True Name:</span>
+                        <input
+                          type="text"
+                          value={character.trueName || 'Marcille Donato'}
+                          onChange={(e) => updateCharacter({ trueName: e.target.value })}
+                          className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
+                        />
+                      </div>
+
+                      {/* Age */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Age:</span>
+                        <input
+                          type="text"
+                          value={character.age || '50 years old'}
+                          onChange={(e) => updateCharacter({ age: e.target.value })}
+                          className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
+                        />
+                      </div>
+
+                      {/* Race */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Race:</span>
+                        <select
+                          value={character.race}
+                          onChange={(e) => updateCharacter({ race: e.target.value })}
+                          className={`flex-1 outline-none ${isDarkMode ? 'bg-slate-800 text-stone-200' : 'bg-stone-50 text-stone-800'}`}
+                        >
+                          {DND_RACES.map(race => (
+                            <option key={race} value={race}>{race}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Gender */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Gender:</span>
+                        <select
+                          value={character.gender || 'Female'}
+                          onChange={(e) => updateCharacter({ gender: e.target.value })}
+                          className={`flex-1 outline-none ${isDarkMode ? 'bg-slate-800 text-stone-200' : 'bg-stone-50 text-stone-800'}`}
+                        >
+                          {GENDER_OPTIONS.map(gender => (
+                            <option key={gender} value={gender}>{gender}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Birthplace */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Birthplace:</span>
+                        <input
+                          type="text"
+                          value={character.birthplace || 'Northern Continent'}
+                          onChange={(e) => updateCharacter({ birthplace: e.target.value })}
+                          className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
+                        />
+                      </div>
+
+                      {/* Family */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Family:</span>
+                        <input
+                          type="text"
+                          value={character.family || 'Mother'}
+                          onChange={(e) => updateCharacter({ family: e.target.value })}
+                          className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
+                        />
+                      </div>
+
+                      {/* Physique */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Physique:</span>
+                        <input
+                          type="text"
+                          value={character.physique || 'Height, roughly 160cm'}
+                          onChange={(e) => updateCharacter({ physique: e.target.value })}
+                          className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
+                        />
+                      </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <p><span className="font-bold">Alignment:</span> {character.alignment}</p>
-                      <p><span className="font-bold">Experience:</span> {character.experiencePoints.toLocaleString()} XP</p>
-                      <p><span className="font-bold">Proficiency:</span> +{character.proficiencyBonus}</p>
-                      <p><span className="font-bold">Armor Class:</span> {character.armorClass}</p>
-                      <p><span className="font-bold">Hit Points:</span> {character.hitPoints.current}/{character.hitPoints.maximum}</p>
+                    <div className="space-y-3">
+                      {/* Likes */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Likes:</span>
+                        <input
+                          type="text"
+                          value={character.likes || 'Seafood, nuts'}
+                          onChange={(e) => updateCharacter({ likes: e.target.value })}
+                          className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
+                        />
+                      </div>
+
+                      {/* Dislikes */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Dislikes:</span>
+                        <input
+                          type="text"
+                          value={character.dislikes || 'Any sort of weird food'}
+                          onChange={(e) => updateCharacter({ dislikes: e.target.value })}
+                          className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
+                        />
+                      </div>
+
+                      {/* Flaws */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Flaws:</span>
+                        <input
+                          type="text"
+                          value={character.flaws || ''}
+                          onChange={(e) => updateCharacter({ flaws: e.target.value })}
+                          className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
+                          placeholder="Character flaws..."
+                        />
+                      </div>
+
+                      {/* Nicknames */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Nicknames:</span>
+                        <input
+                          type="text"
+                          value={character.nicknames || ''}
+                          onChange={(e) => updateCharacter({ nicknames: e.target.value })}
+                          className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
+                          placeholder="Character nicknames..."
+                        />
+                      </div>
+
+                      {/* Alignment */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Alignment:</span>
+                        <select
+                          value={character.alignment}
+                          onChange={(e) => updateCharacter({ alignment: e.target.value })}
+                          className={`flex-1 outline-none ${isDarkMode ? 'bg-slate-800 text-stone-200' : 'bg-stone-50 text-stone-800'}`}
+                        >
+                          {DND_ALIGNMENTS.map(alignment => (
+                            <option key={alignment} value={alignment}>{alignment}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Background */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Background:</span>
+                        <input
+                          type="text"
+                          value={character.background}
+                          onChange={(e) => updateCharacter({ background: e.target.value })}
+                          className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
+                        />
+                      </div>
+
+                      {/* Class */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Class:</span>
+                        <select
+                          value={character.class}
+                          onChange={(e) => updateCharacter({ class: e.target.value })}
+                          className={`flex-1 outline-none ${isDarkMode ? 'bg-slate-800 text-stone-200' : 'bg-stone-50 text-stone-800'}`}
+                        >
+                          {DND_CLASSES.map(className => (
+                            <option key={className} value={className}>{className}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
 
                   {/* Ability Scores Radar Chart */}
                   <div className="mt-6 pt-4 border-t border-stone-300">
-                    <h3 className={`font-bold text-lg mb-3 text-center ${isDarkMode ? 'text-orange-400' : 'text-stone-700'}`}>
-                      Ability Scores
-                    </h3>
-                    <div className="flex justify-center">
-                      <div className="w-80 h-80 relative">
+                    <div className="flex justify-start gap-8">
+                      {/* Ability Scores Radar Chart */}
+                      <div className="w-50 h-50 relative">
                         <svg viewBox="0 0 320 320" className="w-full h-full">
                           {/* Background circles */}
                           {[1, 2, 3, 4, 5].map((level) => (
@@ -1966,9 +2311,8 @@ export default function CharacterSheet() {
                           {/* Labels */}
                           {Object.entries(character.abilityScores).map(([ability, score], index) => {
                             const angle = (index * 60 - 90) * (Math.PI / 180);
-                            const labelX = 160 + Math.cos(angle) * 170;
-                            const labelY = 160 + Math.sin(angle) * 170;
-                            const modifier = Math.floor((score - 10) / 2);
+                            const labelX = 160 + Math.cos(angle) * 140;
+                            const labelY = 160 + Math.sin(angle) * 140;
 
                             return (
                               <g key={ability}>
@@ -1988,14 +2332,6 @@ export default function CharacterSheet() {
                                 >
                                   {score}
                                 </text>
-                                <text
-                                  x={labelX}
-                                  y={labelY + 20}
-                                  textAnchor="middle"
-                                  className={`text-xs ${isDarkMode ? 'fill-stone-400' : 'fill-stone-600'}`}
-                                >
-                                  {modifier >= 0 ? '+' : ''}{modifier}
-                                </text>
                               </g>
                             );
                           })}
@@ -2007,6 +2343,82 @@ export default function CharacterSheet() {
                           <text x="170" y="130" className={`text-xs ${isDarkMode ? 'fill-stone-400' : 'fill-stone-600'}`}>5</text>
                         </svg>
                       </div>
+
+                      {/* Skills Bar Chart */}
+                      <div className="w-64 h-50">
+                        <h3 className={`text-sm font-bold mb-3 text-center ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>
+                          Skills Overview
+                        </h3>
+                        <div className="space-y-1">
+                          {(() => {
+                            // Get all skills with their modifiers
+                            const skillsWithModifiers = Object.entries({
+                              'Acrobatics': 'dexterity', 'Animal Handling': 'wisdom', 'Arcana': 'intelligence',
+                              'Athletics': 'strength', 'Deception': 'charisma', 'History': 'intelligence',
+                              'Insight': 'wisdom', 'Intimidation': 'charisma', 'Investigation': 'intelligence',
+                              'Medicine': 'wisdom', 'Nature': 'intelligence', 'Perception': 'wisdom',
+                              'Performance': 'charisma', 'Persuasion': 'charisma', 'Religion': 'intelligence',
+                              'Sleight of Hand': 'dexterity', 'Stealth': 'dexterity', 'Survival': 'wisdom'
+                            }).map(([skill, ability]) => {
+                              const modifier = getSkillModifier(skill, ability as keyof typeof character.abilityScores);
+                              return { skill, modifier };
+                            });
+
+                            // Sort by modifier and get top 4 and bottom 4
+                            const sorted = skillsWithModifiers.sort((a, b) => b.modifier - a.modifier);
+                            const topSkills = sorted.slice(0, 4);
+                            const bottomSkills = sorted.slice(-4).reverse();
+                            const displaySkills = [...topSkills, ...bottomSkills];
+
+                            const maxModifier = Math.max(...displaySkills.map(s => Math.abs(s.modifier)));
+
+                            return displaySkills.map((item, index) => {
+                              const isTop = index < 4;
+                              const barWidth = Math.abs(item.modifier) / (maxModifier || 1) * 100;
+                              const showDivider = index === 3; // Add divider after 4th item (between strongest and weakest)
+
+                              return (
+                                <div key={item.skill}>
+                                  <div className="flex items-center text-xs">
+                                    <div className={`w-20 text-right pr-2 ${isDarkMode ? 'text-stone-300' : 'text-stone-700'}`}>
+                                      {item.skill.slice(0, 8)}
+                                    </div>
+                                    <div className={`flex-1 relative h-4 rounded overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>
+                                      <div
+                                        className={`h-full rounded transition-all duration-300 ${
+                                          isTop
+                                            ? (isDarkMode ? 'bg-green-500 bg-opacity-60' : 'bg-green-600 bg-opacity-60')
+                                            : (isDarkMode ? 'bg-red-500 bg-opacity-60' : 'bg-red-600 bg-opacity-60')
+                                        }`}
+                                        style={{ width: `${barWidth}%` }}
+                                      />
+                                    </div>
+                                    <div className={`w-8 text-center font-mono ${isDarkMode ? 'text-stone-300' : 'text-stone-700'}`}>
+                                      {item.modifier >= 0 ? '+' : ''}{item.modifier}
+                                    </div>
+                                  </div>
+                                  {showDivider && (
+                                    <div className={`my-2 border-t border-dashed ${isDarkMode ? 'border-stone-500' : 'border-stone-400'}`}></div>
+                                  )}
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                        <div className={`mt-2 text-xs text-center opacity-60 ${isDarkMode ? 'text-stone-400' : 'text-stone-600'}`}>
+                          <div className="flex justify-center gap-4">
+                            <div className="flex items-center gap-1">
+                              <div className={`w-3 h-3 rounded ${isDarkMode ? 'bg-green-500' : 'bg-green-600'}`}></div>
+                              <span>Strongest</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className={`w-3 h-3 rounded ${isDarkMode ? 'bg-red-500' : 'bg-red-600'}`}></div>
+                              <span>Weakest</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 </div>
