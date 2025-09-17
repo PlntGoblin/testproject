@@ -115,6 +115,10 @@ interface Character {
   spellSlots: {
     [key: string]: { total: number; used: number };
   };
+  spellcastingAbility: 'Intelligence' | 'Wisdom' | 'Charisma';
+  knownPreparedSpells: number;
+  spellDC: number;
+  spellAttack: number;
   features: Array<{
     name: string;
     description: string;
@@ -148,6 +152,8 @@ interface Character {
 export default function CharacterSheet() {
   const [activeTab, setActiveTab] = useState('Stats');
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [masterSpellList, setMasterSpellList] = useState<any[]>([]);
+  const [knownSpells, setKnownSpells] = useState<Set<number>>(new Set());
 
   const [character, setCharacter] = useState<Character>({
     name: 'Elara Moonwhisper',
@@ -235,6 +241,10 @@ export default function CharacterSheet() {
       '2nd': { total: 3, used: 0 },
       '3rd': { total: 2, used: 1 },
     },
+    spellcastingAbility: 'Intelligence',
+    knownPreparedSpells: 9,
+    spellDC: 16,
+    spellAttack: 8,
     features: [
       { name: 'Spellcasting', description: 'Cast wizard spells using Intelligence', source: 'Wizard' },
       { name: 'Arcane Recovery', description: 'Recover spell slots on short rest', source: 'Wizard' },
@@ -743,6 +753,27 @@ export default function CharacterSheet() {
   });
 
   const [carryingSize, setCarryingSize] = useState('Medium');
+
+  // Helper function to get known spells for a specific level
+  const getKnownSpellsForLevel = (level: number) => {
+    const sortedSpells = masterSpellList.sort((a, b) => {
+      // Handle invalid levels by treating them as level 0
+      const levelA = isNaN(parseFloat(a.Level !== undefined ? a.Level : a.level)) ? 0 : parseFloat(a.Level !== undefined ? a.Level : a.level);
+      const levelB = isNaN(parseFloat(b.Level !== undefined ? b.Level : b.level)) ? 0 : parseFloat(b.Level !== undefined ? b.Level : b.level);
+      if (levelA !== levelB) return levelA - levelB;
+      const nameA = a.Name || a.name || 'Unknown Spell';
+      const nameB = b.Name || b.name || 'Unknown Spell';
+      return nameA.localeCompare(nameB);
+    });
+
+    return sortedSpells
+      .map((spell, index) => ({ spell, originalIndex: index }))
+      .filter(({ spell, originalIndex }) => {
+        const spellLevel = isNaN(parseFloat(spell.Level !== undefined ? spell.Level : spell.level)) ? 0 : parseFloat(spell.Level !== undefined ? spell.Level : spell.level);
+        return spellLevel === level && knownSpells.has(originalIndex);
+      })
+      .map(({ spell }) => spell);
+  };
 
   // Inventory management state
   const [encumbrance, setEncumbrance] = useState({
@@ -2517,61 +2548,444 @@ export default function CharacterSheet() {
         {/* Spells Tab */}
         {activeTab === 'Spells' && (
           <div className="space-y-8">
-            {/* Spells */}
+            {/* Spellcasting Controls */}
             <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-              <h3 className="text-xl font-semibold text-orange-400 mb-4">Spells</h3>
-              
-              {/* Spell Slots */}
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold mb-3">Spell Slots</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  {Object.entries(character.spellSlots).map(([level, slots]) => (
-                    <div key={level} className={`p-3 rounded border text-center ${
-                      isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300'
-                    }`}>
-                      <div className="text-sm font-medium text-gray-300">{level} Level</div>
-                      <div className="text-lg font-bold">
-                        {slots.total - slots.used} / {slots.total}
+              <div className="grid grid-cols-4 gap-6">
+                {/* Spellcasting Ability */}
+                <div className="text-center">
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    Spellcasting Ability
+                  </label>
+                  <select
+                    value={character.spellcastingAbility}
+                    onChange={(e) => setCharacter({
+                      ...character,
+                      spellcastingAbility: e.target.value as 'Intelligence' | 'Wisdom' | 'Charisma'
+                    })}
+                    className={`w-full px-3 py-2 rounded border bg-transparent text-white text-center font-bold ${
+                      isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                    } focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                  >
+                    <option value="Intelligence" className="bg-slate-800 text-center font-bold">Intelligence</option>
+                    <option value="Wisdom" className="bg-slate-800 text-center font-bold">Wisdom</option>
+                    <option value="Charisma" className="bg-slate-800 text-center font-bold">Charisma</option>
+                  </select>
+                </div>
+
+                {/* Number of Known/Prepared Spells */}
+                <div className="text-center">
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    Known/Prepared Spells
+                  </label>
+                  <select
+                    value={character.knownPreparedSpells}
+                    onChange={(e) => setCharacter({
+                      ...character,
+                      knownPreparedSpells: parseInt(e.target.value)
+                    })}
+                    className={`w-full px-3 py-2 rounded border bg-transparent text-white text-center font-bold ${
+                      isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                    } focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                  >
+                    {Array.from({ length: 40 }, (_, i) => i + 1).map(num => (
+                      <option key={num} value={num} className="bg-slate-800 text-center font-bold">{num}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Spell DC */}
+                <div className="text-center">
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    Spell DC
+                  </label>
+                  <input
+                    type="number"
+                    value={character.spellDC}
+                    onChange={(e) => setCharacter({
+                      ...character,
+                      spellDC: parseInt(e.target.value) || 0
+                    })}
+                    className={`w-full px-3 py-2 rounded border bg-transparent text-white text-center font-bold ${
+                      isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                    } focus:outline-none focus:ring-2 focus:ring-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                  />
+                </div>
+
+                {/* Spell Attack */}
+                <div className="text-center">
+                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                    Spell Attack
+                  </label>
+                  <input
+                    type="number"
+                    value={character.spellAttack}
+                    onChange={(e) => setCharacter({
+                      ...character,
+                      spellAttack: parseInt(e.target.value) || 0
+                    })}
+                    className={`w-full px-3 py-2 rounded border bg-transparent text-white text-center font-bold ${
+                      isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                    } focus:outline-none focus:ring-2 focus:ring-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Spell Level Boxes */}
+            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className="space-y-4">
+                {/* Cantrips Box */}
+                <div className={`p-4 rounded border ${
+                  isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300'
+                }`}>
+                  <div className="text-center text-lg font-bold text-gray-300 mb-4 py-2">Cantrips</div>
+                  <div className="grid text-xs font-bold text-gray-300 mb-2" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
+                    <div className="text-center">Spell Name</div>
+                    <div className="text-center">School</div>
+                    <div className="text-center">Casting Time</div>
+                    <div className="text-center">Range</div>
+                    <div className="text-center">Area / Targets</div>
+                    <div className="text-center">Effect</div>
+                    <div className="text-center">Save /Att</div>
+                    <div className="text-center">Duration</div>
+                    <div className="text-center">Tags</div>
+                    <div className="text-center">Comp</div>
+                  </div>
+                  <div className="grid" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
+                    <input
+                      type="text"
+                      placeholder="Spell Name"
+                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                    />
+                    <input
+                      type="text"
+                      placeholder="School"
+                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Cast Time"
+                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Range"
+                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Area/Targets"
+                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                    />
+                    <textarea
+                      placeholder="Effect"
+                      rows={1}
+                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center resize-none ${
+                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                      style={{ minHeight: '1.5rem' }}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                        target.style.height = target.scrollHeight + 'px';
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Save/Att"
+                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Duration"
+                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                    />
+                    <input
+                      type="text"
+                      placeholder="C,R"
+                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                    />
+                    <input
+                      type="text"
+                      placeholder="V,S,M"
+                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                    />
+                  </div>
+
+                  {/* Display Known Cantrips */}
+                  {getKnownSpellsForLevel(0).map((spell, spellIndex) => (
+                    <div key={`cantrip-${spellIndex}`} className="grid mt-1" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        {spell.Name || spell.name || ''}
                       </div>
-                      <div className="text-xs text-gray-400">Available</div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        {spell.School || spell.school || ''}
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        {spell.CastingTime || spell.casting_time || spell.castingTime || ''}
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        {spell.Range || spell.range || ''}
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        {spell['Area or Targets'] || spell.area_of_effect || spell.areaOfEffect || spell.targets || ''}
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        {spell.Effect || spell.description || spell.effect || ''}
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        {spell['Save or Attack'] || spell.save || spell.attack || ''}
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        {spell.Duration || spell.duration || ''}
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        {(spell.Conc ? 'C' : '') + (spell.Ritual ? 'R' : '')}
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        {spell.Comp || spell.components || ''}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
 
-              {/* Spell List */}
-              <div className="space-y-2">
-                {character.spells.map((spell, index) => (
-                  <div key={index} className={`p-3 rounded border ${
+                {Array.from({ length: 9 }, (_, i) => i + 1).map(level => (
+                  <div key={level} className={`p-4 rounded border ${
                     isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300'
                   }`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center">
-                        <div className={`w-3 h-3 rounded-full mr-2 ${
-                          spell.prepared ? 'bg-green-400' : 'bg-gray-600'
-                        }`}></div>
-                        <h4 className="font-semibold">{spell.name}</h4>
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        {spell.level === 0 ? 'Cantrip' : `Level ${spell.level}`} • {spell.school}
-                      </div>
+                    <div className="text-center text-lg font-bold text-gray-300 mb-4 py-2">Level {level}</div>
+                    <div className="grid text-xs font-bold text-gray-300 mb-2" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
+                      <div className="text-center">Spell Name</div>
+                      <div className="text-center">School</div>
+                      <div className="text-center">Casting Time</div>
+                      <div className="text-center">Range</div>
+                      <div className="text-center">Area / Targets</div>
+                      <div className="text-center">Effect</div>
+                      <div className="text-center">Save /Att</div>
+                      <div className="text-center">Duration</div>
+                      <div className="text-center">Tags</div>
+                      <div className="text-center">Comp</div>
                     </div>
-                    <p className="text-sm text-gray-300">{spell.description}</p>
+                    <div className="grid" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
+                      <input
+                        type="text"
+                        placeholder="Spell Name"
+                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                      />
+                      <input
+                        type="text"
+                        placeholder="School"
+                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Cast Time"
+                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Range"
+                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Area/Targets"
+                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                      />
+                      <textarea
+                        placeholder="Effect"
+                        rows={1}
+                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center resize-none ${
+                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                        style={{ minHeight: '1.5rem' }}
+                        onInput={(e) => {
+                          const target = e.target as HTMLTextAreaElement;
+                          target.style.height = 'auto';
+                          target.style.height = target.scrollHeight + 'px';
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Save/Att"
+                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Duration"
+                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                      />
+                      <input
+                        type="text"
+                        placeholder="C,R"
+                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                      />
+                      <input
+                        type="text"
+                        placeholder="V,S,M"
+                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
+                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                      />
+                    </div>
+
+                    {/* Display Known Spells for Current Level */}
+                    {getKnownSpellsForLevel(level).map((spell, spellIndex) => (
+                      <div key={`level-${level}-spell-${spellIndex}`} className="grid mt-1" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          {spell.Name || spell.name || ''}
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          {spell.School || spell.school || ''}
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          {spell.CastingTime || spell.casting_time || spell.castingTime || ''}
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          {spell.Range || spell.range || ''}
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          {spell['Area or Targets'] || spell.area_of_effect || spell.areaOfEffect || spell.targets || ''}
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          {spell.Effect || spell.description || spell.effect || ''}
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          {spell['Save or Attack'] || spell.save || spell.attack || ''}
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          {spell.Duration || spell.duration || ''}
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          {(spell.Conc ? 'C' : '') + (spell.Ritual ? 'R' : '')}
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          {spell.Comp || spell.components || ''}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
             </div>
+
           </div>
         )}
 
         {/* Library Tab */}
         {activeTab === 'Library' && (
           <div className="space-y-8">
+            {/* Spell Library Table */}
             <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-              <h3 className="text-xl font-semibold text-orange-400 mb-4">Spell Library & Resources</h3>
-              <div className="text-center text-gray-400 py-12">
-                <p>Spell library and reference materials coming soon...</p>
-              </div>
+              <h3 className="text-xl font-semibold text-orange-400 mb-4">Master Spell Library</h3>
+
+              {masterSpellList.length > 0 ? (
+                <div className="overflow-x-auto">
+                  {/* Table Header */}
+                  <div className="grid text-xs font-bold text-gray-300 mb-2 py-2 border-b border-slate-600" style={{ gridTemplateColumns: '5fr 5fr 20fr 8fr 8fr 8fr 12fr 25fr 8fr 8fr' }}>
+                    <div className="text-center">Known</div>
+                    <div className="text-center">Level</div>
+                    <div className="text-center">Name</div>
+                    <div className="text-center">School</div>
+                    <div className="text-center">Casting Time</div>
+                    <div className="text-center">Range</div>
+                    <div className="text-center">Area or Targets</div>
+                    <div className="text-center">Effect</div>
+                    <div className="text-center">Save or Attack</div>
+                    <div className="text-center">Duration</div>
+                  </div>
+
+                  {/* Table Rows */}
+                  <div className="space-y-1 max-h-[72rem] overflow-y-auto">
+                    {masterSpellList
+                      .sort((a, b) => {
+                        // Sort by level first, then by name - handle invalid levels
+                        const levelA = isNaN(parseFloat(a.Level !== undefined ? a.Level : a.level)) ? 0 : parseFloat(a.Level !== undefined ? a.Level : a.level);
+                        const levelB = isNaN(parseFloat(b.Level !== undefined ? b.Level : b.level)) ? 0 : parseFloat(b.Level !== undefined ? b.Level : b.level);
+                        if (levelA !== levelB) return levelA - levelB;
+                        const nameA = a.Name || a.name || 'Unknown Spell';
+                        const nameB = b.Name || b.name || 'Unknown Spell';
+                        return nameA.localeCompare(nameB);
+                      })
+                      .map((spell, index) => (
+                        <div key={index} className={`grid text-xs py-2 border-b border-slate-700 hover:bg-slate-700/50 ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`} style={{ gridTemplateColumns: '5fr 5fr 20fr 8fr 8fr 8fr 12fr 25fr 8fr 8fr' }}>
+                          <div className="text-center">
+                            <input
+                              type="checkbox"
+                              checked={knownSpells.has(index)}
+                              onChange={(e) => {
+                                const newKnownSpells = new Set(knownSpells);
+                                if (e.target.checked) {
+                                  newKnownSpells.add(index);
+                                } else {
+                                  newKnownSpells.delete(index);
+                                }
+                                setKnownSpells(newKnownSpells);
+                              }}
+                              className="w-4 h-4 text-orange-400 bg-transparent border-slate-600 rounded focus:ring-orange-500"
+                            />
+                          </div>
+                          <div className="text-center">
+                            {isNaN(parseFloat(spell.Level !== undefined ? spell.Level : spell.level))
+                              ? 'Unknown'
+                              : parseFloat(spell.Level !== undefined ? spell.Level : spell.level) === 0
+                                ? 'Cantrip'
+                                : Math.floor(parseFloat(spell.Level !== undefined ? spell.Level : spell.level))
+                            }
+                          </div>
+                          <div className="text-center px-1 truncate">{spell.Name || spell.name || 'Unknown Spell'}</div>
+                          <div className="text-center px-1 truncate">{spell.School || spell.school || 'Unknown'}</div>
+                          <div className="text-center px-1 truncate">{spell.CastingTime || spell.casting_time || spell.castingTime || 'Unknown'}</div>
+                          <div className="text-center px-1 truncate">{spell.Range || spell.range || 'Unknown'}</div>
+                          <div className="text-center px-1 truncate">{spell['Area or Targets'] || spell.area_of_effect || spell.areaOfEffect || spell.targets || 'Unknown'}</div>
+                          <div className="text-center px-1">{spell.Effect || spell.description || spell.effect || 'No description available'}</div>
+                          <div className="text-center px-1 truncate">{spell['Save or Attack'] || spell.save || spell.attack || 'None'}</div>
+                          <div className="text-center px-1 truncate">{spell.Duration || spell.duration || 'Unknown'}</div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-gray-400 py-12">
+                  <p>Upload a JSON file to view your master spell list.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -3337,10 +3751,10 @@ export default function CharacterSheet() {
         {activeTab === 'Data' && (
           <div className="space-y-8">
             {/* 4-Column Layout */}
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-4 gap-x-6 gap-y-6 items-start">
               
               {/* Column 1: Hit Points */}
-              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                 <h3 className="text-lg font-semibold text-orange-400 mb-2">Hit Points</h3>
                 
                 {/* HP Levels 1-10 and 11-20 in two columns */}
@@ -3456,9 +3870,9 @@ export default function CharacterSheet() {
               </div>
 
               {/* Column 2: Speed, Hit Die, Initiative */}
-              <div className="space-y-6">
+              <div className="space-y-6 h-fit">
                 {/* Speed Box */}
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Speed</h3>
                   <p className="text-xs text-gray-400 mb-4">Enter any base speeds you have below.</p>
                   <div className="space-y-2">
@@ -3485,7 +3899,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Hit Die Box */}
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Hit Die</h3>
                   <p className="text-xs text-gray-400 mb-4">The number of hit dice of each type you have from your class levels.</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -3512,7 +3926,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Initiative Box */}
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Initiative</h3>
                   <p className="text-xs text-gray-400 mb-4">Enter any additional modifiers to your initiative.</p>
                   <div className="space-y-2">
@@ -3557,13 +3971,15 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
-              {/* Column 3: Feat/ASI Choices */}
-              <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <h3 className="text-lg font-semibold text-orange-400 mb-2">Feat/ASI Choices</h3>
-                <p className="text-xs text-gray-400 mb-4">Track your ability score improvements and feats by level.</p>
-                
-                <div className="space-y-2">
-                  {Object.entries(asiChoices).map(([levelKey, choice]) => (
+              {/* Column 3: Feat/ASI Choices & Master Spell List */}
+              <div className="space-y-6 h-fit">
+                {/* Feat/ASI Choices Box */}
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                  <h3 className="text-lg font-semibold text-orange-400 mb-2">Feat/ASI Choices</h3>
+                  <p className="text-xs text-gray-400 mb-4">Track your ability score improvements and feats by level.</p>
+
+                  <div className="space-y-2">
+                    {Object.entries(asiChoices).map(([levelKey, choice]) => (
                     <div key={levelKey} className="border border-slate-600 rounded p-2">
                       <div className="space-y-1">
                         {/* Level and ASI/Feat Toggle on same row */}
@@ -3647,13 +4063,80 @@ export default function CharacterSheet() {
                       </div>
                     </div>
                   ))}
+                  </div>
+                </div>
+
+                {/* Master Spell List Box */}
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                  <h3 className="text-lg font-semibold text-orange-400 mb-2">Master Spell List</h3>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const jsonData = JSON.parse(event.target?.result as string);
+                            console.log('Raw JSON data:', jsonData);
+
+                            let spellArray = [];
+
+                            // Handle different JSON structures
+                            if (Array.isArray(jsonData)) {
+                              spellArray = jsonData;
+                            } else if (jsonData.spells && Array.isArray(jsonData.spells)) {
+                              spellArray = jsonData.spells;
+                            } else if (jsonData.data && Array.isArray(jsonData.data)) {
+                              spellArray = jsonData.data;
+                            } else if (typeof jsonData === 'object') {
+                              // If it's an object with spell properties, treat each property as a potential spell array
+                              for (const key in jsonData) {
+                                if (Array.isArray(jsonData[key])) {
+                                  spellArray = jsonData[key];
+                                  break;
+                                }
+                              }
+                              // If no arrays found, try to treat the object itself as a single spell
+                              if (spellArray.length === 0) {
+                                spellArray = [jsonData];
+                              }
+                            }
+
+                            console.log('Processed spell array:', spellArray);
+                            setMasterSpellList(spellArray);
+
+                            if (spellArray.length === 0) {
+                              alert('No spells found in the JSON file. Please check the file structure.');
+                            } else {
+                              alert(`Successfully loaded ${spellArray.length} spells!`);
+                            }
+                          } catch (error) {
+                            console.error('JSON parsing error:', error);
+                            alert('Error reading JSON file. Please check the file format.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }
+                    }}
+                    className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white mb-2 ${
+                      isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
+                    } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+                  />
+                  <p className="text-xs text-gray-400">Upload JSON file</p>
+                  {masterSpellList.length > 0 && (
+                    <div className="mt-2 text-center">
+                      <p className="text-xs text-green-400">✓ {masterSpellList.length} spells loaded</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Column 4: Calendar & Carrying Size */}
-              <div className="space-y-6">
+              <div className="space-y-6 h-fit">
                 {/* Calendar Box */}
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Calendar</h3>
                   <p className="text-xs text-gray-400 mb-4">Set the current game date.</p>
                   
@@ -3721,7 +4204,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Carrying Size Box */}
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Carrying Size</h3>
                   <p className="text-xs text-gray-400 mb-4">Select the size you count as when determining carrying capacity.</p>
                   <select
@@ -3743,7 +4226,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Images Box */}
-                <div className={`p-4 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Images</h3>
                   <p className="text-xs text-gray-400 mb-4">Upload images for character display and background.</p>
                   
