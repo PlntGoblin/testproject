@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 // D&D 5e Player's Handbook Classes
 const DND_CLASSES = [
@@ -159,6 +159,7 @@ export default function CharacterSheet() {
   const [selectedSpellLevels, setSelectedSpellLevels] = useState<Set<number>>(new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
   const [hoveredSpell, setHoveredSpell] = useState<any>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [spellSlots, setSpellSlots] = useState<{[key: number]: {max: number, used: number}}>({});
 
   const [character, setCharacter] = useState<Character>({
     name: 'Elara Moonwhisper',
@@ -346,6 +347,39 @@ export default function CharacterSheet() {
     }));
   };
 
+  // Helper functions to get equipped items by type
+  const getEquippedItemsByType = (type: string) => {
+    return equippedItems
+      .filter(item => item.type === type && item.item.trim() !== '')
+      .map(item => item.item);
+  };
+
+  const getArmorOptions = () => {
+    const equippedArmor = getEquippedItemsByType('Armor');
+    const defaultArmor = ['Padded', 'Leather', 'Studded Leather', 'Hide', 'Chain Shirt', 'Scale Mail', 'Breastplate', 'Half Plate', 'Ring Mail', 'Chain Mail', 'Splint', 'Plate'];
+    return [...new Set([...defaultArmor, ...equippedArmor])];
+  };
+
+  const getShieldOptions = () => {
+    const equippedShields = getEquippedItemsByType('Shield');
+    const defaultShields = ['None', 'Shield', 'Tower Shield', 'Buckler'];
+    return [...new Set([...defaultShields, ...equippedShields])];
+  };
+
+  const getMagicalAttireOptions = () => {
+    const equippedAttire = getEquippedItemsByType('Magical Attire');
+    const defaultAttire = ['None', 'Cloak of Resistance', 'Boots of Speed', 'Ring of Protection', 'Amulet of Natural Armor', 'Belt of Giant Strength', 'Headband of Intellect', 'Gloves of Dexterity', 'Periapt of Wisdom', 'Cloak of Charisma'];
+    return [...new Set([...defaultAttire, ...equippedAttire])];
+  };
+
+  const getWeaponOptions = () => {
+    return getEquippedItemsByType('Weapon');
+  };
+
+  const getAmmunitionOptions = () => {
+    return getEquippedItemsByType('Ammunition');
+  };
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, setImage: (value: string) => void) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -405,7 +439,7 @@ export default function CharacterSheet() {
   const [armor, setArmor] = useState({
     armorType: { item: 'Studded Leather', karuta: 'Karuta (Studded Leather)', plus: '', notches: '' },
     shieldType: { item: 'None', plus: '', notches: '' },
-    magicalAttire: { plus: '', notches: '' }
+    magicalAttire: { item1: 'None', item2: 'None', plus: '', notches: '' }
   });
 
   // Image state
@@ -452,6 +486,7 @@ export default function CharacterSheet() {
     const savedImages = localStorage.getItem('dnd-images');
     const savedSpellList = localStorage.getItem('dnd-master-spell-list');
     const savedKnownSpells = localStorage.getItem('dnd-known-spells');
+    const savedSpellSlots = localStorage.getItem('dnd-spell-slots');
 
     if (savedCharacter) {
       try {
@@ -508,6 +543,25 @@ export default function CharacterSheet() {
         console.warn('Failed to load known spells from localStorage:', error);
       }
     }
+
+    // Load spell slots from localStorage (but don't override calculated ones)
+    if (savedSpellSlots) {
+      try {
+        const savedSlots = JSON.parse(savedSpellSlots);
+        // Only load the 'used' values, keep the 'max' values from calculations
+        setSpellSlots(prev => {
+          const newSlots = { ...prev };
+          Object.keys(savedSlots).forEach(level => {
+            if (newSlots[parseInt(level)]) {
+              newSlots[parseInt(level)].used = savedSlots[level].used || 0;
+            }
+          });
+          return newSlots;
+        });
+      } catch (error) {
+        console.warn('Failed to load spell slots from localStorage:', error);
+      }
+    }
   }, []);
 
   // Save character data to localStorage whenever it changes
@@ -538,6 +592,15 @@ export default function CharacterSheet() {
       console.warn('Failed to save known spells to localStorage:', error);
     }
   }, [knownSpells]);
+
+  // Save spell slots to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-spell-slots', JSON.stringify(spellSlots));
+    } catch (error) {
+      console.warn('Failed to save spell slots to localStorage:', error);
+    }
+  }, [spellSlots]);
 
   // Save images to localStorage with error handling
   useEffect(() => {
@@ -834,6 +897,306 @@ export default function CharacterSheet() {
     });
   };
 
+  // Calculate spell slots based on character class and level
+  const calculateSpellSlots = (characterClass: string, level: number) => {
+    const spellSlotTable: {[key: string]: {[level: number]: number[]}} = {
+      // [level]: [1st, 2nd, 3rd, 4th, 5th, 6th, 7th, 8th, 9th]
+      'Wizard': {
+        1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+        2: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        3: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        4: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        5: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        6: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        7: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        8: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        9: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        10: [4, 3, 3, 3, 2, 0, 0, 0, 0],
+        11: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+        12: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+        13: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+        14: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+        15: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+        16: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+        17: [4, 3, 3, 3, 2, 1, 1, 1, 1],
+        18: [4, 3, 3, 3, 3, 1, 1, 1, 1],
+        19: [4, 3, 3, 3, 3, 2, 1, 1, 1],
+        20: [4, 3, 3, 3, 3, 2, 2, 1, 1]
+      },
+      'Sorcerer': {
+        1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+        2: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        3: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        4: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        5: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        6: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        7: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        8: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        9: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        10: [4, 3, 3, 3, 2, 0, 0, 0, 0],
+        11: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+        12: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+        13: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+        14: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+        15: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+        16: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+        17: [4, 3, 3, 3, 2, 1, 1, 1, 1],
+        18: [4, 3, 3, 3, 3, 1, 1, 1, 1],
+        19: [4, 3, 3, 3, 3, 2, 1, 1, 1],
+        20: [4, 3, 3, 3, 3, 2, 2, 1, 1]
+      },
+      'Cleric': {
+        1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+        2: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        3: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        4: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        5: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        6: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        7: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        8: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        9: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        10: [4, 3, 3, 3, 2, 0, 0, 0, 0],
+        11: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+        12: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+        13: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+        14: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+        15: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+        16: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+        17: [4, 3, 3, 3, 2, 1, 1, 1, 1],
+        18: [4, 3, 3, 3, 3, 1, 1, 1, 1],
+        19: [4, 3, 3, 3, 3, 2, 1, 1, 1],
+        20: [4, 3, 3, 3, 3, 2, 2, 1, 1]
+      },
+      'Bard': {
+        1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+        2: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        3: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        4: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        5: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        6: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        7: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        8: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        9: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        10: [4, 3, 3, 3, 2, 0, 0, 0, 0],
+        11: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+        12: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+        13: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+        14: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+        15: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+        16: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+        17: [4, 3, 3, 3, 2, 1, 1, 1, 1],
+        18: [4, 3, 3, 3, 3, 1, 1, 1, 1],
+        19: [4, 3, 3, 3, 3, 2, 1, 1, 1],
+        20: [4, 3, 3, 3, 3, 2, 2, 1, 1]
+      },
+      'Druid': {
+        1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+        2: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        3: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        4: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        5: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        6: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        7: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        8: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        9: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        10: [4, 3, 3, 3, 2, 0, 0, 0, 0],
+        11: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+        12: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+        13: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+        14: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+        15: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+        16: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+        17: [4, 3, 3, 3, 2, 1, 1, 1, 1],
+        18: [4, 3, 3, 3, 3, 1, 1, 1, 1],
+        19: [4, 3, 3, 3, 3, 2, 1, 1, 1],
+        20: [4, 3, 3, 3, 3, 2, 2, 1, 1]
+      },
+      'Paladin': {
+        1: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        2: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+        3: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        4: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        5: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        6: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        7: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        8: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        9: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        10: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        11: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        12: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        13: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        14: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        15: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        16: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        17: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        18: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        19: [4, 3, 3, 3, 2, 0, 0, 0, 0],
+        20: [4, 3, 3, 3, 2, 0, 0, 0, 0]
+      },
+      'Ranger': {
+        1: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        2: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+        3: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        4: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        5: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        6: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        7: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        8: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        9: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        10: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        11: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        12: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        13: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        14: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        15: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        16: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        17: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        18: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        19: [4, 3, 3, 3, 2, 0, 0, 0, 0],
+        20: [4, 3, 3, 3, 2, 0, 0, 0, 0]
+      },
+      'Warlock': {
+        1: [1, 0, 0, 0, 0, 0, 0, 0, 0],
+        2: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+        3: [0, 2, 0, 0, 0, 0, 0, 0, 0],
+        4: [0, 2, 0, 0, 0, 0, 0, 0, 0],
+        5: [0, 0, 2, 0, 0, 0, 0, 0, 0],
+        6: [0, 0, 2, 0, 0, 0, 0, 0, 0],
+        7: [0, 0, 0, 2, 0, 0, 0, 0, 0],
+        8: [0, 0, 0, 2, 0, 0, 0, 0, 0],
+        9: [0, 0, 0, 0, 2, 0, 0, 0, 0],
+        10: [0, 0, 0, 0, 2, 0, 0, 0, 0],
+        11: [0, 0, 0, 0, 3, 0, 0, 0, 0],
+        12: [0, 0, 0, 0, 3, 0, 0, 0, 0],
+        13: [0, 0, 0, 0, 3, 0, 0, 0, 0],
+        14: [0, 0, 0, 0, 3, 0, 0, 0, 0],
+        15: [0, 0, 0, 0, 3, 0, 0, 0, 0],
+        16: [0, 0, 0, 0, 3, 0, 0, 0, 0],
+        17: [0, 0, 0, 0, 4, 0, 0, 0, 0],
+        18: [0, 0, 0, 0, 4, 0, 0, 0, 0],
+        19: [0, 0, 0, 0, 4, 0, 0, 0, 0],
+        20: [0, 0, 0, 0, 4, 0, 0, 0, 0]
+      }
+    };
+
+    const slots = spellSlotTable[characterClass]?.[level] || [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const result: {[key: number]: {max: number, used: number}} = {};
+
+    slots.forEach((maxSlots, index) => {
+      if (maxSlots > 0) {
+        result[index + 1] = { max: maxSlots, used: 0 };
+      }
+    });
+
+    return result;
+  };
+
+  // Determine which spell levels a character can access based on class and level
+  const getAccessibleSpellLevels = (characterClass: string, level: number): number[] => {
+    const accessibleLevels = [0]; // Cantrips are always accessible for spellcasters
+
+    // Non-spellcasters
+    if (['Fighter', 'Barbarian', 'Rogue', 'Monk'].includes(characterClass)) {
+      // Eldritch Knight (Fighter) and Arcane Trickster (Rogue) get spells at level 3
+      if ((characterClass === 'Fighter' || characterClass === 'Rogue') && level >= 3) {
+        // These subclasses learn spells more slowly than full casters
+        if (level >= 3) accessibleLevels.push(1);
+        if (level >= 7) accessibleLevels.push(2);
+        if (level >= 13) accessibleLevels.push(3);
+        if (level >= 19) accessibleLevels.push(4);
+      }
+      return accessibleLevels;
+    }
+
+    // Rangers start casting at level 2
+    if (characterClass === 'Ranger') {
+      if (level >= 2) accessibleLevels.push(1);
+      if (level >= 5) accessibleLevels.push(2);
+      if (level >= 9) accessibleLevels.push(3);
+      if (level >= 13) accessibleLevels.push(4);
+      if (level >= 17) accessibleLevels.push(5);
+      return accessibleLevels;
+    }
+
+    // Paladins start casting at level 2
+    if (characterClass === 'Paladin') {
+      if (level >= 2) accessibleLevels.push(1);
+      if (level >= 5) accessibleLevels.push(2);
+      if (level >= 9) accessibleLevels.push(3);
+      if (level >= 13) accessibleLevels.push(4);
+      if (level >= 17) accessibleLevels.push(5);
+      return accessibleLevels;
+    }
+
+    // Warlocks have unique spell progression
+    if (characterClass === 'Warlock') {
+      if (level >= 1) accessibleLevels.push(1);
+      if (level >= 3) accessibleLevels.push(2);
+      if (level >= 5) accessibleLevels.push(3);
+      if (level >= 7) accessibleLevels.push(4);
+      if (level >= 9) accessibleLevels.push(5);
+      // Warlocks don't get 6th+ level spells through their pact magic
+      return accessibleLevels;
+    }
+
+    // Full casters (Wizard, Sorcerer, Cleric, Bard, Druid)
+    if (['Wizard', 'Sorcerer', 'Cleric', 'Bard', 'Druid'].includes(characterClass)) {
+      if (level >= 1) accessibleLevels.push(1);
+      if (level >= 3) accessibleLevels.push(2);
+      if (level >= 5) accessibleLevels.push(3);
+      if (level >= 7) accessibleLevels.push(4);
+      if (level >= 9) accessibleLevels.push(5);
+      if (level >= 11) accessibleLevels.push(6);
+      if (level >= 13) accessibleLevels.push(7);
+      if (level >= 15) accessibleLevels.push(8);
+      if (level >= 17) accessibleLevels.push(9);
+      return accessibleLevels;
+    }
+
+    return accessibleLevels;
+  };
+
+  // Functions for spell slot management
+  const castSpell = (spellLevel: number) => {
+    setSpellSlots(prev => {
+      const newSlots = { ...prev };
+      if (newSlots[spellLevel] && newSlots[spellLevel].used < newSlots[spellLevel].max) {
+        newSlots[spellLevel].used += 1;
+      }
+      return newSlots;
+    });
+  };
+
+  const shortRest = () => {
+    // Warlocks restore all spell slots on short rest
+    if (character.class === 'Warlock') {
+      setSpellSlots(prev => {
+        const newSlots = { ...prev };
+        Object.keys(newSlots).forEach(level => {
+          newSlots[parseInt(level)].used = 0;
+        });
+        return newSlots;
+      });
+    }
+  };
+
+  const longRest = () => {
+    // All classes restore all spell slots on long rest
+    setSpellSlots(prev => {
+      const newSlots = { ...prev };
+      Object.keys(newSlots).forEach(level => {
+        newSlots[parseInt(level)].used = 0;
+      });
+      return newSlots;
+    });
+  };
+
+  // Update spell slots when character class or level changes
+  useEffect(() => {
+    const newSlots = calculateSpellSlots(character.class, character.level);
+    setSpellSlots(newSlots);
+  }, [character.class, character.level]);
+
   // Inventory management state
   const [encumbrance, setEncumbrance] = useState({
     openSlots: 18,
@@ -1107,6 +1470,7 @@ export default function CharacterSheet() {
                           }`}>
                             <div className="flex items-center gap-1">
                               <input
+                                id={`saving-throw-${save}`}
                                 type="checkbox"
                                 checked={proficient}
                                 onChange={(e) => updateCharacter({
@@ -1178,24 +1542,32 @@ export default function CharacterSheet() {
                     </div>
                     {ammunition.map((ammo, index) => (
                       <div key={index} className="grid grid-cols-10 gap-1">
-                        <input
-                          type="text"
+                        <select
                           value={ammo.name}
                           onChange={(e) => updateAmmunition(index, 'name', e.target.value)}
                           className={`col-span-3 text-center border rounded px-2 py-1 text-xs ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
-                          placeholder="Ammo name"
-                        />
-                        <input
-                          type="text"
+                        >
+                          <option value="">Select ammo...</option>
+                          {getAmmunitionOptions().map(ammoName => (
+                            <option key={ammoName} value={ammoName}>{ammoName}</option>
+                          ))}
+                          <option value="custom">-- Custom --</option>
+                        </select>
+                        <select
                           value={ammo.weapon}
                           onChange={(e) => updateAmmunition(index, 'weapon', e.target.value)}
                           className={`col-span-4 text-center border rounded px-2 py-1 text-xs ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
-                          placeholder="Weapon"
-                        />
+                        >
+                          <option value="">Select weapon...</option>
+                          {getWeaponOptions().map(weaponName => (
+                            <option key={weaponName} value={weaponName}>{weaponName}</option>
+                          ))}
+                          <option value="custom">-- Custom --</option>
+                        </select>
                         <select
                           value={ammo.amount}
                           onChange={(e) => updateAmmunition(index, 'amount', e.target.value)}
@@ -1234,7 +1606,7 @@ export default function CharacterSheet() {
                         type="number"
                         value={character.armorClass}
                         onChange={(e) => updateCharacter({ armorClass: parseInt(e.target.value) || 0 })}
-                        className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        className={`w-full text-center border rounded px-3 py-2 text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       />
@@ -1245,7 +1617,7 @@ export default function CharacterSheet() {
                         type="number"
                         value={character.initiative}
                         onChange={(e) => updateCharacter({ initiative: parseInt(e.target.value) || 0 })}
-                        className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        className={`w-full text-center border rounded px-3 py-2 text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       />
@@ -1256,7 +1628,7 @@ export default function CharacterSheet() {
                         type="number"
                         value={character.speed}
                         onChange={(e) => updateCharacter({ speed: parseInt(e.target.value) || 0 })}
-                        className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        className={`w-full text-center border rounded px-3 py-2 text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       />
@@ -1334,7 +1706,7 @@ export default function CharacterSheet() {
                           onChange={(e) => updateCharacter({
                             hitPoints: { ...character.hitPoints, current: parseInt(e.target.value) || 0 }
                           })}
-                          className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          className={`w-full text-center border rounded px-2 py-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
                         />
@@ -1347,7 +1719,7 @@ export default function CharacterSheet() {
                           onChange={(e) => updateCharacter({
                             hitPoints: { ...character.hitPoints, maximum: parseInt(e.target.value) || 0 }
                           })}
-                          className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          className={`w-full text-center border rounded px-2 py-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
                         />
@@ -1360,7 +1732,7 @@ export default function CharacterSheet() {
                           onChange={(e) => updateCharacter({
                             hitPoints: { ...character.hitPoints, temporary: parseInt(e.target.value) || 0 }
                           })}
-                          className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          className={`w-full text-center border rounded px-2 py-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
                         />
@@ -1462,362 +1834,7 @@ export default function CharacterSheet() {
               </div>
               </div>
 
-              {/* Weapons Box - Spans both columns (Passive and Health) */}
-              <div className={`col-span-2 p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <div className="space-y-3 pb-8">
-                  {/* Column Headers */}
-                  <div className="grid gap-2 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600" style={{gridTemplateColumns: "2fr 0.6fr 0.4fr 1fr 0.8fr 0.7fr 1.2fr 0.6fr"}}>
-                    <div className="text-center">Name</div>
-                    <div className="text-center">Prof</div>
-                    <div className="text-center">Notch</div>
-                    <div className="text-center">Range</div>
-                    <div className="text-center">Ability</div>
-                    <div className="text-center">ATK Bon</div>
-                    <div className="text-center">Damage</div>
-                    <div className="text-center">Roll</div>
-                  </div>
-                  
-                  {character.weapons.map((weapon, index) => (
-                    <div key={index} className="grid gap-2 items-center text-sm" style={{gridTemplateColumns: "2fr 0.6fr 0.4fr 1fr 0.8fr 0.7fr 1.2fr 0.6fr"}}>
-                      {/* Name */}
-                      <div>
-                        <input
-                          type="text"
-                          value={weapon.name}
-                          onChange={(e) => {
-                            const newWeapons = [...character.weapons];
-                            newWeapons[index] = { ...weapon, name: e.target.value };
-                            updateCharacter({ weapons: newWeapons });
-                          }}
-                          className={`w-full border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="Weapon name"
-                        />
-                      </div>
-                      
-                      {/* Proficiency Checkbox */}
-                      <div className="flex justify-center">
-                        <input
-                          type="checkbox"
-                          checked={weapon.proficient}
-                          onChange={(e) => {
-                            const newWeapons = [...character.weapons];
-                            newWeapons[index] = { ...weapon, proficient: e.target.checked };
-                            updateCharacter({ weapons: newWeapons });
-                          }}
-                          className="w-3 h-3 accent-green-500 rounded focus:ring-1 focus:ring-green-400"
-                        />
-                      </div>
-                      
-                      {/* Notches */}
-                      <div>
-                        <input
-                          type="text"
-                          value={weapon.notches}
-                          onChange={(e) => {
-                            const newWeapons = [...character.weapons];
-                            newWeapons[index] = { ...weapon, notches: e.target.value };
-                            updateCharacter({ weapons: newWeapons });
-                          }}
-                          className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="+"
-                        />
-                      </div>
-                      
-                      {/* Range */}
-                      <div>
-                        <input
-                          type="text"
-                          value={weapon.range}
-                          onChange={(e) => {
-                            const newWeapons = [...character.weapons];
-                            newWeapons[index] = { ...weapon, range: e.target.value };
-                            updateCharacter({ weapons: newWeapons });
-                          }}
-                          className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="Range"
-                        />
-                      </div>
-                      
-                      {/* Ability */}
-                      <div>
-                        <input
-                          type="text"
-                          value={weapon.ability}
-                          onChange={(e) => {
-                            const newWeapons = [...character.weapons];
-                            newWeapons[index] = { ...weapon, ability: e.target.value };
-                            updateCharacter({ weapons: newWeapons });
-                          }}
-                          className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="STR"
-                        />
-                      </div>
-                      
-                      {/* ATK Bonus */}
-                      <div>
-                        <input
-                          type="text"
-                          value={weapon.atkBonus}
-                          onChange={(e) => {
-                            const newWeapons = [...character.weapons];
-                            newWeapons[index] = { ...weapon, atkBonus: e.target.value };
-                            updateCharacter({ weapons: newWeapons });
-                          }}
-                          className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="+0"
-                        />
-                      </div>
-                      
-                      {/* Damage */}
-                      <div>
-                        <input
-                          type="text"
-                          value={weapon.damage}
-                          onChange={(e) => {
-                            const newWeapons = [...character.weapons];
-                            newWeapons[index] = { ...weapon, damage: e.target.value };
-                            updateCharacter({ weapons: newWeapons });
-                          }}
-                          className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="1d6"
-                        />
-                      </div>
-                      
-                      {/* D20 Roll Button */}
-                      <div className="flex justify-center">
-                        <button
-                          onClick={() => {
-                            const d20Roll = Math.floor(Math.random() * 20) + 1;
-                            const atkBonus = parseInt(weapon.atkBonus.replace(/[^-\d]/g, '')) || 0;
-                            const totalAttack = d20Roll + atkBonus;
-                            
-                            // Parse damage (e.g., "1d6+2" or "1d8")
-                            const damageMatch = weapon.damage.match(/(\d+)d(\d+)([+-]\d+)?/);
-                            let damageRoll = 0;
-                            if (damageMatch) {
-                              const numDice = parseInt(damageMatch[1]);
-                              const dieSize = parseInt(damageMatch[2]);
-                              const bonus = parseInt(damageMatch[3]) || 0;
-                              
-                              for (let i = 0; i < numDice; i++) {
-                                damageRoll += Math.floor(Math.random() * dieSize) + 1;
-                              }
-                              damageRoll += bonus;
-                            }
-                            
-                            alert(`${weapon.name || 'Weapon'} Roll:\n\nAttack: d20(${d20Roll}) + ${atkBonus} = ${totalAttack}\nDamage: ${damageRoll > 0 ? damageRoll : 'Invalid damage format'}`);
-                          }}
-                          className="w-6 h-6 bg-purple-600 hover:bg-purple-700 text-white font-bold transition-colors rounded-sm"
-                          style={{
-                            clipPath: 'polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)',
-                            fontSize: '0.64rem'
-                          }}
-                          title="Roll d20 attack and damage"
-                        >
-                          d20
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Add/Remove Weapon Buttons */}
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => {
-                        if (character.weapons.length < 5) {
-                          updateCharacter({
-                            weapons: [...character.weapons, {
-                              name: '',
-                              proficient: false,
-                              notches: '',
-                              range: '',
-                              ability: '',
-                              atkBonus: '',
-                              damage: ''
-                            }]
-                          });
-                        }
-                      }}
-                      disabled={character.weapons.length >= 5}
-                      className={`flex-1 py-1 px-3 text-xs rounded transition-colors ${
-                        character.weapons.length >= 5 
-                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-                          : 'bg-orange-600 hover:bg-orange-700 text-white'
-                      }`}
-                      title={character.weapons.length >= 5 ? "Maximum 5 weapons allowed" : "Add weapon"}
-                    >
-                      {character.weapons.length >= 5 ? 'Max Weapons (5)' : 'Add Weapon'}
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        if (character.weapons.length > 2) {
-                          const newWeapons = character.weapons.slice(0, -1);
-                          updateCharacter({ weapons: newWeapons });
-                        }
-                      }}
-                      disabled={character.weapons.length <= 2}
-                      className={`flex-1 py-1 px-3 text-xs rounded transition-colors ${
-                        character.weapons.length <= 2 
-                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-                          : 'bg-red-600 hover:bg-red-700 text-white'
-                      }`}
-                      title={character.weapons.length <= 2 ? "Cannot remove - minimum 2 weapons required" : "Remove last weapon"}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-                <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <h3 className="text-sm font-bold text-gray-400">Weapons</h3>
-                </div>
-              </div>
 
-              {/* Armor Box - Spans both columns (Passive and Health) */}
-              <div className={`col-span-2 p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <div className="space-y-4 pb-8">
-
-                  {/* Armor Type Section */}
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-24 text-xs font-semibold text-gray-400">Armor Type</div>
-                      <div className="flex items-center space-x-2 flex-1">
-                        <div className="w-32 text-xs font-semibold text-gray-400 text-center">Item</div>
-                        <div className="w-12 text-xs font-semibold text-gray-400 text-center">+</div>
-                        <div className="w-16 text-xs font-semibold text-gray-400 text-center">Notches</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-24 text-xs">Studded Leather</div>
-                      <div className="flex items-center space-x-2 flex-1">
-                        <input
-                          type="text"
-                          value={armor.armorType.karuta}
-                          onChange={(e) => updateArmor('armorType', 'karuta', e.target.value)}
-                          className={`w-32 border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="Karuta (Studded Leather)"
-                        />
-                        <input
-                          type="text"
-                          value={armor.armorType.plus}
-                          onChange={(e) => updateArmor('armorType', 'plus', e.target.value)}
-                          className={`w-12 text-center border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="+"
-                        />
-                        <input
-                          type="text"
-                          value={armor.armorType.notches}
-                          onChange={(e) => updateArmor('armorType', 'notches', e.target.value)}
-                          className={`w-16 text-center border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="Notches"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Shield Type Section */}
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-24 text-xs font-semibold text-gray-400">Shield Type</div>
-                      <div className="flex items-center space-x-2 flex-1">
-                        <div className="w-32 text-xs font-semibold text-gray-400 text-center">Item</div>
-                        <div className="w-12 text-xs font-semibold text-gray-400 text-center">+</div>
-                        <div className="w-16 text-xs font-semibold text-gray-400 text-center">Notches</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-24 text-xs">None</div>
-                      <div className="flex items-center space-x-2 flex-1">
-                        <input
-                          type="text"
-                          value={armor.shieldType.item}
-                          onChange={(e) => updateArmor('shieldType', 'item', e.target.value)}
-                          className={`w-32 border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder=""
-                        />
-                        <input
-                          type="text"
-                          value={armor.shieldType.plus}
-                          onChange={(e) => updateArmor('shieldType', 'plus', e.target.value)}
-                          className={`w-12 text-center border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="+"
-                        />
-                        <input
-                          type="text"
-                          value={armor.shieldType.notches}
-                          onChange={(e) => updateArmor('shieldType', 'notches', e.target.value)}
-                          className={`w-16 text-center border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="Notches"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Magical Attire Section */}
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-24 text-xs font-semibold text-gray-400">Magical Attire</div>
-                      <div className="flex items-center space-x-2 flex-1">
-                        <div className="w-32"></div>
-                        <div className="w-12 text-xs font-semibold text-gray-400 text-center">+</div>
-                        <div className="w-16 text-xs font-semibold text-gray-400 text-center">Notches</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-24"></div>
-                      <div className="flex items-center space-x-2 flex-1">
-                        <div className="w-32"></div>
-                        <input
-                          type="text"
-                          value={armor.magicalAttire.plus}
-                          onChange={(e) => updateArmor('magicalAttire', 'plus', e.target.value)}
-                          className={`w-12 text-center border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="+"
-                        />
-                        <input
-                          type="text"
-                          value={armor.magicalAttire.notches}
-                          onChange={(e) => updateArmor('magicalAttire', 'notches', e.target.value)}
-                          className={`w-16 text-center border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                          placeholder="Notches"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-                <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <h3 className="text-sm font-bold text-gray-400">Armor</h3>
-                </div>
-              </div>
               </div>
 
               {/* Right Block: 2 Columns */}
@@ -2161,7 +2178,422 @@ export default function CharacterSheet() {
               </div>
               </div>
             </div>
-            
+
+            {/* Large Combat Planning Box - Part of Attack Field */}
+            <div className={`p-6 rounded-lg border mt-6 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <h3 className="text-lg font-semibold text-orange-400 mb-4">⚔️ Combat Planning & Notes</h3>
+
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left side - Weapons */}
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300'}`}>
+                  <div className="space-y-3 pb-8">
+                    {/* Column Headers */}
+                    <div className="grid gap-2 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600" style={{gridTemplateColumns: "2fr 0.6fr 0.4fr 1fr 0.8fr 0.7fr 1.2fr 0.6fr"}}>
+                      <div className="text-center">Name</div>
+                      <div className="text-center">Prof</div>
+                      <div className="text-center">Notch</div>
+                      <div className="text-center">Range</div>
+                      <div className="text-center">Ability</div>
+                      <div className="text-center">ATK Bon</div>
+                      <div className="text-center">Damage</div>
+                      <div className="text-center">Roll</div>
+                    </div>
+
+                    {character.weapons.map((weapon, index) => (
+                      <div key={index} className="grid gap-2 items-center text-sm" style={{gridTemplateColumns: "2fr 0.6fr 0.4fr 1fr 0.8fr 0.7fr 1.2fr 0.6fr"}}>
+                        {/* Name */}
+                        <div>
+                          <select
+                            value={weapon.name}
+                            onChange={(e) => {
+                              const newWeapons = [...character.weapons];
+                              newWeapons[index] = { ...weapon, name: e.target.value };
+                              updateCharacter({ weapons: newWeapons });
+                            }}
+                            className={`w-full border rounded px-2 py-1 text-xs ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                          >
+                            <option value="">Select weapon...</option>
+                            {getWeaponOptions().map(weaponName => (
+                              <option key={weaponName} value={weaponName}>{weaponName}</option>
+                            ))}
+                            <option value="custom">-- Custom --</option>
+                          </select>
+                          {weapon.name === 'custom' && (
+                            <input
+                              type="text"
+                              placeholder="Enter custom weapon name"
+                              className={`w-full border rounded px-2 py-1 text-xs mt-1 ${
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              }`}
+                              onChange={(e) => {
+                                const newWeapons = [...character.weapons];
+                                newWeapons[index] = { ...weapon, name: e.target.value };
+                                updateCharacter({ weapons: newWeapons });
+                              }}
+                            />
+                          )}
+                        </div>
+
+                        {/* Proficiency Checkbox */}
+                        <div className="flex justify-center">
+                          <input
+                            id={`combat-weapon-proficient-${index}`}
+                            type="checkbox"
+                            checked={weapon.proficient}
+                            onChange={(e) => {
+                              const newWeapons = [...character.weapons];
+                              newWeapons[index] = { ...weapon, proficient: e.target.checked };
+                              updateCharacter({ weapons: newWeapons });
+                            }}
+                            className="w-3 h-3 accent-green-500 rounded focus:ring-1 focus:ring-green-400"
+                          />
+                        </div>
+
+                        {/* Notches */}
+                        <div>
+                          <input
+                            type="text"
+                            value={weapon.notches}
+                            onChange={(e) => {
+                              const newWeapons = [...character.weapons];
+                              newWeapons[index] = { ...weapon, notches: e.target.value };
+                              updateCharacter({ weapons: newWeapons });
+                            }}
+                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                            placeholder="+"
+                          />
+                        </div>
+
+                        {/* Range */}
+                        <div>
+                          <input
+                            type="text"
+                            value={weapon.range}
+                            onChange={(e) => {
+                              const newWeapons = [...character.weapons];
+                              newWeapons[index] = { ...weapon, range: e.target.value };
+                              updateCharacter({ weapons: newWeapons });
+                            }}
+                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                            placeholder="Range"
+                          />
+                        </div>
+
+                        {/* Ability */}
+                        <div>
+                          <input
+                            type="text"
+                            value={weapon.ability}
+                            onChange={(e) => {
+                              const newWeapons = [...character.weapons];
+                              newWeapons[index] = { ...weapon, ability: e.target.value };
+                              updateCharacter({ weapons: newWeapons });
+                            }}
+                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                            placeholder="STR"
+                          />
+                        </div>
+
+                        {/* ATK Bonus */}
+                        <div>
+                          <input
+                            type="text"
+                            value={weapon.atkBonus}
+                            onChange={(e) => {
+                              const newWeapons = [...character.weapons];
+                              newWeapons[index] = { ...weapon, atkBonus: e.target.value };
+                              updateCharacter({ weapons: newWeapons });
+                            }}
+                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                            placeholder="+0"
+                          />
+                        </div>
+
+                        {/* Damage */}
+                        <div>
+                          <input
+                            type="text"
+                            value={weapon.damage}
+                            onChange={(e) => {
+                              const newWeapons = [...character.weapons];
+                              newWeapons[index] = { ...weapon, damage: e.target.value };
+                              updateCharacter({ weapons: newWeapons });
+                            }}
+                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                            placeholder="1d6"
+                          />
+                        </div>
+
+                        {/* D20 Roll Button */}
+                        <div className="flex justify-center">
+                          <button
+                            onClick={() => {
+                              const d20Roll = Math.floor(Math.random() * 20) + 1;
+                              const atkBonus = parseInt(weapon.atkBonus.replace(/[^-\d]/g, '')) || 0;
+                              const totalAttack = d20Roll + atkBonus;
+
+                              // Parse damage (e.g., "1d6+2" or "1d8")
+                              const damageMatch = weapon.damage.match(/(\d+)d(\d+)([+-]\d+)?/);
+                              let damageRoll = 0;
+                              if (damageMatch) {
+                                const numDice = parseInt(damageMatch[1]);
+                                const dieSize = parseInt(damageMatch[2]);
+                                const bonus = parseInt(damageMatch[3]) || 0;
+
+                                for (let i = 0; i < numDice; i++) {
+                                  damageRoll += Math.floor(Math.random() * dieSize) + 1;
+                                }
+                                damageRoll += bonus;
+                              }
+
+                              alert(`${weapon.name || 'Weapon'} Roll:\n\nAttack: d20(${d20Roll}) + ${atkBonus} = ${totalAttack}\nDamage: ${damageRoll > 0 ? damageRoll : 'Invalid damage format'}`);
+                            }}
+                            className="w-6 h-6 bg-purple-600 hover:bg-purple-700 text-white font-bold transition-colors rounded-sm"
+                            style={{
+                              clipPath: 'polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)',
+                              fontSize: '0.64rem'
+                            }}
+                            title="Roll d20 attack and damage"
+                          >
+                            d20
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add/Remove Weapon Buttons */}
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => {
+                          if (character.weapons.length < 5) {
+                            updateCharacter({
+                              weapons: [...character.weapons, {
+                                name: '',
+                                proficient: false,
+                                notches: '',
+                                range: '',
+                                ability: '',
+                                atkBonus: '',
+                                damage: ''
+                              }]
+                            });
+                          }
+                        }}
+                        disabled={character.weapons.length >= 5}
+                        className={`flex-1 py-1 px-3 text-xs rounded transition-colors ${
+                          character.weapons.length >= 5
+                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                            : 'bg-orange-600 hover:bg-orange-700 text-white'
+                        }`}
+                        title={character.weapons.length >= 5 ? "Maximum 5 weapons allowed" : "Add weapon"}
+                      >
+                        {character.weapons.length >= 5 ? 'Max Weapons (5)' : 'Add Weapon'}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (character.weapons.length > 2) {
+                            const newWeapons = character.weapons.slice(0, -1);
+                            updateCharacter({ weapons: newWeapons });
+                          }
+                        }}
+                        disabled={character.weapons.length <= 2}
+                        className={`flex-1 py-1 px-3 text-xs rounded transition-colors ${
+                          character.weapons.length <= 2
+                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-700 text-white'
+                        }`}
+                        title={character.weapons.length <= 2 ? "Cannot remove - minimum 2 weapons required" : "Remove last weapon"}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-400">Weapons</h3>
+                  </div>
+                </div>
+
+                {/* Right side - Armor */}
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300'}`}>
+                  <div className="space-y-2 pb-8">
+
+                    {/* Header Row */}
+                    <div className="flex items-center space-x-2">
+                      <div className="w-16 text-xs font-semibold text-gray-400"></div>
+                      <div className="w-24 text-xs font-semibold text-gray-400 text-center">Type</div>
+                      <div className="w-28 text-xs font-semibold text-gray-400 text-center">Item</div>
+                      <div className="w-12 text-xs font-semibold text-gray-400 text-center">+</div>
+                      <div className="w-16 text-xs font-semibold text-gray-400 text-center">Notches</div>
+                    </div>
+
+                    {/* Armor Row */}
+                    <div className="flex items-center space-x-2">
+                      <div className="w-16 text-xs font-semibold text-gray-400">Armor</div>
+                      <select
+                        value={armor.armorType.item}
+                        onChange={(e) => updateArmor('armorType', 'item', e.target.value)}
+                        className={`w-24 text-xs border rounded px-1 py-1 ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      >
+                        {getArmorOptions().map(armorType => (
+                          <option key={armorType} value={armorType}>{armorType}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        value={armor.armorType.karuta}
+                        onChange={(e) => updateArmor('armorType', 'karuta', e.target.value)}
+                        className={`w-28 border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="Karuta (Studded Leather)"
+                      />
+                      <input
+                        type="text"
+                        value={armor.armorType.plus}
+                        onChange={(e) => updateArmor('armorType', 'plus', e.target.value)}
+                        className={`w-12 text-center border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="+"
+                      />
+                      <input
+                        type="text"
+                        value={armor.armorType.notches}
+                        onChange={(e) => updateArmor('armorType', 'notches', e.target.value)}
+                        className={`w-16 text-center border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="Notches"
+                      />
+                    </div>
+
+                    {/* Shield Row */}
+                    <div className="flex items-center space-x-2">
+                      <div className="w-16 text-xs font-semibold text-gray-400">Shield</div>
+                      <select
+                        value={armor.shieldType.item}
+                        onChange={(e) => updateArmor('shieldType', 'item', e.target.value)}
+                        className={`w-24 text-xs border rounded px-1 py-1 ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      >
+                        {getShieldOptions().map(shieldType => (
+                          <option key={shieldType} value={shieldType}>{shieldType}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        value=""
+                        className={`w-28 border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="Shield Item"
+                      />
+                      <input
+                        type="text"
+                        value={armor.shieldType.plus}
+                        onChange={(e) => updateArmor('shieldType', 'plus', e.target.value)}
+                        className={`w-12 text-center border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="+"
+                      />
+                      <input
+                        type="text"
+                        value={armor.shieldType.notches}
+                        onChange={(e) => updateArmor('shieldType', 'notches', e.target.value)}
+                        className={`w-16 text-center border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="Notches"
+                      />
+                    </div>
+
+                    {/* Magical Attire Row 1 */}
+                    <div className="flex items-center space-x-2">
+                      <div className="w-16 text-xs font-semibold text-gray-400">Attire🪄</div>
+                      <select
+                        value={armor.magicalAttire.item1}
+                        onChange={(e) => updateArmor('magicalAttire', 'item1', e.target.value)}
+                        className={`w-32 text-xs border rounded px-1 py-1 ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
+                      >
+                        {getMagicalAttireOptions().map(attire => (
+                          <option key={attire} value={attire}>{attire}</option>
+                        ))}
+                      </select>
+                      <div className="w-20"></div>
+                      <input
+                        type="text"
+                        value={armor.magicalAttire.plus}
+                        onChange={(e) => updateArmor('magicalAttire', 'plus', e.target.value)}
+                        className={`w-12 text-center border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="+"
+                      />
+                      <input
+                        type="text"
+                        value={armor.magicalAttire.notches}
+                        onChange={(e) => updateArmor('magicalAttire', 'notches', e.target.value)}
+                        className={`w-16 text-center border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="Notches"
+                      />
+                    </div>
+
+                    {/* Magical Attire Row 2 */}
+                    <div className="flex items-center space-x-2">
+                      <div className="w-16 text-xs font-semibold text-gray-400"></div>
+                      <select
+                        value={armor.magicalAttire.item2}
+                        onChange={(e) => updateArmor('magicalAttire', 'item2', e.target.value)}
+                        className={`w-32 text-xs border rounded px-1 py-1 ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
+                      >
+                        {getMagicalAttireOptions().map(attire => (
+                          <option key={attire} value={attire}>{attire}</option>
+                        ))}
+                      </select>
+                      <div className="w-20"></div>
+                      <input
+                        type="text"
+                        className={`w-12 text-center border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="+"
+                      />
+                      <input
+                        type="text"
+                        className={`w-16 text-center border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="Notches"
+                      />
+                    </div>
+
+                  </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-400">Armor</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -2580,7 +3012,7 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
-              {/* Character Illustration - Full Height */}
+              {/* Attack Field - Full Height */}
               <div className="flex justify-center items-start">
                 <div className={`rounded-lg shadow-2xl overflow-hidden border-4 w-full ${isDarkMode ? 'border-orange-400 bg-slate-800' : 'border-stone-300 bg-white'}`}>
                   {characterImage ? (
@@ -2592,14 +3024,15 @@ export default function CharacterSheet() {
                   ) : (
                     <div className={`w-full h-[600px] flex items-center justify-center ${isDarkMode ? 'bg-slate-700 text-stone-400' : 'bg-stone-200 text-stone-500'}`}>
                       <div className="text-center">
-                        <div className="text-6xl mb-4">🎭</div>
-                        <p className="text-sm">Character Portrait</p>
-                        <p className="text-xs mt-2">Upload image in Data tab</p>
+                        <div className="text-6xl mb-4">⚔️</div>
+                        <p className="text-sm">Attack Field</p>
+                        <p className="text-xs mt-2">Combat area placeholder</p>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
+
             </div>
           </div>
         )}
@@ -2690,6 +3123,106 @@ export default function CharacterSheet() {
               </div>
             </div>
 
+            {/* Spell Slots Tracker */}
+            <div className={`p-6 rounded-lg border w-fit mx-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-orange-400">Spell Slots</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={shortRest}
+                    className={`px-3 py-1 text-xs rounded border transition-colors ${
+                      isDarkMode ? 'bg-blue-600 border-blue-500 text-white hover:bg-blue-500' : 'bg-blue-200 border-blue-300 text-blue-700 hover:bg-blue-300'
+                    }`}
+                  >
+                    Short Rest {character.class === 'Warlock' ? '(Restore All)' : ''}
+                  </button>
+                  <button
+                    onClick={longRest}
+                    className={`px-3 py-1 text-xs rounded border transition-colors ${
+                      isDarkMode ? 'bg-green-600 border-green-500 text-white hover:bg-green-500' : 'bg-green-200 border-green-300 text-green-700 hover:bg-green-300'
+                    }`}
+                  >
+                    Long Rest (Restore All)
+                  </button>
+                </div>
+              </div>
+
+              {Object.keys(spellSlots).length > 0 ? (
+                <div className="flex items-start gap-4">
+                  {/* Vertical Label */}
+                  <div className="flex flex-col items-center text-gray-400 text-sm font-bold mt-8">
+                    <div className="transform -rotate-90 whitespace-nowrap">TOTAL</div>
+                    <div className="transform -rotate-90 whitespace-nowrap mt-8">SLOTS</div>
+                  </div>
+
+                  {/* Main Tracker Grid */}
+                  <div className="w-96 h-24">
+                    <div className="grid grid-cols-9 gap-2 h-full">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(level => {
+                        const slots = spellSlots[level];
+                        const hasSlots = slots && slots.max > 0;
+
+                        return (
+                          <div key={level} className="flex flex-col items-center">
+                            {/* Square container for level number */}
+                            <div
+                              className={`w-8 h-8 flex items-center justify-center border-2 mb-2 rounded ${
+                                hasSlots
+                                  ? 'bg-orange-400 border-orange-300 text-slate-900'
+                                  : 'bg-gray-600 border-gray-500 text-gray-400'
+                              }`}
+                            >
+                              <span className="text-sm font-bold">
+                                {hasSlots ? slots.max : 0}
+                              </span>
+                            </div>
+
+                            {/* Level Label */}
+                            <div className="text-xs text-gray-400 mb-1 font-bold">{level}</div>
+
+                            {/* Circles for tracking used slots */}
+                            <div className="flex flex-col gap-1 items-center">
+                              {hasSlots && Array.from({ length: slots.max }, (_, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => {
+                                    if (index < slots.used) {
+                                      // Clicking on a used slot restores it
+                                      setSpellSlots(prev => ({
+                                        ...prev,
+                                        [level]: {
+                                          ...prev[level],
+                                          used: Math.max(0, prev[level].used - 1)
+                                        }
+                                      }));
+                                    } else {
+                                      // Clicking on an available slot uses it
+                                      castSpell(level);
+                                    }
+                                  }}
+                                  className={`w-4 h-4 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                                    index < slots.used
+                                      ? 'bg-gray-500 border-gray-400 hover:bg-gray-400' // Used slot
+                                      : 'bg-transparent border-orange-300 hover:bg-orange-100' // Available slot
+                                  }`}
+                                  title={index < slots.used ? 'Click to restore this slot' : 'Click to use this slot'}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-gray-400 py-8">
+                  <p>No spell slots available for {character.class} level {character.level}</p>
+                  <p className="text-xs mt-2">Some classes gain spellcasting at higher levels</p>
+                </div>
+              )}
+            </div>
+
             {/* Spell Level Boxes */}
             <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
               <div className="space-y-4">
@@ -2698,7 +3231,7 @@ export default function CharacterSheet() {
                   isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300'
                 }`}>
                   <div className="text-left text-lg font-bold text-gray-300 mb-4 py-2">Cantrips</div>
-                  <div className="grid text-xs font-bold text-gray-300 mb-2" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
+                  <div className="grid text-xs font-bold text-gray-300 mb-2" style={{ gridTemplateColumns: '20fr 7fr 7fr 7fr 8fr 28fr 6fr 6fr 4fr 5fr 6fr' }}>
                     <div className="text-center">Spell Name</div>
                     <div className="text-center">School</div>
                     <div className="text-center">Casting Time</div>
@@ -2709,6 +3242,7 @@ export default function CharacterSheet() {
                     <div className="text-center">Duration</div>
                     <div className="text-center">Tags</div>
                     <div className="text-center">Comp</div>
+                    <div className="text-center">Cast</div>
                   </div>
 
                   {/* Display Known Cantrips */}
@@ -2716,7 +3250,7 @@ export default function CharacterSheet() {
                     <div
                       key={`cantrip-${spellIndex}`}
                       className="grid mt-1 cursor-pointer hover:bg-slate-600/30 transition-colors"
-                      style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}
+                      style={{ gridTemplateColumns: '20fr 7fr 7fr 7fr 8fr 28fr 6fr 6fr 4fr 5fr 6fr' }}
                       onMouseEnter={(e) => {
                         setHoveredSpell(spell);
                         setMousePosition({ x: e.clientX, y: e.clientY });
@@ -2762,7 +3296,9 @@ export default function CharacterSheet() {
                   ))}
                 </div>
 
-                {Array.from({ length: 9 }, (_, i) => i + 1).map(level => (
+                {Array.from({ length: 9 }, (_, i) => i + 1).filter(level =>
+                  getAccessibleSpellLevels(character.class, character.level).includes(level)
+                ).map(level => (
                   <div key={level} className={`p-4 rounded border ${
                     isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300'
                   }`}>
@@ -2891,9 +3427,12 @@ export default function CharacterSheet() {
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Spell Levels</label>
                   <div className="grid grid-cols-5 gap-2">
-                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(level => (
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(level =>
+                      getAccessibleSpellLevels(character.class, character.level).includes(level)
+                    ).map(level => (
                       <label key={level} className="flex items-center">
                         <input
+                          id={`spell-level-${level}`}
                           type="checkbox"
                           checked={selectedSpellLevels.has(level)}
                           onChange={(e) => {
@@ -2919,12 +3458,12 @@ export default function CharacterSheet() {
               {/* Quick Actions */}
               <div className="mt-4 flex gap-2">
                 <button
-                  onClick={() => setSelectedSpellLevels(new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]))}
+                  onClick={() => setSelectedSpellLevels(new Set(getAccessibleSpellLevels(character.class, character.level)))}
                   className={`px-3 py-1 text-xs rounded border transition-colors ${
                     isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
                   }`}
                 >
-                  All Levels
+                  Accessible Levels
                 </button>
                 <button
                   onClick={() => setSelectedSpellLevels(new Set([0]))}
@@ -2990,6 +3529,7 @@ export default function CharacterSheet() {
                         }`} style={{ gridTemplateColumns: '5fr 5fr 20fr 8fr 8fr 8fr 12fr 25fr 8fr 8fr' }}>
                           <div className="text-center">
                             <input
+                              id={`known-spell-${index}`}
                               type="checkbox"
                               checked={knownSpells.has(index)}
                               onChange={(e) => {
@@ -3448,6 +3988,7 @@ export default function CharacterSheet() {
                             </td>
                             <td className="py-1 text-center">
                               <input
+                                id={`reqAtt-${index}`}
                                 type="checkbox"
                                 checked={equippedItem.reqAtt}
                                 onChange={(e) => {
@@ -3983,6 +4524,7 @@ export default function CharacterSheet() {
                            'Alert?'}
                         </label>
                         <input
+                          id={`init-modifier-${modifier}`}
                           type="checkbox"
                           checked={isChecked as boolean}
                           onChange={(e) => setInitiativeModifiers({
@@ -4067,6 +4609,7 @@ export default function CharacterSheet() {
                             {Object.entries(choice.abilityIncreases).map(([ability, increase]) => (
                               <label key={ability} className="flex items-center text-xs">
                                 <input
+                                  id={`asi-${levelKey}-${ability}`}
                                   type="checkbox"
                                   checked={increase > 0}
                                   onChange={(e) => {
@@ -4364,6 +4907,7 @@ export default function CharacterSheet() {
                   </div>
                 </div>
               </div>
+
 
             </div>
           </div>
