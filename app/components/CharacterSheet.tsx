@@ -154,6 +154,11 @@ export default function CharacterSheet() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [masterSpellList, setMasterSpellList] = useState<any[]>([]);
   const [knownSpells, setKnownSpells] = useState<Set<number>>(new Set());
+  const [spellSearchTerm, setSpellSearchTerm] = useState('');
+  const [selectedSpellClass, setSelectedSpellClass] = useState('All Classes');
+  const [selectedSpellLevels, setSelectedSpellLevels] = useState<Set<number>>(new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
+  const [hoveredSpell, setHoveredSpell] = useState<any>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   const [character, setCharacter] = useState<Character>({
     name: 'Elara Moonwhisper',
@@ -445,6 +450,8 @@ export default function CharacterSheet() {
     const savedDarkMode = localStorage.getItem('dnd-dark-mode');
     const savedAsiChoices = localStorage.getItem('dnd-asi-choices');
     const savedImages = localStorage.getItem('dnd-images');
+    const savedSpellList = localStorage.getItem('dnd-master-spell-list');
+    const savedKnownSpells = localStorage.getItem('dnd-known-spells');
 
     if (savedCharacter) {
       try {
@@ -481,6 +488,26 @@ export default function CharacterSheet() {
         console.warn('Failed to load images from localStorage:', error);
       }
     }
+
+    // Load spell list from localStorage
+    if (savedSpellList) {
+      try {
+        const spellList = JSON.parse(savedSpellList);
+        setMasterSpellList(spellList);
+      } catch (error) {
+        console.warn('Failed to load spell list from localStorage:', error);
+      }
+    }
+
+    // Load known spells from localStorage
+    if (savedKnownSpells) {
+      try {
+        const knownSpellsArray = JSON.parse(savedKnownSpells);
+        setKnownSpells(new Set(knownSpellsArray));
+      } catch (error) {
+        console.warn('Failed to load known spells from localStorage:', error);
+      }
+    }
   }, []);
 
   // Save character data to localStorage whenever it changes
@@ -502,6 +529,15 @@ export default function CharacterSheet() {
   useEffect(() => {
     localStorage.setItem('dnd-asi-choices', JSON.stringify(asiChoices));
   }, [asiChoices]);
+
+  // Save known spells to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-known-spells', JSON.stringify([...knownSpells]));
+    } catch (error) {
+      console.warn('Failed to save known spells to localStorage:', error);
+    }
+  }, [knownSpells]);
 
   // Save images to localStorage with error handling
   useEffect(() => {
@@ -773,6 +809,29 @@ export default function CharacterSheet() {
         return spellLevel === level && knownSpells.has(originalIndex);
       })
       .map(({ spell }) => spell);
+  };
+
+  // Filter spells based on search term, class, and levels
+  const getFilteredSpells = () => {
+    return masterSpellList.filter(spell => {
+      // Search term filter
+      const searchMatch = spellSearchTerm === '' ||
+        (spell.Name || spell.name || '').toLowerCase().includes(spellSearchTerm.toLowerCase()) ||
+        (spell.School || spell.school || '').toLowerCase().includes(spellSearchTerm.toLowerCase()) ||
+        (spell.Effect || spell.description || spell.effect || '').toLowerCase().includes(spellSearchTerm.toLowerCase());
+
+      // Level filter
+      const spellLevel = isNaN(parseFloat(spell.Level !== undefined ? spell.Level : spell.level)) ? 0 : parseFloat(spell.Level !== undefined ? spell.Level : spell.level);
+      const levelMatch = selectedSpellLevels.has(spellLevel);
+
+      // Class filter (simplified - would need actual spell class data)
+      const classMatch = selectedSpellClass === 'All Classes' ||
+        (spell.Classes && spell.Classes.includes(selectedSpellClass)) ||
+        (spell.classes && spell.classes.includes(selectedSpellClass)) ||
+        selectedSpellClass === 'All Classes';
+
+      return searchMatch && levelMatch && classMatch;
+    });
   };
 
   // Inventory management state
@@ -2638,7 +2697,7 @@ export default function CharacterSheet() {
                 <div className={`p-4 rounded border ${
                   isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300'
                 }`}>
-                  <div className="text-center text-lg font-bold text-gray-300 mb-4 py-2">Cantrips</div>
+                  <div className="text-left text-lg font-bold text-gray-300 mb-4 py-2">Cantrips</div>
                   <div className="grid text-xs font-bold text-gray-300 mb-2" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
                     <div className="text-center">Spell Name</div>
                     <div className="text-center">School</div>
@@ -2651,88 +2710,24 @@ export default function CharacterSheet() {
                     <div className="text-center">Tags</div>
                     <div className="text-center">Comp</div>
                   </div>
-                  <div className="grid" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
-                    <input
-                      type="text"
-                      placeholder="Spell Name"
-                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                    />
-                    <input
-                      type="text"
-                      placeholder="School"
-                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Cast Time"
-                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Range"
-                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Area/Targets"
-                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                    />
-                    <textarea
-                      placeholder="Effect"
-                      rows={1}
-                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center resize-none ${
-                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                      style={{ minHeight: '1.5rem' }}
-                      onInput={(e) => {
-                        const target = e.target as HTMLTextAreaElement;
-                        target.style.height = 'auto';
-                        target.style.height = target.scrollHeight + 'px';
-                      }}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Save/Att"
-                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Duration"
-                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                    />
-                    <input
-                      type="text"
-                      placeholder="C,R"
-                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                    />
-                    <input
-                      type="text"
-                      placeholder="V,S,M"
-                      className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                        isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                      } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                    />
-                  </div>
 
                   {/* Display Known Cantrips */}
                   {getKnownSpellsForLevel(0).map((spell, spellIndex) => (
-                    <div key={`cantrip-${spellIndex}`} className="grid mt-1" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
+                    <div
+                      key={`cantrip-${spellIndex}`}
+                      className="grid mt-1 cursor-pointer hover:bg-slate-600/30 transition-colors"
+                      style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}
+                      onMouseEnter={(e) => {
+                        setHoveredSpell(spell);
+                        setMousePosition({ x: e.clientX, y: e.clientY });
+                      }}
+                      onMouseMove={(e) => {
+                        setMousePosition({ x: e.clientX, y: e.clientY });
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredSpell(null);
+                      }}
+                    >
                       <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
                         {spell.Name || spell.name || ''}
                       </div>
@@ -2771,7 +2766,7 @@ export default function CharacterSheet() {
                   <div key={level} className={`p-4 rounded border ${
                     isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300'
                   }`}>
-                    <div className="text-center text-lg font-bold text-gray-300 mb-4 py-2">Level {level}</div>
+                    <div className="text-left text-lg font-bold text-gray-300 mb-4 py-2">Level {level}</div>
                     <div className="grid text-xs font-bold text-gray-300 mb-2" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
                       <div className="text-center">Spell Name</div>
                       <div className="text-center">School</div>
@@ -2784,88 +2779,24 @@ export default function CharacterSheet() {
                       <div className="text-center">Tags</div>
                       <div className="text-center">Comp</div>
                     </div>
-                    <div className="grid" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
-                      <input
-                        type="text"
-                        placeholder="Spell Name"
-                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                      />
-                      <input
-                        type="text"
-                        placeholder="School"
-                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Cast Time"
-                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Range"
-                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Area/Targets"
-                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                      />
-                      <textarea
-                        placeholder="Effect"
-                        rows={1}
-                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center resize-none ${
-                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                        style={{ minHeight: '1.5rem' }}
-                        onInput={(e) => {
-                          const target = e.target as HTMLTextAreaElement;
-                          target.style.height = 'auto';
-                          target.style.height = target.scrollHeight + 'px';
-                        }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Save/Att"
-                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Duration"
-                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                      />
-                      <input
-                        type="text"
-                        placeholder="C,R"
-                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                      />
-                      <input
-                        type="text"
-                        placeholder="V,S,M"
-                        className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white text-center ${
-                          isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                        } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-                      />
-                    </div>
 
                     {/* Display Known Spells for Current Level */}
                     {getKnownSpellsForLevel(level).map((spell, spellIndex) => (
-                      <div key={`level-${level}-spell-${spellIndex}`} className="grid mt-1" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
+                      <div
+                        key={`level-${level}-spell-${spellIndex}`}
+                        className="grid mt-1 cursor-pointer hover:bg-slate-600/30 transition-colors"
+                        style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}
+                        onMouseEnter={(e) => {
+                          setHoveredSpell(spell);
+                          setMousePosition({ x: e.clientX, y: e.clientY });
+                        }}
+                        onMouseMove={(e) => {
+                          setMousePosition({ x: e.clientX, y: e.clientY });
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredSpell(null);
+                        }}
+                      >
                         <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
                           {spell.Name || spell.name || ''}
                         </div>
@@ -2909,9 +2840,121 @@ export default function CharacterSheet() {
         {/* Library Tab */}
         {activeTab === 'Library' && (
           <div className="space-y-8">
+            {/* Spell Filters */}
+            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <h3 className="text-xl font-semibold text-orange-400 mb-4">Spell Filters</h3>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Search Bar */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Search Spells</label>
+                  <input
+                    type="text"
+                    placeholder="Search by name, school, or description..."
+                    value={spellSearchTerm}
+                    onChange={(e) => setSpellSearchTerm(e.target.value)}
+                    className={`w-full border rounded px-3 py-2 ${
+                      isDarkMode
+                        ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  />
+                </div>
+
+                {/* Class Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Class</label>
+                  <select
+                    value={selectedSpellClass}
+                    onChange={(e) => setSelectedSpellClass(e.target.value)}
+                    className={`w-full border rounded px-3 py-2 ${
+                      isDarkMode
+                        ? 'bg-slate-700 border-slate-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="All Classes">All Classes</option>
+                    <option value="Bard">Bard</option>
+                    <option value="Cleric">Cleric</option>
+                    <option value="Druid">Druid</option>
+                    <option value="Paladin">Paladin</option>
+                    <option value="Ranger">Ranger</option>
+                    <option value="Sorcerer">Sorcerer</option>
+                    <option value="Warlock">Warlock</option>
+                    <option value="Wizard">Wizard</option>
+                    <option value="Eldritch Knight">Eldritch Knight</option>
+                    <option value="Arcane Trickster">Arcane Trickster</option>
+                  </select>
+                </div>
+
+                {/* Level Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Spell Levels</label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(level => (
+                      <label key={level} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedSpellLevels.has(level)}
+                          onChange={(e) => {
+                            const newLevels = new Set(selectedSpellLevels);
+                            if (e.target.checked) {
+                              newLevels.add(level);
+                            } else {
+                              newLevels.delete(level);
+                            }
+                            setSelectedSpellLevels(newLevels);
+                          }}
+                          className="w-4 h-4 text-orange-400 bg-transparent border-slate-600 rounded focus:ring-orange-500 mr-1"
+                        />
+                        <span className="text-xs text-gray-300">
+                          {level === 0 ? 'C' : level}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => setSelectedSpellLevels(new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]))}
+                  className={`px-3 py-1 text-xs rounded border transition-colors ${
+                    isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  All Levels
+                </button>
+                <button
+                  onClick={() => setSelectedSpellLevels(new Set([0]))}
+                  className={`px-3 py-1 text-xs rounded border transition-colors ${
+                    isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Cantrips Only
+                </button>
+                <button
+                  onClick={() => setSelectedSpellLevels(new Set())}
+                  className={`px-3 py-1 text-xs rounded border transition-colors ${
+                    isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+
             {/* Spell Library Table */}
             <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-              <h3 className="text-xl font-semibold text-orange-400 mb-4">Master Spell Library</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-orange-400">Master Spell Library</h3>
+                {masterSpellList.length > 0 && (
+                  <div className="text-sm text-gray-400">
+                    Showing {getFilteredSpells().length} of {masterSpellList.length} spells
+                  </div>
+                )}
+              </div>
 
               {masterSpellList.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -2931,7 +2974,7 @@ export default function CharacterSheet() {
 
                   {/* Table Rows */}
                   <div className="space-y-1 max-h-[72rem] overflow-y-auto">
-                    {masterSpellList
+                    {getFilteredSpells()
                       .sort((a, b) => {
                         // Sort by level first, then by name - handle invalid levels
                         const levelA = isNaN(parseFloat(a.Level !== undefined ? a.Level : a.level)) ? 0 : parseFloat(a.Level !== undefined ? a.Level : a.level);
@@ -4107,6 +4150,13 @@ export default function CharacterSheet() {
                             console.log('Processed spell array:', spellArray);
                             setMasterSpellList(spellArray);
 
+                            // Save spell data to localStorage
+                            try {
+                              localStorage.setItem('dnd-master-spell-list', JSON.stringify(spellArray));
+                            } catch (error) {
+                              console.warn('Failed to save spell data to localStorage:', error);
+                            }
+
                             if (spellArray.length === 0) {
                               alert('No spells found in the JSON file. Please check the file structure.');
                             } else {
@@ -4315,6 +4365,85 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* Spell Hover Card */}
+        {hoveredSpell && (
+          <div
+            className="fixed z-50 pointer-events-none"
+            style={{
+              left: mousePosition.x + 20,
+              top: mousePosition.y - 10,
+              maxWidth: '400px',
+            }}
+          >
+            <div className={`p-4 rounded-lg border shadow-xl ${
+              isDarkMode
+                ? 'bg-slate-800 border-slate-600 text-white'
+                : 'bg-white border-gray-300 text-gray-900'
+            }`}>
+              <div className="space-y-3">
+                {/* Spell Name and Level */}
+                <div className="border-b border-slate-600 pb-2">
+                  <h3 className="text-lg font-bold text-orange-400">
+                    {hoveredSpell.Name || hoveredSpell.name || 'Unknown Spell'}
+                  </h3>
+                  <div className="text-sm text-gray-400">
+                    {isNaN(parseFloat(hoveredSpell.Level !== undefined ? hoveredSpell.Level : hoveredSpell.level))
+                      ? 'Unknown Level'
+                      : parseFloat(hoveredSpell.Level !== undefined ? hoveredSpell.Level : hoveredSpell.level) === 0
+                        ? 'Cantrip'
+                        : `Level ${Math.floor(parseFloat(hoveredSpell.Level !== undefined ? hoveredSpell.Level : hoveredSpell.level))}`
+                    } • {hoveredSpell.School || hoveredSpell.school || 'Unknown School'}
+                  </div>
+                </div>
+
+                {/* Spell Stats */}
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="font-semibold text-orange-300">Casting Time:</span>
+                    <div className="text-gray-300">{hoveredSpell.CastingTime || hoveredSpell.casting_time || hoveredSpell.castingTime || 'Unknown'}</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-orange-300">Range:</span>
+                    <div className="text-gray-300">{hoveredSpell.Range || hoveredSpell.range || 'Unknown'}</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-orange-300">Duration:</span>
+                    <div className="text-gray-300">{hoveredSpell.Duration || hoveredSpell.duration || 'Unknown'}</div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-orange-300">Components:</span>
+                    <div className="text-gray-300">{hoveredSpell.Components || hoveredSpell.components || 'Unknown'}</div>
+                  </div>
+                </div>
+
+                {/* Area/Targets */}
+                {(hoveredSpell['Area or Targets'] || hoveredSpell.area_of_effect || hoveredSpell.areaOfEffect || hoveredSpell.targets) && (
+                  <div className="text-sm">
+                    <span className="font-semibold text-orange-300">Area/Targets:</span>
+                    <div className="text-gray-300">{hoveredSpell['Area or Targets'] || hoveredSpell.area_of_effect || hoveredSpell.areaOfEffect || hoveredSpell.targets}</div>
+                  </div>
+                )}
+
+                {/* Save/Attack */}
+                {(hoveredSpell['Save or Attack'] || hoveredSpell.save || hoveredSpell.attack) && (
+                  <div className="text-sm">
+                    <span className="font-semibold text-orange-300">Save/Attack:</span>
+                    <div className="text-gray-300">{hoveredSpell['Save or Attack'] || hoveredSpell.save || hoveredSpell.attack}</div>
+                  </div>
+                )}
+
+                {/* Effect/Description */}
+                <div className="text-sm">
+                  <span className="font-semibold text-orange-300">Effect:</span>
+                  <div className="text-gray-300 mt-1 max-h-32 overflow-y-auto">
+                    {hoveredSpell.Effect || hoveredSpell.description || hoveredSpell.effect || 'No description available'}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
