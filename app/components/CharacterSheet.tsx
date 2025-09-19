@@ -11,7 +11,7 @@ const DND_CLASSES = [
   'Fighter',
   'Monk',
   'Paladin',
-  'Ranger',
+  'Ranger (*LL Alt)',
   'Rogue',
   'Sorcerer',
   'Warlock',
@@ -888,10 +888,20 @@ export default function CharacterSheet() {
       const levelMatch = selectedSpellLevels.has(spellLevel);
 
       // Class filter (simplified - would need actual spell class data)
-      const classMatch = selectedSpellClass === 'All Classes' ||
+      let classMatch = selectedSpellClass === 'All Classes' ||
         (spell.Classes && spell.Classes.includes(selectedSpellClass)) ||
         (spell.classes && spell.classes.includes(selectedSpellClass)) ||
         selectedSpellClass === 'All Classes';
+
+      // Laserllama Alternate Ranger gets access to Ranger spells + expanded spell list
+      if (selectedSpellClass === 'Ranger (*LL Alt)') {
+        classMatch = classMatch ||
+          (spell.Classes && spell.Classes.includes('Ranger')) ||
+          (spell.classes && spell.classes.includes('Ranger')) ||
+          // Additional utility and nature spells commonly added to Laserllama Ranger
+          (spell.Name && ['Mending', 'Guidance', 'Resistance', 'Thaumaturgy', 'Create or Destroy Water', 'Purify Food and Drink', 'Detect Poison and Disease', 'Lesser Restoration', 'Zone of Truth', 'Water Breathing', 'Water Walk', 'Dispel Magic', 'Remove Curse'].includes(spell.Name)) ||
+          (spell.name && ['Mending', 'Guidance', 'Resistance', 'Thaumaturgy', 'Create or Destroy Water', 'Purify Food and Drink', 'Detect Poison and Disease', 'Lesser Restoration', 'Zone of Truth', 'Water Breathing', 'Water Walk', 'Dispel Magic', 'Remove Curse'].includes(spell.name));
+      }
 
       return searchMatch && levelMatch && classMatch;
     });
@@ -1033,8 +1043,8 @@ export default function CharacterSheet() {
         19: [4, 3, 3, 3, 2, 0, 0, 0, 0],
         20: [4, 3, 3, 3, 2, 0, 0, 0, 0]
       },
-      'Ranger': {
-        1: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      'Ranger (*LL Alt)': {
+        1: [1, 0, 0, 0, 0, 0, 0, 0, 0],
         2: [2, 0, 0, 0, 0, 0, 0, 0, 0],
         3: [3, 0, 0, 0, 0, 0, 0, 0, 0],
         4: [3, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -1108,9 +1118,9 @@ export default function CharacterSheet() {
       return accessibleLevels;
     }
 
-    // Rangers start casting at level 2
-    if (characterClass === 'Ranger') {
-      if (level >= 2) accessibleLevels.push(1);
+    // Alternate Rangers start casting at level 1
+    if (characterClass === 'Ranger (*LL Alt)') {
+      if (level >= 1) accessibleLevels.push(1);
       if (level >= 5) accessibleLevels.push(2);
       if (level >= 9) accessibleLevels.push(3);
       if (level >= 13) accessibleLevels.push(4);
@@ -1545,9 +1555,12 @@ export default function CharacterSheet() {
                         <select
                           value={ammo.name}
                           onChange={(e) => updateAmmunition(index, 'name', e.target.value)}
-                          className={`col-span-3 text-center border rounded px-2 py-1 text-xs ${
+                          className={`col-span-3 text-center border rounded px-2 py-1 text-xs appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
+                          style={{
+                            backgroundImage: 'none'
+                          }}
                         >
                           <option value="">Select ammo...</option>
                           {getAmmunitionOptions().map(ammoName => (
@@ -1558,9 +1571,12 @@ export default function CharacterSheet() {
                         <select
                           value={ammo.weapon}
                           onChange={(e) => updateAmmunition(index, 'weapon', e.target.value)}
-                          className={`col-span-4 text-center border rounded px-2 py-1 text-xs ${
+                          className={`col-span-4 text-center border rounded px-2 py-1 text-xs appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
+                          style={{
+                            backgroundImage: 'none'
+                          }}
                         >
                           <option value="">Select weapon...</option>
                           {getWeaponOptions().map(weaponName => (
@@ -1693,7 +1709,7 @@ export default function CharacterSheet() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Hit Points */}
                   <div className="space-y-4">
                     {/* HP Section - Horizontal Layout */}
@@ -2179,13 +2195,9 @@ export default function CharacterSheet() {
               </div>
             </div>
 
-            {/* Large Combat Planning Box - Part of Attack Field */}
-            <div className={`p-6 rounded-lg border mt-6 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-              <h3 className="text-lg font-semibold text-orange-400 mb-4">⚔️ Combat Planning & Notes</h3>
-
-              <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6 mt-6">
                 {/* Left side - Weapons */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <div className="space-y-3 pb-8">
                     {/* Column Headers */}
                     <div className="grid gap-2 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600" style={{gridTemplateColumns: "2fr 0.6fr 0.4fr 1fr 0.8fr 0.7fr 1.2fr 0.6fr"}}>
@@ -2427,7 +2439,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Right side - Armor */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <div className="space-y-2 pb-8">
 
                     {/* Header Row */}
@@ -2498,7 +2510,8 @@ export default function CharacterSheet() {
                       </select>
                       <input
                         type="text"
-                        value=""
+                        value={armor.shieldType.karuta || ''}
+                        onChange={(e) => updateArmor('shieldType', 'karuta', e.target.value)}
                         className={`w-28 border rounded px-2 py-1 text-xs ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
@@ -2591,7 +2604,6 @@ export default function CharacterSheet() {
                     <h3 className="text-sm font-bold text-gray-400">Armor</h3>
                   </div>
                 </div>
-              </div>
             </div>
 
           </div>
@@ -3414,7 +3426,7 @@ export default function CharacterSheet() {
                     <option value="Cleric">Cleric</option>
                     <option value="Druid">Druid</option>
                     <option value="Paladin">Paladin</option>
-                    <option value="Ranger">Ranger</option>
+                    <option value="Ranger (*LL Alt)">Ranger (*LL Alt)</option>
                     <option value="Sorcerer">Sorcerer</option>
                     <option value="Warlock">Warlock</option>
                     <option value="Wizard">Wizard</option>
@@ -4336,11 +4348,33 @@ export default function CharacterSheet() {
           <div className="space-y-8">
             {/* 4-Column Layout */}
             <div className="grid grid-cols-4 gap-x-6 gap-y-6 items-start">
-              
-              {/* Column 1: Hit Points */}
+
+              {/* Column 1: Level & Hit Points */}
               <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                {/* Level Selection */}
+                <div className="mb-4">
+                  <div className="text-xs font-bold text-orange-400 mb-2">Level</div>
+                  <div className={`text-xs mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Your character's level (1-20)
+                  </div>
+                  <select
+                    value={character.level || 1}
+                    onChange={(e) => updateCharacter({ level: parseInt(e.target.value) })}
+                    className={`w-full text-center border rounded px-2 py-1 font-bold ${
+                      isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    {Array.from({ length: 20 }, (_, i) => i + 1).map(level => (
+                      <option key={level} value={level}>{level}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <h3 className="text-lg font-semibold text-orange-400 mb-2">Hit Points</h3>
-                
+                <div className={`text-xs mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Roll for HP at each level. Track your health and hit dice.
+                </div>
+
                 {/* HP Levels 1-10 and 11-20 in two columns */}
                 <div className="mb-4">
                   <div className="grid grid-cols-2 gap-4">
