@@ -52,6 +52,124 @@ const GENDER_OPTIONS = [
   'Other'
 ];
 
+// Feat Data Structures
+interface Feat {
+  name: string;
+  description: string;
+  source: 'class' | 'race' | 'manual';
+  level?: number;
+}
+
+// Class Features that grant feats automatically
+const CLASS_FEATS: { [key: string]: { [level: number]: Feat[] } } = {
+  'Fighter': {
+    1: [{ name: 'Fighting Style', description: 'Choose a fighting style that grants combat bonuses', source: 'class', level: 1 }],
+    2: [{ name: 'Action Surge', description: 'Take an additional action on your turn', source: 'class', level: 2 }],
+    3: [{ name: 'Martial Archetype', description: 'Choose your fighter subclass', source: 'class', level: 3 }],
+    5: [{ name: 'Extra Attack', description: 'Attack twice when you take the Attack action', source: 'class', level: 5 }],
+    9: [{ name: 'Indomitable', description: 'Reroll a failed saving throw', source: 'class', level: 9 }],
+    11: [{ name: 'Extra Attack (2)', description: 'Attack three times when you take the Attack action', source: 'class', level: 11 }],
+    20: [{ name: 'Extra Attack (3)', description: 'Attack four times when you take the Attack action', source: 'class', level: 20 }]
+  },
+  'Rogue': {
+    1: [{ name: 'Expertise', description: 'Double proficiency bonus for two skills', source: 'class', level: 1 },
+        { name: 'Sneak Attack', description: '1d6 extra damage when conditions are met', source: 'class', level: 1 }],
+    2: [{ name: 'Cunning Action', description: 'Dash, Disengage, or Hide as a bonus action', source: 'class', level: 2 }],
+    3: [{ name: 'Roguish Archetype', description: 'Choose your rogue subclass', source: 'class', level: 3 }],
+    5: [{ name: 'Uncanny Dodge', description: 'Halve damage from one attack per turn', source: 'class', level: 5 }],
+    6: [{ name: 'Expertise (Additional)', description: 'Double proficiency bonus for two more skills', source: 'class', level: 6 }],
+    7: [{ name: 'Evasion', description: 'Take no damage on successful Dex saves, half on failures', source: 'class', level: 7 }]
+  },
+  'Wizard': {
+    1: [{ name: 'Spellcasting', description: 'Cast wizard spells using Intelligence', source: 'class', level: 1 },
+        { name: 'Arcane Recovery', description: 'Recover spell slots on short rest', source: 'class', level: 1 }],
+    2: [{ name: 'Arcane Tradition', description: 'Choose your wizard school', source: 'class', level: 2 }],
+    18: [{ name: 'Spell Mastery', description: 'Cast certain spells without expending spell slots', source: 'class', level: 18 }],
+    20: [{ name: 'Signature Spells', description: 'Always have two 3rd level spells prepared', source: 'class', level: 20 }]
+  },
+  'Barbarian': {
+    1: [{ name: 'Rage', description: 'Enter a battle rage for combat bonuses', source: 'class', level: 1 },
+        { name: 'Unarmored Defense', description: 'AC = 10 + Dex + Con while unarmored', source: 'class', level: 1 }],
+    2: [{ name: 'Reckless Attack', description: 'Gain advantage but enemies gain advantage against you', source: 'class', level: 2 },
+        { name: 'Danger Sense', description: 'Advantage on Dex saves against traps and spells', source: 'class', level: 2 }],
+    3: [{ name: 'Primal Path', description: 'Choose your barbarian subclass', source: 'class', level: 3 }],
+    5: [{ name: 'Extra Attack', description: 'Attack twice when you take the Attack action', source: 'class', level: 5 },
+        { name: 'Fast Movement', description: 'Speed increases by 10 feet', source: 'class', level: 5 }]
+  },
+  'Bard': {
+    1: [{ name: 'Spellcasting', description: 'Cast bard spells using Charisma', source: 'class', level: 1 },
+        { name: 'Bardic Inspiration', description: 'Inspire allies with bonus action', source: 'class', level: 1 }],
+    2: [{ name: 'Jack of All Trades', description: 'Add half proficiency to non-proficient checks', source: 'class', level: 2 },
+        { name: 'Song of Rest', description: 'Improve short rest healing with performance', source: 'class', level: 2 }],
+    3: [{ name: 'Bard College', description: 'Choose your bard subclass', source: 'class', level: 3 },
+        { name: 'Expertise', description: 'Double proficiency bonus for two skills', source: 'class', level: 3 }]
+  },
+  'Cleric': {
+    1: [{ name: 'Spellcasting', description: 'Cast cleric spells using Wisdom', source: 'class', level: 1 },
+        { name: 'Divine Domain', description: 'Choose your cleric domain', source: 'class', level: 1 }],
+    2: [{ name: 'Channel Divinity', description: 'Use divine energy for supernatural effects', source: 'class', level: 2 }],
+    5: [{ name: 'Destroy Undead', description: 'Channel Divinity to destroy undead', source: 'class', level: 5 }]
+  },
+  'Druid': {
+    1: [{ name: 'Spellcasting', description: 'Cast druid spells using Wisdom', source: 'class', level: 1 },
+        { name: 'Druidcraft', description: 'Know the Druidcraft cantrip', source: 'class', level: 1 }],
+    2: [{ name: 'Wild Shape', description: 'Transform into beasts', source: 'class', level: 2 },
+        { name: 'Druid Circle', description: 'Choose your druid subclass', source: 'class', level: 2 }],
+    18: [{ name: 'Timeless Body', description: 'Age more slowly and cannot be aged magically', source: 'class', level: 18 }],
+    20: [{ name: 'Archdruid', description: 'Unlimited Wild Shape uses', source: 'class', level: 20 }]
+  }
+};
+
+// Racial Features that grant feats
+const RACIAL_FEATS: { [key: string]: Feat[] } = {
+  'Human': [
+    { name: 'Extra Skill', description: 'Gain proficiency in one additional skill', source: 'race' },
+    { name: 'Extra Language', description: 'Learn one additional language', source: 'race' },
+    { name: 'Versatile', description: '+1 to all ability scores', source: 'race' }
+  ],
+  'Elf': [
+    { name: 'Darkvision', description: 'See in dim light within 60 feet', source: 'race' },
+    { name: 'Keen Senses', description: 'Proficiency in Perception', source: 'race' },
+    { name: 'Fey Ancestry', description: 'Advantage on saves against charm, immune to magical sleep', source: 'race' },
+    { name: 'Trance', description: 'Meditate for 4 hours instead of sleeping for 8', source: 'race' }
+  ],
+  'Dwarf': [
+    { name: 'Darkvision', description: 'See in dim light within 60 feet', source: 'race' },
+    { name: 'Dwarven Resilience', description: 'Advantage on saves against poison, resistance to poison damage', source: 'race' },
+    { name: 'Dwarven Combat Training', description: 'Proficiency with battleaxe, handaxe, light hammer, warhammer', source: 'race' },
+    { name: 'Stonecunning', description: 'Add double proficiency to History checks related to stonework', source: 'race' }
+  ],
+  'Halfling': [
+    { name: 'Lucky', description: 'Reroll natural 1s on attack rolls, ability checks, and saves', source: 'race' },
+    { name: 'Brave', description: 'Advantage on saves against being frightened', source: 'race' },
+    { name: 'Halfling Nimbleness', description: 'Move through space of larger creatures', source: 'race' }
+  ],
+  'Dragonborn': [
+    { name: 'Draconic Ancestry', description: 'Choose a dragon type for breath weapon and resistance', source: 'race' },
+    { name: 'Breath Weapon', description: 'Use breath weapon based on draconic ancestry', source: 'race' },
+    { name: 'Damage Resistance', description: 'Resistance to damage type associated with draconic ancestry', source: 'race' }
+  ],
+  'Gnome': [
+    { name: 'Darkvision', description: 'See in dim light within 60 feet', source: 'race' },
+    { name: 'Gnome Cunning', description: 'Advantage on mental saves against magic', source: 'race' }
+  ],
+  'Half-Elf': [
+    { name: 'Darkvision', description: 'See in dim light within 60 feet', source: 'race' },
+    { name: 'Fey Ancestry', description: 'Advantage on saves against charm, immune to magical sleep', source: 'race' },
+    { name: 'Extra Skills', description: 'Gain proficiency in two additional skills', source: 'race' }
+  ],
+  'Half-Orc': [
+    { name: 'Darkvision', description: 'See in dim light within 60 feet', source: 'race' },
+    { name: 'Relentless Endurance', description: 'Drop to 1 HP instead of 0 once per long rest', source: 'race' },
+    { name: 'Savage Attacks', description: 'Roll extra weapon damage die on critical hits', source: 'race' }
+  ],
+  'Tiefling': [
+    { name: 'Darkvision', description: 'See in dim light within 60 feet', source: 'race' },
+    { name: 'Hellish Resistance', description: 'Resistance to fire damage', source: 'race' },
+    { name: 'Infernal Legacy', description: 'Know Thaumaturgy cantrip, gain spells at higher levels', source: 'race' }
+  ]
+};
+
 interface Character {
   name: string;
   class: string;
@@ -280,6 +398,8 @@ export default function CharacterSheet() {
     weapons: [
       {
         name: 'Quarterstaff',
+        type: 'Melee',
+        finesse: false,
         proficient: true,
         notches: '1',
         range: '5 ft',
@@ -289,6 +409,8 @@ export default function CharacterSheet() {
       },
       {
         name: 'Dagger',
+        type: 'Melee',
+        finesse: true,
         proficient: true,
         notches: '1',
         range: '20/60 ft',
@@ -330,6 +452,73 @@ export default function CharacterSheet() {
     return character.savingThrows[save] ? baseModifier + character.proficiencyBonus : baseModifier;
   };
 
+  // Calculate weapon attack bonus based on ability, proficiency, and weapon bonus
+  const calculateWeaponAttackBonus = (weapon: any): string => {
+    const abilityScore = character.abilityScores[weapon.ability?.toLowerCase() as keyof typeof character.abilityScores] || 10;
+    const abilityMod = getModifier(abilityScore);
+    const profBonus = weapon.proficient ? character.proficiencyBonus : 0;
+    const weaponBonus = parseInt(weapon.notches?.replace(/[^-\d]/g, '')) || 0;
+    const total = abilityMod + profBonus + weaponBonus;
+    return total >= 0 ? `+${total}` : `${total}`;
+  };
+
+  // D&D 5e Armor Classifications
+  const ARMOR_DATA: { [key: string]: { ac: number; type: 'Light' | 'Medium' | 'Heavy' | 'None'; maxDex?: number; stealthDis?: boolean } } = {
+    'None': { ac: 10, type: 'None' },
+    'Padded': { ac: 11, type: 'Light', stealthDis: true },
+    'Leather': { ac: 11, type: 'Light' },
+    'Studded Leather': { ac: 12, type: 'Light' },
+    'Hide': { ac: 12, type: 'Medium', maxDex: 2 },
+    'Chain Shirt': { ac: 13, type: 'Medium', maxDex: 2 },
+    'Scale Mail': { ac: 14, type: 'Medium', maxDex: 2, stealthDis: true },
+    'Breastplate': { ac: 14, type: 'Medium', maxDex: 2 },
+    'Half Plate': { ac: 15, type: 'Medium', maxDex: 2, stealthDis: true },
+    'Ring Mail': { ac: 14, type: 'Heavy', stealthDis: true },
+    'Chain Mail': { ac: 16, type: 'Heavy', stealthDis: true },
+    'Splint': { ac: 17, type: 'Heavy', stealthDis: true },
+    'Plate': { ac: 18, type: 'Heavy', stealthDis: true }
+  };
+
+  const SHIELD_DATA: { [key: string]: { ac: number } } = {
+    'None': { ac: 0 },
+    'Shield': { ac: 2 },
+    'Tower Shield': { ac: 3 },
+    'Buckler': { ac: 1 }
+  };
+
+  // Calculate total AC based on D&D 5e rules
+  const calculateTotalAC = (): number => {
+    const armorName = armor.armorType.item || 'None';
+    const shieldName = armor.shieldType.item || 'None';
+
+    const armorData = ARMOR_DATA[armorName] || ARMOR_DATA['None'];
+    const shieldData = SHIELD_DATA[shieldName] || SHIELD_DATA['None'];
+
+    // Base AC from armor
+    let totalAC = armorData.ac;
+
+    // Add DEX modifier (with armor type limits)
+    const dexMod = getModifier(character.abilityScores.dexterity);
+    if (armorData.type === 'Light' || armorData.type === 'None') {
+      totalAC += dexMod; // Full DEX mod
+    } else if (armorData.type === 'Medium') {
+      totalAC += Math.min(dexMod, armorData.maxDex || 2); // Max +2 DEX
+    }
+    // Heavy armor gets no DEX mod
+
+    // Add shield AC
+    totalAC += shieldData.ac;
+
+    // Add magical bonuses
+    const armorBonus = parseInt(armor.armorType.plus?.replace(/[^-\d]/g, '')) || 0;
+    const shieldBonus = parseInt(armor.shieldType.plus?.replace(/[^-\d]/g, '')) || 0;
+    const attireBonus = parseInt(armor.magicalAttire.plus?.replace(/[^-\d]/g, '')) || 0;
+
+    totalAC += armorBonus + shieldBonus + attireBonus;
+
+    return totalAC;
+  };
+
   const updateCharacter = (updates: Partial<Character>) => {
     setCharacter(prev => ({ ...prev, ...updates }));
   };
@@ -356,8 +545,17 @@ export default function CharacterSheet() {
 
   const getArmorOptions = () => {
     const equippedArmor = getEquippedItemsByType('Armor');
-    const defaultArmor = ['Padded', 'Leather', 'Studded Leather', 'Hide', 'Chain Shirt', 'Scale Mail', 'Breastplate', 'Half Plate', 'Ring Mail', 'Chain Mail', 'Splint', 'Plate'];
+    const defaultArmor = ['None', 'Padded', 'Leather', 'Studded Leather', 'Hide', 'Chain Shirt', 'Scale Mail', 'Breastplate', 'Half Plate', 'Ring Mail', 'Chain Mail', 'Splint', 'Plate'];
     return [...new Set([...defaultArmor, ...equippedArmor])];
+  };
+
+  const getArmorDisplayName = (armorName: string): string => {
+    const armorData = ARMOR_DATA[armorName];
+    if (!armorData || armorName === 'None') return armorName;
+
+    const typeShort = armorData.type.charAt(0); // L, M, H
+    const stealthIcon = armorData.stealthDis ? '👤' : '';
+    return `${armorName} (${typeShort}${armorData.ac}${stealthIcon})`;
   };
 
   const getShieldOptions = () => {
@@ -437,8 +635,8 @@ export default function CharacterSheet() {
 
   // Armor state
   const [armor, setArmor] = useState({
-    armorType: { item: 'Studded Leather', karuta: 'Karuta (Studded Leather)', plus: '', notches: '' },
-    shieldType: { item: 'None', plus: '', notches: '' },
+    armorType: { item: 'Studded Leather', karuta: 'Armor Item', plus: '', notches: '' },
+    shieldType: { item: 'None', karuta: '', plus: '', notches: '' },
     magicalAttire: { item1: 'None', item2: 'None', plus: '', notches: '' }
   });
 
@@ -467,6 +665,52 @@ export default function CharacterSheet() {
     level19: { type: 'ASI', abilityIncreases: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 }, featName: '' }
   });
 
+  // Automatic Feat Tracking
+  const [characterFeats, setCharacterFeats] = useState<Feat[]>([]);
+  const [manualFeats, setManualFeats] = useState<Feat[]>([]);
+
+  // Function to get automatic feats based on class and level
+  const getAutomaticFeats = (characterClass: string, level: number, race: string): Feat[] => {
+    const allFeats: Feat[] = [];
+
+    // Add racial feats
+    if (RACIAL_FEATS[race]) {
+      allFeats.push(...RACIAL_FEATS[race]);
+    }
+
+    // Add class feats up to current level
+    if (CLASS_FEATS[characterClass]) {
+      for (let lvl = 1; lvl <= level; lvl++) {
+        if (CLASS_FEATS[characterClass][lvl]) {
+          allFeats.push(...CLASS_FEATS[characterClass][lvl]);
+        }
+      }
+    }
+
+    return allFeats;
+  };
+
+  // Function to add a manual feat
+  const addManualFeat = (featName: string, description: string = '') => {
+    const newFeat: Feat = {
+      name: featName,
+      description: description || 'Custom feat',
+      source: 'manual'
+    };
+    setManualFeats(prev => [...prev, newFeat]);
+  };
+
+  // Function to remove a manual feat
+  const removeManualFeat = (index: number) => {
+    setManualFeats(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Update automatic feats when character class, level, or race changes
+  useEffect(() => {
+    const autoFeats = getAutomaticFeats(character.class, character.level, character.race);
+    setCharacterFeats(autoFeats);
+  }, [character.class, character.level, character.race]);
+
   // Fantasy Calendar State
   const [currentDate, setCurrentDate] = useState({
     day: 14,
@@ -487,6 +731,7 @@ export default function CharacterSheet() {
     const savedSpellList = localStorage.getItem('dnd-master-spell-list');
     const savedKnownSpells = localStorage.getItem('dnd-known-spells');
     const savedSpellSlots = localStorage.getItem('dnd-spell-slots');
+    const savedManualFeats = localStorage.getItem('dnd-manual-feats');
 
     if (savedCharacter) {
       try {
@@ -562,6 +807,16 @@ export default function CharacterSheet() {
         console.warn('Failed to load spell slots from localStorage:', error);
       }
     }
+
+    // Load manual feats from localStorage
+    if (savedManualFeats) {
+      try {
+        const manualFeatsArray = JSON.parse(savedManualFeats);
+        setManualFeats(manualFeatsArray);
+      } catch (error) {
+        console.warn('Failed to load manual feats from localStorage:', error);
+      }
+    }
   }, []);
 
   // Save character data to localStorage whenever it changes
@@ -601,6 +856,15 @@ export default function CharacterSheet() {
       console.warn('Failed to save spell slots to localStorage:', error);
     }
   }, [spellSlots]);
+
+  // Save manual feats to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-manual-feats', JSON.stringify(manualFeats));
+    } catch (error) {
+      console.warn('Failed to save manual feats to localStorage:', error);
+    }
+  }, [manualFeats]);
 
   // Save images to localStorage with error handling
   useEffect(() => {
@@ -1301,6 +1565,81 @@ export default function CharacterSheet() {
     setEquippedItems([...equippedItems, { type: '', item: '', itemBonus: '', range: '', notches: '', valueSP: 0, bulk: 0, reqAtt: false }]);
   };
 
+  // Integration function to sync equipped items with other systems
+  const syncEquippedItemToSystems = (equippedItem: any, index: number) => {
+    const { type, item, itemBonus, notches } = equippedItem;
+
+    switch (type) {
+      case 'Armor':
+        setArmor(prev => ({
+          ...prev,
+          armorType: {
+            item: item || prev.armorType.item,
+            karuta: item ? 'Armor Item' : prev.armorType.karuta,
+            plus: itemBonus || prev.armorType.plus,
+            notches: notches || prev.armorType.notches
+          }
+        }));
+        break;
+
+      case 'Shield':
+        setArmor(prev => ({
+          ...prev,
+          shieldType: {
+            item: item || prev.shieldType.item,
+            karuta: item ? `${item}` : prev.shieldType.karuta,
+            plus: itemBonus || prev.shieldType.plus,
+            notches: notches || prev.shieldType.notches
+          }
+        }));
+        break;
+
+      case 'Attire':
+        setArmor(prev => ({
+          ...prev,
+          magicalAttire: {
+            item1: item || prev.magicalAttire.item1,
+            item2: prev.magicalAttire.item2,
+            plus: itemBonus || prev.magicalAttire.plus,
+            notches: notches || prev.magicalAttire.notches
+          }
+        }));
+        break;
+
+      case 'Ammunition':
+        // Find first empty ammunition slot or update existing
+        setAmmunition(prev => {
+          const newAmmunition = [...prev];
+          const emptyIndex = newAmmunition.findIndex(ammo => ammo.name === '');
+          if (emptyIndex !== -1) {
+            newAmmunition[emptyIndex] = {
+              name: item || '',
+              weapon: '', // User can fill this in manually
+              amount: itemBonus || '' // Using bonus field for amount
+            };
+          } else if (newAmmunition.length > 0) {
+            // Update first slot if no empty slots
+            newAmmunition[0] = {
+              name: item || newAmmunition[0].name,
+              weapon: newAmmunition[0].weapon,
+              amount: itemBonus || newAmmunition[0].amount
+            };
+          }
+          return newAmmunition;
+        });
+        break;
+
+      case 'Weapon':
+        // For weapons, we could potentially add them to a weapons system if it exists
+        // For now, this will just keep them in equipped items
+        break;
+
+      default:
+        // Other item types stay in equipped items only
+        break;
+    }
+  };
+
   const removeEquippedItem = () => {
     if (equippedItems.length > 1) {
       setEquippedItems(equippedItems.slice(0, -1));
@@ -1568,40 +1907,24 @@ export default function CharacterSheet() {
                           ))}
                           <option value="custom">-- Custom --</option>
                         </select>
-                        <select
+                        <input
+                          type="text"
                           value={ammo.weapon}
                           onChange={(e) => updateAmmunition(index, 'weapon', e.target.value)}
-                          className={`col-span-4 text-center border rounded px-2 py-1 text-xs appearance-none ${
+                          className={`col-span-4 text-center border rounded px-2 py-1 text-xs ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
-                          style={{
-                            backgroundImage: 'none'
-                          }}
-                        >
-                          <option value="">Select weapon...</option>
-                          {getWeaponOptions().map(weaponName => (
-                            <option key={weaponName} value={weaponName}>{weaponName}</option>
-                          ))}
-                          <option value="custom">-- Custom --</option>
-                        </select>
-                        <select
+                          placeholder="Weapon"
+                        />
+                        <input
+                          type="text"
                           value={ammo.amount}
                           onChange={(e) => updateAmmunition(index, 'amount', e.target.value)}
-                          className={`col-span-3 text-center border rounded px-2 py-1 text-xs appearance-none ${
+                          className={`col-span-3 text-center border rounded px-2 py-1 text-xs ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
-                          style={{
-                            backgroundImage: 'none'
-                          }}
-                        >
-                          <option value="">Select Die</option>
-                          <option value="d4">d4</option>
-                          <option value="d6">d6</option>
-                          <option value="d8">d8</option>
-                          <option value="d10">d10</option>
-                          <option value="d12">d12</option>
-                          <option value="d20">d20</option>
-                        </select>
+                          placeholder="Dice/Qty"
+                        />
                       </div>
                     ))}
                   </div>
@@ -1620,11 +1943,23 @@ export default function CharacterSheet() {
                       <div className="text-xs font-bold text-white mb-2">AC</div>
                       <input
                         type="number"
-                        value={character.armorClass}
+                        value={character.armorClass || calculateTotalAC()}
                         onChange={(e) => updateCharacter({ armorClass: parseInt(e.target.value) || 0 })}
                         className={`w-full text-center border rounded px-3 py-2 text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          character.armorClass
+                            ? (isDarkMode ? 'bg-yellow-700 border-yellow-500 text-yellow-200' : 'bg-yellow-100 border-yellow-400 text-yellow-800')
+                            : (isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900')
                         }`}
+                        placeholder={calculateTotalAC().toString()}
+                        title={character.armorClass
+                          ? "Manual AC override - clear to use auto-calculation"
+                          : `Auto-calculated AC: ${calculateTotalAC()}\n\nBreakdown:\n• Armor: ${ARMOR_DATA[armor.armorType.item || 'None']?.ac || 10}\n• DEX Mod: ${(() => {
+                            const armorData = ARMOR_DATA[armor.armorType.item || 'None'];
+                            const dexMod = getModifier(character.abilityScores.dexterity);
+                            if (armorData?.type === 'Light' || armorData?.type === 'None') return dexMod;
+                            if (armorData?.type === 'Medium') return Math.min(dexMod, armorData.maxDex || 2);
+                            return 0;
+                          })()}\n• Shield: ${SHIELD_DATA[armor.shieldType.item || 'None']?.ac || 0}\n• Magic Bonus: ${(parseInt(armor.armorType.plus?.replace(/[^-\d]/g, '')) || 0) + (parseInt(armor.shieldType.plus?.replace(/[^-\d]/g, '')) || 0) + (parseInt(armor.magicalAttire.plus?.replace(/[^-\d]/g, '')) || 0)}`}
                       />
                     </div>
                     <div className="text-center">
@@ -2200,58 +2535,94 @@ export default function CharacterSheet() {
                 <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <div className="space-y-3 pb-8">
                     {/* Column Headers */}
-                    <div className="grid gap-2 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600" style={{gridTemplateColumns: "2fr 0.6fr 0.4fr 1fr 0.8fr 0.7fr 1.2fr 0.6fr"}}>
+                    <div className="grid gap-1 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600" style={{gridTemplateColumns: "1.8fr 0.8fr 0.5fr 0.5fr 0.4fr 0.8fr 0.7fr 1fr 0.5fr"}}>
                       <div className="text-center">Name</div>
+                      <div className="text-center">Type</div>
+                      <div className="text-center">Finesse</div>
                       <div className="text-center">Prof</div>
-                      <div className="text-center">Notch</div>
-                      <div className="text-center">Range</div>
+                      <div className="text-center">+</div>
                       <div className="text-center">Ability</div>
                       <div className="text-center">ATK Bon</div>
                       <div className="text-center">Damage</div>
-                      <div className="text-center">Roll</div>
+                      <div className="text-center">Notch</div>
                     </div>
 
                     {character.weapons.map((weapon, index) => (
-                      <div key={index} className="grid gap-2 items-center text-sm" style={{gridTemplateColumns: "2fr 0.6fr 0.4fr 1fr 0.8fr 0.7fr 1.2fr 0.6fr"}}>
+                      <div key={index} className="grid gap-1 items-center text-sm" style={{gridTemplateColumns: "1.8fr 0.8fr 0.5fr 0.5fr 0.4fr 0.8fr 0.7fr 1fr 0.5fr"}}>
                         {/* Name */}
                         <div>
-                          <select
+                          <input
+                            type="text"
                             value={weapon.name}
                             onChange={(e) => {
                               const newWeapons = [...character.weapons];
                               newWeapons[index] = { ...weapon, name: e.target.value };
                               updateCharacter({ weapons: newWeapons });
                             }}
-                            className={`w-full border rounded px-2 py-1 text-xs ${
+                            className={`w-full border rounded px-1 py-1 text-xs ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                            placeholder="Weapon name"
+                          />
+                        </div>
+
+                        {/* Type */}
+                        <div>
+                          <select
+                            value={weapon.type || 'Melee'}
+                            onChange={(e) => {
+                              const newWeapons = [...character.weapons];
+                              const newType = e.target.value;
+                              let newAbility = weapon.ability;
+
+                              // Auto-set ability based on weapon type
+                              if (newType === 'Ranged') {
+                                newAbility = 'DEX';
+                              } else if (newType === 'Melee' && !weapon.finesse) {
+                                newAbility = 'STR';
+                              } else if (newType === 'Thrown') {
+                                newAbility = weapon.finesse ? 'DEX' : 'STR';
+                              }
+
+                              newWeapons[index] = { ...weapon, type: newType, ability: newAbility };
+                              updateCharacter({ weapons: newWeapons });
+                            }}
+                            className={`w-full border rounded px-1 py-1 text-xs appearance-none ${
                               isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                             }`}
                           >
-                            <option value="">Select weapon...</option>
-                            {getWeaponOptions().map(weaponName => (
-                              <option key={weaponName} value={weaponName}>{weaponName}</option>
-                            ))}
-                            <option value="custom">-- Custom --</option>
+                            <option value="Melee">Melee</option>
+                            <option value="Ranged">Ranged</option>
+                            <option value="Thrown">Thrown</option>
                           </select>
-                          {weapon.name === 'custom' && (
-                            <input
-                              type="text"
-                              placeholder="Enter custom weapon name"
-                              className={`w-full border rounded px-2 py-1 text-xs mt-1 ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                              }`}
-                              onChange={(e) => {
-                                const newWeapons = [...character.weapons];
-                                newWeapons[index] = { ...weapon, name: e.target.value };
-                                updateCharacter({ weapons: newWeapons });
-                              }}
-                            />
-                          )}
+                        </div>
+
+                        {/* Finesse */}
+                        <div className="flex justify-center">
+                          <input
+                            type="checkbox"
+                            checked={weapon.finesse || false}
+                            onChange={(e) => {
+                              const newWeapons = [...character.weapons];
+                              const isFinesse = e.target.checked;
+                              let newAbility = weapon.ability;
+
+                              // Auto-adjust ability when finesse changes
+                              if (weapon.type === 'Melee' || weapon.type === 'Thrown') {
+                                newAbility = isFinesse ? 'DEX' : 'STR';
+                              }
+
+                              newWeapons[index] = { ...weapon, finesse: isFinesse, ability: newAbility };
+                              updateCharacter({ weapons: newWeapons });
+                            }}
+                            className="w-3 h-3 accent-blue-500 rounded focus:ring-1 focus:ring-blue-400"
+                            disabled={weapon.type === 'Ranged'}
+                          />
                         </div>
 
                         {/* Proficiency Checkbox */}
                         <div className="flex justify-center">
                           <input
-                            id={`combat-weapon-proficient-${index}`}
                             type="checkbox"
                             checked={weapon.proficient}
                             onChange={(e) => {
@@ -2263,7 +2634,7 @@ export default function CharacterSheet() {
                           />
                         </div>
 
-                        {/* Notches */}
+                        {/* Weapon Bonus (+ field) */}
                         <div>
                           <input
                             type="text"
@@ -2273,61 +2644,57 @@ export default function CharacterSheet() {
                               newWeapons[index] = { ...weapon, notches: e.target.value };
                               updateCharacter({ weapons: newWeapons });
                             }}
-                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                            className={`w-full border rounded px-1 py-1 text-xs text-center ${
                               isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                             }`}
-                            placeholder="+"
-                          />
-                        </div>
-
-                        {/* Range */}
-                        <div>
-                          <input
-                            type="text"
-                            value={weapon.range}
-                            onChange={(e) => {
-                              const newWeapons = [...character.weapons];
-                              newWeapons[index] = { ...weapon, range: e.target.value };
-                              updateCharacter({ weapons: newWeapons });
-                            }}
-                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                            placeholder="Range"
+                            placeholder="+0"
                           />
                         </div>
 
                         {/* Ability */}
                         <div>
-                          <input
-                            type="text"
-                            value={weapon.ability}
+                          <select
+                            value={weapon.ability || 'STR'}
                             onChange={(e) => {
                               const newWeapons = [...character.weapons];
                               newWeapons[index] = { ...weapon, ability: e.target.value };
                               updateCharacter({ weapons: newWeapons });
                             }}
-                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                            className={`w-full border rounded px-1 py-1 text-xs text-center appearance-none ${
                               isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                             }`}
-                            placeholder="STR"
-                          />
+                          >
+                            <option value="STR">STR</option>
+                            <option value="DEX">DEX</option>
+                            <option value="CON">CON</option>
+                            <option value="INT">INT</option>
+                            <option value="WIS">WIS</option>
+                            <option value="CHA">CHA</option>
+                          </select>
                         </div>
 
-                        {/* ATK Bonus */}
+                        {/* ATK Bonus - Auto-calculated but editable */}
                         <div>
                           <input
                             type="text"
-                            value={weapon.atkBonus}
+                            value={weapon.atkBonus || calculateWeaponAttackBonus(weapon)}
                             onChange={(e) => {
                               const newWeapons = [...character.weapons];
                               newWeapons[index] = { ...weapon, atkBonus: e.target.value };
                               updateCharacter({ weapons: newWeapons });
                             }}
-                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            className={`w-full border rounded px-1 py-1 text-xs text-center ${
+                              weapon.atkBonus
+                                ? (isDarkMode ? 'bg-slate-600 border-yellow-500 text-yellow-200' : 'bg-yellow-50 border-yellow-400 text-gray-900')
+                                : (isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900')
                             }`}
-                            placeholder="+0"
+                            placeholder={calculateWeaponAttackBonus(weapon)}
+                            title={weapon.atkBonus ? "Manual override - clear to use auto-calculation" : "Auto-calculated: ability mod + prof bonus + weapon bonus"}
+                            onFocus={(e) => {
+                              if (!weapon.atkBonus) {
+                                e.target.value = calculateWeaponAttackBonus(weapon);
+                              }
+                            }}
                           />
                         </div>
 
@@ -2341,46 +2708,28 @@ export default function CharacterSheet() {
                               newWeapons[index] = { ...weapon, damage: e.target.value };
                               updateCharacter({ weapons: newWeapons });
                             }}
-                            className={`w-full border rounded px-2 py-1 text-xs text-center ${
+                            className={`w-full border rounded px-1 py-1 text-xs text-center ${
                               isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                             }`}
-                            placeholder="1d6"
+                            placeholder="1d8+2"
                           />
                         </div>
 
-                        {/* D20 Roll Button */}
-                        <div className="flex justify-center">
-                          <button
-                            onClick={() => {
-                              const d20Roll = Math.floor(Math.random() * 20) + 1;
-                              const atkBonus = parseInt(weapon.atkBonus.replace(/[^-\d]/g, '')) || 0;
-                              const totalAttack = d20Roll + atkBonus;
-
-                              // Parse damage (e.g., "1d6+2" or "1d8")
-                              const damageMatch = weapon.damage.match(/(\d+)d(\d+)([+-]\d+)?/);
-                              let damageRoll = 0;
-                              if (damageMatch) {
-                                const numDice = parseInt(damageMatch[1]);
-                                const dieSize = parseInt(damageMatch[2]);
-                                const bonus = parseInt(damageMatch[3]) || 0;
-
-                                for (let i = 0; i < numDice; i++) {
-                                  damageRoll += Math.floor(Math.random() * dieSize) + 1;
-                                }
-                                damageRoll += bonus;
-                              }
-
-                              alert(`${weapon.name || 'Weapon'} Roll:\n\nAttack: d20(${d20Roll}) + ${atkBonus} = ${totalAttack}\nDamage: ${damageRoll > 0 ? damageRoll : 'Invalid damage format'}`);
+                        {/* Notch */}
+                        <div>
+                          <input
+                            type="text"
+                            value={weapon.notches || ''}
+                            onChange={(e) => {
+                              const newWeapons = [...character.weapons];
+                              newWeapons[index] = { ...weapon, notches: e.target.value };
+                              updateCharacter({ weapons: newWeapons });
                             }}
-                            className="w-6 h-6 bg-purple-600 hover:bg-purple-700 text-white font-bold transition-colors rounded-sm"
-                            style={{
-                              clipPath: 'polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)',
-                              fontSize: '0.64rem'
-                            }}
-                            title="Roll d20 attack and damage"
-                          >
-                            d20
-                          </button>
+                            className={`w-full border rounded px-1 py-1 text-xs text-center ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                            placeholder="0"
+                          />
                         </div>
                       </div>
                     ))}
@@ -2393,10 +2742,11 @@ export default function CharacterSheet() {
                             updateCharacter({
                               weapons: [...character.weapons, {
                                 name: '',
+                                type: 'Melee',
+                                finesse: false,
                                 proficient: false,
                                 notches: '',
-                                range: '',
-                                ability: '',
+                                ability: 'STR',
                                 atkBonus: '',
                                 damage: ''
                               }]
@@ -2442,11 +2792,12 @@ export default function CharacterSheet() {
                 <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <div className="space-y-2 pb-8">
 
+
                     {/* Header Row */}
                     <div className="flex items-center space-x-2">
                       <div className="w-16 text-xs font-semibold text-gray-400"></div>
-                      <div className="w-24 text-xs font-semibold text-gray-400 text-center">Type</div>
-                      <div className="w-28 text-xs font-semibold text-gray-400 text-center">Item</div>
+                      <div className="w-32 text-xs font-semibold text-gray-400 px-1">Type</div>
+                      <div className="w-40 text-xs font-semibold text-gray-400 px-2">Item</div>
                       <div className="w-12 text-xs font-semibold text-gray-400 text-center">+</div>
                       <div className="w-16 text-xs font-semibold text-gray-400 text-center">Notches</div>
                     </div>
@@ -2457,22 +2808,22 @@ export default function CharacterSheet() {
                       <select
                         value={armor.armorType.item}
                         onChange={(e) => updateArmor('armorType', 'item', e.target.value)}
-                        className={`w-24 text-xs border rounded px-1 py-1 ${
+                        className={`w-32 text-xs border rounded px-1 py-1 appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       >
                         {getArmorOptions().map(armorType => (
-                          <option key={armorType} value={armorType}>{armorType}</option>
+                          <option key={armorType} value={armorType}>{getArmorDisplayName(armorType)}</option>
                         ))}
                       </select>
                       <input
                         type="text"
                         value={armor.armorType.karuta}
                         onChange={(e) => updateArmor('armorType', 'karuta', e.target.value)}
-                        className={`w-28 border rounded px-2 py-1 text-xs ${
+                        className={`w-40 border rounded px-2 py-1 text-xs ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
-                        placeholder="Karuta (Studded Leather)"
+                        placeholder="Armor Item"
                       />
                       <input
                         type="text"
@@ -2500,7 +2851,7 @@ export default function CharacterSheet() {
                       <select
                         value={armor.shieldType.item}
                         onChange={(e) => updateArmor('shieldType', 'item', e.target.value)}
-                        className={`w-24 text-xs border rounded px-1 py-1 ${
+                        className={`w-32 text-xs border rounded px-1 py-1 appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       >
@@ -2512,7 +2863,7 @@ export default function CharacterSheet() {
                         type="text"
                         value={armor.shieldType.karuta || ''}
                         onChange={(e) => updateArmor('shieldType', 'karuta', e.target.value)}
-                        className={`w-28 border rounded px-2 py-1 text-xs ${
+                        className={`w-40 border rounded px-2 py-1 text-xs ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                         placeholder="Shield Item"
@@ -2539,17 +2890,17 @@ export default function CharacterSheet() {
 
                     {/* Magical Attire Row 1 */}
                     <div className="flex items-center space-x-2">
-                      <div className="w-16 text-xs font-semibold text-gray-400">Attire🪄</div>
+                      <div className="w-16 text-xs font-semibold text-gray-400">Attire</div>
                       <select
                         value={armor.magicalAttire.item1}
                         onChange={(e) => updateArmor('magicalAttire', 'item1', e.target.value)}
-                        className={`w-32 text-xs border rounded px-1 py-1 ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
+                        className={`w-32 text-xs border rounded px-1 py-1 appearance-none ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
                       >
                         {getMagicalAttireOptions().map(attire => (
                           <option key={attire} value={attire}>{attire}</option>
                         ))}
                       </select>
-                      <div className="w-20"></div>
+                      <div className="w-40"></div>
                       <input
                         type="text"
                         value={armor.magicalAttire.plus}
@@ -2576,13 +2927,13 @@ export default function CharacterSheet() {
                       <select
                         value={armor.magicalAttire.item2}
                         onChange={(e) => updateArmor('magicalAttire', 'item2', e.target.value)}
-                        className={`w-32 text-xs border rounded px-1 py-1 ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
+                        className={`w-32 text-xs border rounded px-1 py-1 appearance-none ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
                       >
                         {getMagicalAttireOptions().map(attire => (
                           <option key={attire} value={attire}>{attire}</option>
                         ))}
                       </select>
-                      <div className="w-20"></div>
+                      <div className="w-40"></div>
                       <input
                         type="text"
                         className={`w-12 text-center border rounded px-2 py-1 text-xs ${
@@ -2604,6 +2955,152 @@ export default function CharacterSheet() {
                     <h3 className="text-sm font-bold text-gray-400">Armor</h3>
                   </div>
                 </div>
+            </div>
+
+            {/* 4 Separate Boxes Layout */}
+            <div className="grid grid-cols-4 gap-4 mt-8">
+
+              {/* Box 1: Racial Features */}
+              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <h4 className="text-base font-semibold text-blue-400 mb-3">Racial Features</h4>
+                  <div className="space-y-2">
+                    {characterFeats.filter(feat => feat.source === 'race').map((feat, index) => (
+                      <div key={index} className="bg-slate-700 border border-blue-500/30 rounded p-2">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-sm font-medium text-blue-300">{feat.name}</span>
+                          <span className="text-xs text-blue-400 bg-blue-500/20 px-1 py-0.5 rounded">Race</span>
+                        </div>
+                        <p className="text-xs text-gray-300">{feat.description}</p>
+                      </div>
+                    ))}
+                    {characterFeats.filter(feat => feat.source === 'race').length === 0 && (
+                      <div className="text-sm text-gray-500 italic">No racial features available</div>
+                    )}
+                  </div>
+              </div>
+
+              {/* Box 2: Class Features */}
+              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <h4 className="text-base font-semibold text-purple-400 mb-3">Class Features</h4>
+                  <div className="space-y-2">
+                    {characterFeats.filter(feat => feat.source === 'class').map((feat, index) => (
+                      <div key={index} className="bg-slate-700 border border-purple-500/30 rounded p-2">
+                        <div className="flex justify-between items-start mb-1">
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-medium text-purple-300">{feat.name}</span>
+                            {feat.level && <span className="text-xs text-gray-400">(Lvl {feat.level})</span>}
+                          </div>
+                          <span className="text-xs text-purple-400 bg-purple-500/20 px-1 py-0.5 rounded">Class</span>
+                        </div>
+                        <p className="text-xs text-gray-300">{feat.description}</p>
+                      </div>
+                    ))}
+                    {characterFeats.filter(feat => feat.source === 'class').length === 0 && (
+                      <div className="text-sm text-gray-500 italic">No class features available</div>
+                    )}
+                  </div>
+              </div>
+
+              {/* Box 3: Feats */}
+              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <h4 className="text-base font-semibold text-orange-400 mb-3">Feats</h4>
+                <div className="space-y-2">
+                  {manualFeats.slice(Math.ceil(manualFeats.length / 2)).map((feat, index) => (
+                    <div key={index + Math.ceil(manualFeats.length / 2)} className="bg-slate-700 border border-orange-500/30 rounded p-2">
+                      <div className="flex justify-between items-start mb-1">
+                        <input
+                          type="text"
+                          value={feat.name}
+                          onChange={(e) => {
+                            const newFeats = [...manualFeats];
+                            newFeats[index + Math.ceil(manualFeats.length / 2)] = { ...newFeats[index + Math.ceil(manualFeats.length / 2)], name: e.target.value };
+                            setManualFeats(newFeats);
+                          }}
+                          className="bg-transparent text-sm font-medium text-orange-300 border-none outline-none flex-1 mr-2"
+                          placeholder="Feat name..."
+                        />
+                        <button
+                          onClick={() => removeManualFeat(index + Math.ceil(manualFeats.length / 2))}
+                          className="text-red-400 hover:text-red-300 text-xs flex-shrink-0"
+                          title="Remove feat"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <textarea
+                        value={feat.description}
+                        onChange={(e) => {
+                          const newFeats = [...manualFeats];
+                          newFeats[index + Math.ceil(manualFeats.length / 2)] = { ...newFeats[index + Math.ceil(manualFeats.length / 2)], description: e.target.value };
+                          setManualFeats(newFeats);
+                        }}
+                        className="bg-transparent text-xs text-gray-300 border-none outline-none w-full resize-none"
+                        placeholder="Feat description..."
+                        rows={2}
+                      />
+                    </div>
+                  ))}
+
+                  {/* Add New Feat Button */}
+                  <button
+                    onClick={() => addManualFeat('', '')}
+                    className="w-full border-2 border-dashed border-orange-500/30 rounded p-3 text-orange-400 hover:border-orange-500/50 hover:bg-orange-500/5 transition-colors text-sm"
+                  >
+                    + Add Feat
+                  </button>
+                </div>
+              </div>
+
+              {/* Box 4: Feats */}
+              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <h4 className="text-base font-semibold text-orange-400 mb-3">Feats</h4>
+                <div className="space-y-2">
+                  {manualFeats.slice(0, Math.ceil(manualFeats.length / 2)).map((feat, index) => (
+                    <div key={index} className="bg-slate-700 border border-orange-500/30 rounded p-2">
+                      <div className="flex justify-between items-start mb-1">
+                        <input
+                          type="text"
+                          value={feat.name}
+                          onChange={(e) => {
+                            const newFeats = [...manualFeats];
+                            newFeats[index] = { ...newFeats[index], name: e.target.value };
+                            setManualFeats(newFeats);
+                          }}
+                          className="bg-transparent text-sm font-medium text-orange-300 border-none outline-none flex-1 mr-2"
+                          placeholder="Feat name..."
+                        />
+                        <button
+                          onClick={() => removeManualFeat(index)}
+                          className="text-red-400 hover:text-red-300 text-xs flex-shrink-0"
+                          title="Remove feat"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <textarea
+                        value={feat.description}
+                        onChange={(e) => {
+                          const newFeats = [...manualFeats];
+                          newFeats[index] = { ...newFeats[index], description: e.target.value };
+                          setManualFeats(newFeats);
+                        }}
+                        className="bg-transparent text-xs text-gray-300 border-none outline-none w-full resize-none"
+                        placeholder="Feat description..."
+                        rows={2}
+                      />
+                    </div>
+                  ))}
+
+                  {/* Add New Feat Button */}
+                  <button
+                    onClick={() => addManualFeat('', '')}
+                    className="w-full border-2 border-dashed border-orange-500/30 rounded p-3 text-orange-400 hover:border-orange-500/50 hover:bg-orange-500/5 transition-colors text-sm"
+                  >
+                    + Add Feat
+                  </button>
+                </div>
+              </div>
+
             </div>
 
           </div>
@@ -3900,6 +4397,8 @@ export default function CharacterSheet() {
                                   const newItems = [...equippedItems];
                                   newItems[index].type = e.target.value;
                                   setEquippedItems(newItems);
+                                  // Trigger sync when type changes
+                                  syncEquippedItemToSystems(newItems[index], index);
                                 }}
                                 className={`w-full text-xs border rounded px-1 ${
                                   isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
@@ -3919,6 +4418,8 @@ export default function CharacterSheet() {
                                   const newItems = [...equippedItems];
                                   newItems[index].item = e.target.value;
                                   setEquippedItems(newItems);
+                                  // Trigger sync when item name changes
+                                  syncEquippedItemToSystems(newItems[index], index);
                                 }}
                                 className={`w-full text-xs border rounded px-1 ${
                                   isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
@@ -3933,6 +4434,8 @@ export default function CharacterSheet() {
                                   const newItems = [...equippedItems];
                                   newItems[index].itemBonus = e.target.value;
                                   setEquippedItems(newItems);
+                                  // Trigger sync when bonus changes
+                                  syncEquippedItemToSystems(newItems[index], index);
                                 }}
                                 className={`w-12 text-center text-xs border rounded px-1 ${
                                   isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
@@ -3961,6 +4464,8 @@ export default function CharacterSheet() {
                                   const newItems = [...equippedItems];
                                   newItems[index].notches = e.target.value;
                                   setEquippedItems(newItems);
+                                  // Trigger sync when notches change
+                                  syncEquippedItemToSystems(newItems[index], index);
                                 }}
                                 className={`w-12 text-center text-xs border rounded px-1 ${
                                   isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
@@ -4665,20 +5170,29 @@ export default function CharacterSheet() {
                             ))}
                           </div>
                         ) : (
-                          <input
-                            type="text"
-                            placeholder="Feat name..."
-                            value={choice.featName}
-                            onChange={(e) => {
-                              setAsiChoices(prev => ({
-                                ...prev,
-                                [levelKey]: { ...prev[levelKey as keyof typeof prev], featName: e.target.value }
-                              }));
-                            }}
-                            className={`w-full text-xs border rounded px-2 py-1 ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'
-                            }`}
-                          />
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              placeholder="Feat name..."
+                              value={choice.featName}
+                              onChange={(e) => {
+                                setAsiChoices(prev => ({
+                                  ...prev,
+                                  [levelKey]: { ...prev[levelKey as keyof typeof prev], featName: e.target.value }
+                                }));
+                              }}
+                              onBlur={(e) => {
+                                // When user finishes typing a feat name, add it to manual feats if not empty
+                                if (e.target.value.trim() && !manualFeats.some(feat => feat.name === e.target.value.trim())) {
+                                  addManualFeat(e.target.value.trim(), `Feat gained at level ${levelKey.replace('level', '')}`);
+                                }
+                              }}
+                              className={`w-full text-xs border rounded px-2 py-1 ${
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                              }`}
+                            />
+                            <p className="text-xs text-gray-500 italic">This feat will also appear in the Character Features section below.</p>
+                          </div>
                         )}
                       </div>
                     </div>
