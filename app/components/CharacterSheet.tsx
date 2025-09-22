@@ -170,6 +170,41 @@ const RACIAL_FEATS: { [key: string]: Feat[] } = {
   ]
 };
 
+// Class skill proficiencies (D&D 5e)
+const CLASS_SKILLS: { [key: string]: string[] } = {
+  'Barbarian': ['Animal Handling', 'Athletics', 'Intimidation', 'Nature', 'Perception', 'Survival'],
+  'Bard': ['Deception', 'History', 'Investigation', 'Persuasion', 'Performance', 'Sleight of Hand'], // Choose 3
+  'Cleric': ['History', 'Insight', 'Medicine', 'Persuasion', 'Religion'],
+  'Druid': ['Arcana', 'Animal Handling', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival'],
+  'Fighter': ['Acrobatics', 'Animal Handling', 'Athletics', 'History', 'Insight', 'Intimidation', 'Perception', 'Survival'],
+  'Monk': ['Acrobatics', 'Athletics', 'History', 'Insight', 'Religion', 'Stealth'],
+  'Paladin': ['Athletics', 'Insight', 'Intimidation', 'Medicine', 'Persuasion', 'Religion'],
+  'Ranger': ['Animal Handling', 'Athletics', 'Insight', 'Investigation', 'Nature', 'Perception', 'Stealth', 'Survival'],
+  'Rogue': ['Acrobatics', 'Athletics', 'Deception', 'Insight', 'Intimidation', 'Investigation', 'Perception', 'Performance', 'Persuasion', 'Sleight of Hand', 'Stealth'],
+  'Sorcerer': ['Arcana', 'Deception', 'Insight', 'Intimidation', 'Persuasion', 'Religion'],
+  'Warlock': ['Arcana', 'Deception', 'History', 'Intimidation', 'Investigation', 'Nature', 'Religion'],
+  'Wizard': ['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Religion']
+};
+
+// Number of skill proficiencies each class gets
+const CLASS_SKILL_COUNT: { [key: string]: number } = {
+  'Barbarian': 2, 'Bard': 3, 'Cleric': 2, 'Druid': 2, 'Fighter': 2, 'Monk': 2,
+  'Paladin': 2, 'Ranger': 3, 'Rogue': 4, 'Sorcerer': 2, 'Warlock': 2, 'Wizard': 2
+};
+
+// Racial skill proficiencies (guaranteed)
+const RACIAL_SKILLS: { [key: string]: string[] } = {
+  'Elf': ['Perception'], // Keen Senses
+  'Half-Elf': [], // Choose any 2 skills (handled specially)
+  'Human': [], // Choose any 1 skill (handled specially)
+  'Dwarf': [],
+  'Halfling': [],
+  'Dragonborn': [],
+  'Gnome': [],
+  'Half-Orc': [],
+  'Tiefling': []
+};
+
 interface Character {
   name: string;
   class: string;
@@ -212,7 +247,12 @@ interface Character {
   initiative: number;
   speed: number;
   skills: {
-    [key: string]: { proficient: boolean; expertise: boolean };
+    [key: string]: {
+      proficient: boolean;
+      expertise: boolean;
+      source?: 'race' | 'class' | 'background' | 'manual' | 'auto';
+      manualOverride?: boolean;
+    };
   };
   savingThrows: {
     [key: string]: boolean;
@@ -251,6 +291,8 @@ interface Character {
   };
   weapons: Array<{
     name: string;
+    type: string;
+    finesse: boolean;
     proficient: boolean;
     notches: string;
     range: string;
@@ -309,24 +351,24 @@ export default function CharacterSheet() {
     initiative: 2,
     speed: 30,
     skills: {
-      'Acrobatics': { proficient: false, expertise: false },
-      'Animal Handling': { proficient: false, expertise: false },
-      'Arcana': { proficient: true, expertise: false },
-      'Athletics': { proficient: false, expertise: false },
-      'Deception': { proficient: false, expertise: false },
-      'History': { proficient: true, expertise: true },
-      'Insight': { proficient: true, expertise: false },
-      'Intimidation': { proficient: false, expertise: false },
-      'Investigation': { proficient: true, expertise: false },
-      'Medicine': { proficient: false, expertise: false },
-      'Nature': { proficient: false, expertise: false },
-      'Perception': { proficient: false, expertise: false },
-      'Performance': { proficient: false, expertise: false },
-      'Persuasion': { proficient: true, expertise: false },
-      'Religion': { proficient: true, expertise: false },
-      'Sleight of Hand': { proficient: false, expertise: false },
-      'Stealth': { proficient: false, expertise: false },
-      'Survival': { proficient: false, expertise: false },
+      'Acrobatics': { proficient: false, expertise: false, source: 'manual' as const },
+      'Animal Handling': { proficient: false, expertise: false, source: 'manual' as const },
+      'Arcana': { proficient: false, expertise: false, source: 'manual' as const },
+      'Athletics': { proficient: false, expertise: false, source: 'manual' as const },
+      'Deception': { proficient: false, expertise: false, source: 'manual' as const },
+      'History': { proficient: false, expertise: false, source: 'manual' as const },
+      'Insight': { proficient: false, expertise: false, source: 'manual' as const },
+      'Intimidation': { proficient: false, expertise: false, source: 'manual' as const },
+      'Investigation': { proficient: false, expertise: false, source: 'manual' as const },
+      'Medicine': { proficient: false, expertise: false, source: 'manual' as const },
+      'Nature': { proficient: false, expertise: false, source: 'manual' as const },
+      'Perception': { proficient: false, expertise: false, source: 'manual' as const },
+      'Performance': { proficient: false, expertise: false, source: 'manual' as const },
+      'Persuasion': { proficient: false, expertise: false, source: 'manual' as const },
+      'Religion': { proficient: false, expertise: false, source: 'manual' as const },
+      'Sleight of Hand': { proficient: false, expertise: false, source: 'manual' as const },
+      'Stealth': { proficient: false, expertise: false, source: 'manual' as const },
+      'Survival': { proficient: false, expertise: false, source: 'manual' as const },
     },
     savingThrows: {
       'Strength': false,
@@ -420,11 +462,11 @@ export default function CharacterSheet() {
       }
     ],
     survivalConditions: {
-      hunger: { stage: 'Starving', effect: 1 },
-      thirst: { stage: 'Dehydrated', effect: 1 },
+      hunger: { stage: 'Ok', effect: 0 },
+      thirst: { stage: 'Ok', effect: 0 },
       fatigue: { stage: 'Ok', effect: 0 },
       additionalExhaustion: 0,
-      totalExhaustion: 2
+      totalExhaustion: 0
     },
   });
 
@@ -432,8 +474,122 @@ export default function CharacterSheet() {
     return Math.floor((score - 10) / 2);
   };
 
+  // Calculate ASI bonuses from Feat/ASI choices
+  const getAsiBonus = (ability: string): number => {
+    let totalBonus = 0;
+    Object.values(asiChoices).forEach(choice => {
+      if (choice.type === 'ASI') {
+        totalBonus += choice.abilityIncreases[ability as keyof typeof choice.abilityIncreases] || 0;
+      }
+    });
+    return totalBonus;
+  };
+
+  // Get final ability score including ASI bonuses
+  const getFinalAbilityScore = (ability: string): number => {
+    const baseScore = character.abilityScores[ability as keyof typeof character.abilityScores] || 0;
+    const asiBonus = getAsiBonus(ability);
+    return baseScore + asiBonus;
+  };
+
+  // Calculate maximum HP based on HP rolls and bonuses
+  const calculateMaxHP = (): number => {
+    const constitutionModifier = getModifier(getFinalAbilityScore('constitution'));
+
+    // Sum HP rolls for levels up to current level
+    let totalHP = 0;
+    for (let i = 0; i < character.level; i++) {
+      const roll = hitPointRolls[i] || 0;
+      totalHP += roll + constitutionModifier;
+    }
+
+    // Add Toughness feat bonus (+2 per level)
+    if (hasToughness) {
+      totalHP += character.level * 2;
+    }
+
+    // Add PHB Hill Dwarf bonus (+1 per level)
+    if (isPHBHillDwarf) {
+      totalHP += character.level;
+    }
+
+    // Add additional bonuses
+    totalHP += additionalHPBonuses;
+
+    return Math.max(1, totalHP); // Minimum 1 HP
+  };
+
+  // Automatically assign skills based on race and class
+  const assignAutomaticSkills = () => {
+    const newSkills = { ...character.skills };
+
+    // Reset all auto-assigned skills first (preserve manual overrides)
+    Object.keys(newSkills).forEach(skill => {
+      if (newSkills[skill].source === 'race' || newSkills[skill].source === 'class') {
+        if (!newSkills[skill].manualOverride) {
+          newSkills[skill] = { proficient: false, expertise: false, source: 'manual' as const };
+        }
+      }
+    });
+
+    // Apply racial skill proficiencies
+    const racialSkills = RACIAL_SKILLS[character.race] || [];
+    racialSkills.forEach(skill => {
+      if (newSkills[skill] && !newSkills[skill].manualOverride) {
+        newSkills[skill] = {
+          ...newSkills[skill],
+          proficient: true,
+          source: 'race'
+        };
+      }
+    });
+
+    // Apply class skill proficiencies (automatic selection of best skills)
+    const classSkills = CLASS_SKILLS[character.class] || [];
+    const skillCount = CLASS_SKILL_COUNT[character.class] || 0;
+
+    if (classSkills.length > 0 && skillCount > 0) {
+      // Auto-select the most commonly useful skills for each class
+      const prioritySkills = getClassPrioritySkills(character.class);
+      let assigned = 0;
+
+      prioritySkills.forEach(skill => {
+        if (assigned < skillCount && classSkills.includes(skill) && newSkills[skill] && !newSkills[skill].manualOverride) {
+          newSkills[skill] = {
+            ...newSkills[skill],
+            proficient: true,
+            source: 'class'
+          };
+          assigned++;
+        }
+      });
+    }
+
+    updateCharacter({ skills: newSkills });
+  };
+
+  // Priority skills for each class (most commonly useful)
+  const getClassPrioritySkills = (className: string): string[] => {
+    const priorities: { [key: string]: string[] } = {
+      'Barbarian': ['Athletics', 'Perception'],
+      'Bard': ['Persuasion', 'Deception', 'Performance'],
+      'Cleric': ['Religion', 'Insight'],
+      'Druid': ['Nature', 'Perception'],
+      'Fighter': ['Athletics', 'Perception'],
+      'Monk': ['Acrobatics', 'Stealth'],
+      'Paladin': ['Athletics', 'Persuasion'],
+      'Ranger': ['Survival', 'Perception', 'Stealth'],
+      'Rogue': ['Stealth', 'Sleight of Hand', 'Perception', 'Investigation'],
+      'Sorcerer': ['Arcana', 'Persuasion'],
+      'Warlock': ['Arcana', 'Deception'],
+      'Wizard': ['Arcana', 'Investigation']
+    };
+    return priorities[className] || [];
+  };
+
   const getSkillModifier = (skill: string, ability: keyof typeof character.abilityScores): number => {
-    const baseModifier = getModifier(character.abilityScores[ability]);
+    const finalScore = getFinalAbilityScore(ability);
+    const baseModifier = getModifier(finalScore);
     const skillData = character.skills[skill];
     let modifier = baseModifier;
     
@@ -448,13 +604,15 @@ export default function CharacterSheet() {
   };
 
   const getSaveModifier = (save: string, ability: keyof typeof character.abilityScores): number => {
-    const baseModifier = getModifier(character.abilityScores[ability]);
+    const finalScore = getFinalAbilityScore(ability);
+    const baseModifier = getModifier(finalScore);
     return character.savingThrows[save] ? baseModifier + character.proficiencyBonus : baseModifier;
   };
 
   // Calculate weapon attack bonus based on ability, proficiency, and weapon bonus
   const calculateWeaponAttackBonus = (weapon: any): string => {
-    const abilityScore = character.abilityScores[weapon.ability?.toLowerCase() as keyof typeof character.abilityScores] || 10;
+    const finalScore = getFinalAbilityScore(weapon.ability?.toLowerCase() || 'strength');
+    const abilityScore = finalScore;
     const abilityMod = getModifier(abilityScore);
     const profBonus = weapon.proficient ? character.proficiencyBonus : 0;
     const weaponBonus = parseInt(weapon.notches?.replace(/[^-\d]/g, '')) || 0;
@@ -817,6 +975,30 @@ export default function CharacterSheet() {
         console.warn('Failed to load manual feats from localStorage:', error);
       }
     }
+
+    // Load HP-related data from localStorage
+    const savedHitPointRolls = localStorage.getItem('dnd-hit-point-rolls');
+    if (savedHitPointRolls) {
+      try {
+        const rollsArray = JSON.parse(savedHitPointRolls);
+        setHitPointRolls(rollsArray);
+      } catch (error) {
+        console.warn('Failed to load hit point rolls from localStorage:', error);
+      }
+    }
+
+    const savedHPBonuses = localStorage.getItem('dnd-hp-bonuses');
+    if (savedHPBonuses) {
+      try {
+        const hpData = JSON.parse(savedHPBonuses);
+        setAdditionalHPBonuses(hpData.additionalHPBonuses || 0);
+        setHasToughness(hpData.hasToughness || false);
+        setIsPHBHillDwarf(hpData.isPHBHillDwarf || false);
+      } catch (error) {
+        console.warn('Failed to load HP bonuses from localStorage:', error);
+      }
+    }
+
   }, []);
 
   // Save character data to localStorage whenever it changes
@@ -897,6 +1079,34 @@ export default function CharacterSheet() {
       }
     }
   }, [statsImage, backgroundImage, characterImage, backgroundBlur]);
+
+  // Save HP-related data to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-hit-point-rolls', JSON.stringify(hitPointRolls));
+    } catch (error) {
+      console.warn('Failed to save hit point rolls to localStorage:', error);
+    }
+  }, [hitPointRolls]);
+
+  useEffect(() => {
+    try {
+      const hpData = {
+        additionalHPBonuses,
+        hasToughness,
+        isPHBHillDwarf
+      };
+      localStorage.setItem('dnd-hp-bonuses', JSON.stringify(hpData));
+    } catch (error) {
+      console.warn('Failed to save HP bonuses to localStorage:', error);
+    }
+  }, [additionalHPBonuses, hasToughness, isPHBHillDwarf]);
+
+
+  // Auto-assign skills when race or class changes
+  useEffect(() => {
+    assignAutomaticSkills();
+  }, [character.race, character.class]);
 
   // Fantasy Calendar System
   const seasons = [
@@ -1511,7 +1721,7 @@ export default function CharacterSheet() {
   // Calculate encumbrance status
   const calculateEncumbranceStatus = (currentBulk?: number) => {
     const maxSlots = calculateMaxSlots();
-    const bulk = currentBulk !== undefined ? currentBulk : calculateTotalBulk();
+    const bulk = currentBulk !== undefined ? currentBulk : calculateYourBulk();
     const maxCapacity = maxSlots + Math.floor(maxSlots / 2);
 
     if (bulk <= maxSlots) {
@@ -1865,6 +2075,8 @@ export default function CharacterSheet() {
                 {/* Right Column - Ability Scores */}
                 <div className="flex items-center justify-end gap-2">
                   {Object.entries(character.abilityScores).map(([ability, score], index) => {
+                    const finalScore = getFinalAbilityScore(ability);
+                    const asiBonus = getAsiBonus(ability);
                     const borderColors = [
                       'border-red-400',     // STR
                       'border-emerald-400', // DEX
@@ -1882,19 +2094,45 @@ export default function CharacterSheet() {
                       'text-pink-400'       // CHA
                     ];
                     return (
-                      <div key={ability} className={`bg-slate-700 ${borderColors[index]} rounded-xl border-2 px-2 py-1 text-center shadow-lg transform transition-transform hover:scale-105 min-w-16`}>
+                      <div
+                        key={ability}
+                        className={`bg-slate-700 ${borderColors[index]} rounded-xl border-2 px-2 py-1 text-center shadow-lg transform transition-transform hover:scale-105 min-w-16 relative group`}
+                        title={asiBonus > 0 ? `Base: ${score} + ASI: ${asiBonus} = Total: ${finalScore}` : `Score: ${score}`}
+                      >
                         <div className={`text-xs font-bold ${textColors[index]} mb-1`}>{ability.slice(0, 3).toUpperCase()}</div>
                         <input
                           type="number"
-                          value={score}
-                          onChange={(e) => updateCharacter({
-                            abilityScores: { ...character.abilityScores, [ability]: parseInt(e.target.value) || 0 }
-                          })}
+                          value={asiBonus > 0 ? finalScore : score}
+                          onChange={(e) => {
+                            const newValue = parseInt(e.target.value) || 0;
+                            if (asiBonus > 0) {
+                              // If there's an ASI bonus, update the base score by subtracting the ASI bonus
+                              updateCharacter({
+                                abilityScores: { ...character.abilityScores, [ability]: newValue - asiBonus }
+                              });
+                            } else {
+                              // No ASI bonus, update directly
+                              updateCharacter({
+                                abilityScores: { ...character.abilityScores, [ability]: newValue }
+                              });
+                            }
+                          }}
                           className="w-full text-2xl font-bold text-white bg-transparent border-0 text-center rounded-lg py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-slate-600/50"
                         />
                         <div className="text-sm font-semibold text-white/90 mt-1">
-                          {getModifier(score) >= 0 ? '+' : ''}{getModifier(score)}
+                          {getModifier(finalScore) >= 0 ? '+' : ''}{getModifier(finalScore)}
                         </div>
+
+                        {/* Hover tooltip for ASI breakdown */}
+                        {asiBonus > 0 && (
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                            <div className="bg-slate-800 border border-orange-500 rounded px-2 py-1 text-xs whitespace-nowrap">
+                              <div className="text-white">Base: {score}</div>
+                              <div className="text-green-400">ASI: +{asiBonus}</div>
+                              <div className="text-orange-400 border-t border-slate-600 pt-1">Total: {finalScore}</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -2001,22 +2239,15 @@ export default function CharacterSheet() {
                     </div>
                     {ammunition.map((ammo, index) => (
                       <div key={index} className="grid grid-cols-10 gap-1">
-                        <select
+                        <input
+                          type="text"
                           value={ammo.name}
                           onChange={(e) => updateAmmunition(index, 'name', e.target.value)}
-                          className={`col-span-3 text-center border rounded px-2 py-1 text-xs appearance-none ${
+                          className={`col-span-3 text-center border rounded px-2 py-1 text-xs ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                           }`}
-                          style={{
-                            backgroundImage: 'none'
-                          }}
-                        >
-                          <option value="">Select ammo...</option>
-                          {getAmmunitionOptions().map(ammoName => (
-                            <option key={ammoName} value={ammoName}>{ammoName}</option>
-                          ))}
-                          <option value="custom">-- Custom --</option>
-                        </select>
+                          placeholder="Ammo name"
+                        />
                         <input
                           type="text"
                           value={ammo.weapon}
@@ -2048,7 +2279,7 @@ export default function CharacterSheet() {
               <div className="space-y-4">
                 {/* Combat Stats Box */}
                 <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                  <div className="grid grid-cols-3 gap-4 pb-8">
+                  <div className="grid grid-cols-2 gap-2 pb-8 max-w-xs mx-auto">
                     <div className="text-center">
                       <div className="text-xs font-bold text-white mb-2">AC</div>
                       <input
@@ -2093,16 +2324,10 @@ export default function CharacterSheet() {
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       />
-                      {/* Show effective speed if encumbered */}
-                      {(encumbrance.status === 'Encumbered' || encumbrance.status === 'Overloaded') && (
-                        <div className="text-xs text-red-400 mt-1">
-                          Effective: {getEffectiveSpeed(character.speed)} ft
-                        </div>
-                      )}
                       
                       {/* Speed Pie Chart Tooltip */}
                       <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-                        <div className="relative w-24 h-24 bg-slate-800 border-2 border-orange-500 rounded-full overflow-hidden">
+                        <div className="relative w-16 h-16 bg-slate-800 border-2 border-orange-500 rounded-full overflow-hidden">
                           {/* Pie segments using CSS clip-path for 4 quarters */}
                           <div className="absolute inset-0 bg-blue-600 opacity-70" style={{clipPath: 'polygon(50% 50%, 50% 0%, 100% 0%, 100% 50%)'}}></div>
                           <div className="absolute inset-0 bg-green-600 opacity-70" style={{clipPath: 'polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%)'}}></div>
@@ -2124,11 +2349,22 @@ export default function CharacterSheet() {
                           </div>
                           
                           {/* Center circle */}
-                          <div className="absolute inset-6 bg-slate-800 rounded-full border border-slate-600 flex items-center justify-center">
+                          <div className="absolute inset-3 bg-slate-800 rounded-full border border-slate-600 flex items-center justify-center">
                             <div className="text-xs font-bold text-orange-400">Spd</div>
                           </div>
                         </div>
                       </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs font-bold text-white mb-2">Prof Bonus</div>
+                      <input
+                        type="number"
+                        value={character.proficiencyBonus}
+                        onChange={(e) => updateCharacter({ proficiencyBonus: parseInt(e.target.value) || 0 })}
+                        className={`w-full text-center border rounded px-3 py-2 text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
                     </div>
                   </div>
                   <div className="absolute bottom-2 left-0 right-0 text-center">
@@ -2147,16 +2383,16 @@ export default function CharacterSheet() {
                       <div 
                         className="h-full transition-all duration-500 rounded-lg"
                         style={{
-                          width: `${Math.min(100, Math.max(0, (character.hitPoints.current / character.hitPoints.maximum) * 100))}%`,
-                          backgroundColor: 
-                            character.hitPoints.current <= character.hitPoints.maximum * 0.25 ? '#ef4444' :
-                            character.hitPoints.current <= character.hitPoints.maximum * 0.5 ? '#f59e0b' :
-                            character.hitPoints.current <= character.hitPoints.maximum * 0.75 ? '#eab308' :
+                          width: `${Math.min(100, Math.max(0, (character.hitPoints.current / calculateMaxHP()) * 100))}%`,
+                          backgroundColor:
+                            character.hitPoints.current <= calculateMaxHP() * 0.25 ? '#ef4444' :
+                            character.hitPoints.current <= calculateMaxHP() * 0.5 ? '#f59e0b' :
+                            character.hitPoints.current <= calculateMaxHP() * 0.75 ? '#eab308' :
                             '#10b981'
                         }}
                       ></div>
                       <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
-                        {Math.round((character.hitPoints.current / character.hitPoints.maximum) * 100)}%
+                        {Math.round((character.hitPoints.current / calculateMaxHP()) * 100)}%
                       </div>
                     </div>
                   </div>
@@ -2178,18 +2414,29 @@ export default function CharacterSheet() {
                           }`}
                         />
                       </div>
-                      <div className="text-center">
+                      <div className="text-center relative group">
                         <div className="text-xs font-bold text-white mb-2">Max HP</div>
-                        <input
-                          type="number"
-                          value={character.hitPoints.maximum}
-                          onChange={(e) => updateCharacter({
-                            hitPoints: { ...character.hitPoints, maximum: parseInt(e.target.value) || 0 }
-                          })}
-                          className={`w-full text-center border rounded px-2 py-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        <div
+                          className={`w-full text-center border rounded px-2 py-1 font-bold cursor-help ${
+                            isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-300' : 'bg-gray-100 border-gray-300 text-gray-600'
                           }`}
-                        />
+                          title="Auto-calculated from HP rolls in Data tab"
+                        >
+                          {calculateMaxHP()}
+                        </div>
+
+                        {/* Hover tooltip for HP calculation breakdown */}
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                          <div className="bg-slate-800 border border-orange-500 rounded px-3 py-2 text-xs whitespace-nowrap">
+                            <div className="text-white font-bold mb-1">Max HP Calculation:</div>
+                            <div className="text-gray-300">HP Rolls: {hitPointRolls.slice(0, character.level).reduce((sum, roll) => sum + (roll || 0), 0)}</div>
+                            <div className="text-blue-400">CON Mod × Level: {getModifier(getFinalAbilityScore('constitution'))} × {character.level} = {getModifier(getFinalAbilityScore('constitution')) * character.level}</div>
+                            {hasToughness && <div className="text-purple-400">Toughness: +{character.level * 2}</div>}
+                            {isPHBHillDwarf && <div className="text-green-400">Hill Dwarf: +{character.level}</div>}
+                            {additionalHPBonuses > 0 && <div className="text-yellow-400">Additional: +{additionalHPBonuses}</div>}
+                            <div className="text-orange-400 border-t border-slate-600 pt-1 font-bold">Total: {calculateMaxHP()}</div>
+                          </div>
+                        </div>
                       </div>
                       <div className="text-center">
                         <div className="text-xs font-bold text-white mb-2">Temp HP</div>
@@ -2309,23 +2556,39 @@ export default function CharacterSheet() {
               {/* Column 3: Skills and Ammunition */}
               <div className="space-y-4">
               {/* Editable Skills */}
-              <div className={`p-4 rounded-lg border relative self-start ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-                <div className="space-y-1 text-xs pb-8">
+              <div className={`p-3 rounded-lg border relative self-start ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+
+                <div className="space-y-0.5 pb-3">
+                  {/* All skills in a simple list */}
                   {Object.entries({
-                    'Acrobatics': 'dexterity', 'Animal Handling': 'wisdom', 'Arcana': 'intelligence',
-                    'Athletics': 'strength', 'Deception': 'charisma', 'History': 'intelligence',
-                    'Insight': 'wisdom', 'Intimidation': 'charisma', 'Investigation': 'intelligence',
-                    'Medicine': 'wisdom', 'Nature': 'intelligence', 'Perception': 'wisdom',
-                    'Performance': 'charisma', 'Persuasion': 'charisma', 'Religion': 'intelligence',
-                    'Sleight of Hand': 'dexterity', 'Stealth': 'dexterity', 'Survival': 'wisdom'
+                    'Acrobatics': 'dexterity',
+                    'Animal Handling': 'wisdom',
+                    'Arcana': 'intelligence',
+                    'Athletics': 'strength',
+                    'Deception': 'charisma',
+                    'History': 'intelligence',
+                    'Insight': 'wisdom',
+                    'Intimidation': 'charisma',
+                    'Investigation': 'intelligence',
+                    'Medicine': 'wisdom',
+                    'Nature': 'intelligence',
+                    'Perception': 'wisdom',
+                    'Performance': 'charisma',
+                    'Persuasion': 'charisma',
+                    'Religion': 'intelligence',
+                    'Sleight of Hand': 'dexterity',
+                    'Stealth': 'dexterity',
+                    'Survival': 'wisdom'
                   }).map(([skill, ability]) => {
                     const skillData = character.skills[skill] || { proficient: false, expertise: false };
                     const modifier = getSkillModifier(skill, ability as keyof typeof character.abilityScores);
-                    const abilityMod = getModifier(character.abilityScores[ability as keyof typeof character.abilityScores]);
+                    const profBonus = skillData.proficient ? character.proficiencyBonus : 0;
+                    const expBonus = skillData.expertise ? character.proficiencyBonus : 0;
+                    const abilityMod = getModifier(getFinalAbilityScore(ability));
 
                     return (
-                      <div key={skill} className="flex items-center gap-2 hover:bg-opacity-50 hover:bg-gray-600 rounded px-1 py-0.5">
-                        {/* Proficiency Checkbox - Blue Square */}
+                      <div key={skill} className="group flex items-center gap-2 hover:bg-gray-600/20 rounded px-1 py-0 relative">
+                        {/* Proficiency Checkbox */}
                         <div
                           onClick={() => {
                             const newSkills = {
@@ -2333,16 +2596,23 @@ export default function CharacterSheet() {
                               [skill]: {
                                 ...skillData,
                                 proficient: !skillData.proficient,
-                                expertise: !skillData.proficient ? false : skillData.expertise
+                                expertise: !skillData.proficient ? false : skillData.expertise,
+                                source: 'manual' as const,
+                                manualOverride: true
                               }
                             };
                             updateCharacter({ skills: newSkills });
                           }}
                           className={`w-4 h-4 border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
                             skillData.proficient
-                              ? 'bg-blue-600 border-blue-600 shadow-sm'
+                              ? skillData.source === 'race'
+                                ? 'bg-green-600 border-green-600 shadow-sm'
+                                : skillData.source === 'class'
+                                ? 'bg-purple-600 border-purple-600 shadow-sm'
+                                : 'bg-blue-600 border-blue-600 shadow-sm'
                               : 'border-blue-600 bg-transparent hover:border-blue-400'
                           }`}
+                          title={skillData.proficient ? `${skill} proficiency from ${skillData.source}` : `Click to add ${skill} proficiency`}
                         >
                           {skillData.proficient && (
                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -2351,13 +2621,18 @@ export default function CharacterSheet() {
                           )}
                         </div>
 
-                        {/* Expertise Checkbox - Orange Circle */}
+                        {/* Expertise Checkbox */}
                         <div
                           onClick={() => {
                             if (skillData.proficient) {
                               const newSkills = {
                                 ...character.skills,
-                                [skill]: { ...skillData, expertise: !skillData.expertise }
+                                [skill]: {
+                                  ...skillData,
+                                  expertise: !skillData.expertise,
+                                  source: skillData.source === 'race' || skillData.source === 'class' ? skillData.source : 'manual' as const,
+                                  manualOverride: skillData.source === 'race' || skillData.source === 'class' ? skillData.manualOverride : true
+                                }
                               };
                               updateCharacter({ skills: newSkills });
                             }
@@ -2369,6 +2644,7 @@ export default function CharacterSheet() {
                                 : 'border-orange-500 bg-transparent hover:border-orange-400 cursor-pointer'
                               : 'border-gray-400 bg-gray-300 opacity-40 cursor-not-allowed'
                           }`}
+                          title={skillData.proficient ? (skillData.expertise ? 'Remove expertise' : 'Add expertise (double proficiency)') : 'Must be proficient first'}
                         >
                           {skillData.expertise && skillData.proficient && (
                             <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -2376,39 +2652,44 @@ export default function CharacterSheet() {
                         </div>
 
                         {/* Skill Name */}
-                        <div className={`flex-1 ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>
+                        <div className={`flex-1 text-xs ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>
                           {skill}
                         </div>
 
-                        {/* Modifier Display */}
-                        <div className={`w-8 text-center font-mono text-xs border rounded ${
-                          isDarkMode ? 'border-slate-600 bg-slate-700' : 'border-gray-300 bg-gray-50'
-                        }`}>
+                        {/* Modifier Display with enhanced styling */}
+                        <div
+                          className={`w-10 text-center font-mono text-xs border rounded transition-all duration-200 py-1 cursor-help ${
+                            modifier >= 5
+                              ? 'border-green-500 bg-green-500/20 text-green-300'
+                              : modifier >= 0
+                              ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                              : modifier >= -2
+                              ? 'border-yellow-500 bg-yellow-500/20 text-yellow-300'
+                              : 'border-red-500 bg-red-500/20 text-red-300'
+                          }`}
+                          title={`${skill} Calculation:\nAbility (${ability.toUpperCase()}): ${abilityMod >= 0 ? '+' : ''}${abilityMod}\nProficiency: ${profBonus > 0 ? `+${profBonus}` : '0'}\nExpertise: ${expBonus > 0 ? `+${expBonus}` : '0'}\nTotal: ${modifier >= 0 ? '+' : ''}${modifier}`}
+                        >
                           {modifier >= 0 ? '+' : ''}{modifier}
+                        </div>
+
+                        {/* Hover tooltip for calculation breakdown */}
+                        <div className="absolute left-full ml-2 top-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
+                          <div className="bg-slate-800 border border-orange-500 rounded px-2 py-1 text-xs whitespace-nowrap">
+                            <div className="text-white font-bold">{skill}</div>
+                            <div className="text-gray-300">{ability.toUpperCase()}: {abilityMod >= 0 ? '+' : ''}{abilityMod}</div>
+                            {profBonus > 0 && <div className="text-blue-400">Prof: +{profBonus}</div>}
+                            {expBonus > 0 && <div className="text-orange-400">Exp: +{expBonus}</div>}
+                            <div className="text-orange-400 border-t border-slate-600 pt-1">Total: {modifier >= 0 ? '+' : ''}{modifier}</div>
+                          </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
 
-                {/* Legend */}
-                <div className={`absolute bottom-2 left-0 right-0 px-4 ${isDarkMode ? 'text-stone-400' : 'text-stone-600'}`}>
-                  <div className="flex items-center justify-center gap-4 text-xs opacity-60">
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 border-2 border-blue-600 bg-blue-600 flex items-center justify-center">
-                        <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <span>Prof</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 border-2 border-orange-500 rounded-full bg-orange-500 flex items-center justify-center">
-                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                      </div>
-                      <span>Exp</span>
-                    </div>
-                  </div>
+                {/* Skills Title */}
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <h3 className="text-sm font-bold text-gray-400">Skills</h3>
                 </div>
               </div>
 
@@ -2482,14 +2763,9 @@ export default function CharacterSheet() {
                       <input
                         type="number"
                         value={character.survivalConditions.hunger.effect}
-                        onChange={(e) => updateCharacter({
-                          survivalConditions: {
-                            ...character.survivalConditions,
-                            hunger: { ...character.survivalConditions.hunger, effect: parseInt(e.target.value) || 0 }
-                          }
-                        })}
+                        readOnly
                         className={`w-4/5 text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-400 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
                       />
                     </div>
@@ -2532,14 +2808,9 @@ export default function CharacterSheet() {
                       <input
                         type="number"
                         value={character.survivalConditions.thirst.effect}
-                        onChange={(e) => updateCharacter({
-                          survivalConditions: {
-                            ...character.survivalConditions,
-                            thirst: { ...character.survivalConditions.thirst, effect: parseInt(e.target.value) || 0 }
-                          }
-                        })}
+                        readOnly
                         className={`w-4/5 text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-400 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
                       />
                     </div>
@@ -2582,14 +2853,9 @@ export default function CharacterSheet() {
                       <input
                         type="number"
                         value={character.survivalConditions.fatigue.effect}
-                        onChange={(e) => updateCharacter({
-                          survivalConditions: {
-                            ...character.survivalConditions,
-                            fatigue: { ...character.survivalConditions.fatigue, effect: parseInt(e.target.value) || 0 }
-                          }
-                        })}
+                        readOnly
                         className={`w-4/5 text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-400 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
                       />
                     </div>
@@ -2623,15 +2889,10 @@ export default function CharacterSheet() {
                     <div className="text-center">
                       <input
                         type="number"
-                        value={character.survivalConditions.totalExhaustion}
-                        onChange={(e) => updateCharacter({
-                          survivalConditions: {
-                            ...character.survivalConditions,
-                            totalExhaustion: parseInt(e.target.value) || 0
-                          }
-                        })}
+                        value={character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion}
+                        readOnly
                         className={`w-full text-xs text-center rounded px-1 py-0.5 font-semibold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-600 border-slate-500 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
                     </div>
@@ -2862,6 +3123,7 @@ export default function CharacterSheet() {
                                 finesse: false,
                                 proficient: false,
                                 notches: '',
+                                range: '',
                                 ability: 'STR',
                                 atkBonus: '',
                                 damage: ''
@@ -5386,20 +5648,66 @@ export default function CharacterSheet() {
                                   type="checkbox"
                                   checked={increase > 0}
                                   onChange={(e) => {
-                                    setAsiChoices(prev => ({
-                                      ...prev,
-                                      [levelKey]: {
-                                        ...prev[levelKey as keyof typeof prev],
-                                        abilityIncreases: {
-                                          ...prev[levelKey as keyof typeof prev].abilityIncreases,
-                                          [ability]: e.target.checked ? 1 : 0
+                                    setAsiChoices(prev => {
+                                      const currentChoices = prev[levelKey as keyof typeof prev].abilityIncreases;
+                                      const checkedCount = Object.values(currentChoices).filter(val => val > 0).length;
+
+                                      if (e.target.checked) {
+                                        // If trying to check more than 2 boxes, prevent it
+                                        if (checkedCount >= 2) {
+                                          return prev;
                                         }
+
+                                        // Calculate the bonus: +2 if only one ability, +1 if two abilities
+                                        const newCheckedCount = checkedCount + 1;
+                                        const bonusPerAbility = newCheckedCount === 1 ? 2 : 1;
+
+                                        // Update all checked abilities with correct bonus
+                                        const updatedIncreases = { ...currentChoices };
+                                        Object.keys(updatedIncreases).forEach(key => {
+                                          if (updatedIncreases[key as keyof typeof updatedIncreases] > 0) {
+                                            updatedIncreases[key as keyof typeof updatedIncreases] = bonusPerAbility;
+                                          }
+                                        });
+                                        updatedIncreases[ability] = bonusPerAbility;
+
+                                        return {
+                                          ...prev,
+                                          [levelKey]: {
+                                            ...prev[levelKey as keyof typeof prev],
+                                            abilityIncreases: updatedIncreases
+                                          }
+                                        };
+                                      } else {
+                                        // Unchecking a box
+                                        const updatedIncreases = { ...currentChoices, [ability]: 0 };
+
+                                        // Recalculate bonuses for remaining checked abilities
+                                        const remainingChecked = Object.values(updatedIncreases).filter(val => val > 0).length;
+                                        const bonusPerAbility = remainingChecked === 1 ? 2 : 1;
+
+                                        Object.keys(updatedIncreases).forEach(key => {
+                                          if (updatedIncreases[key as keyof typeof updatedIncreases] > 0) {
+                                            updatedIncreases[key as keyof typeof updatedIncreases] = bonusPerAbility;
+                                          }
+                                        });
+
+                                        return {
+                                          ...prev,
+                                          [levelKey]: {
+                                            ...prev[levelKey as keyof typeof prev],
+                                            abilityIncreases: updatedIncreases
+                                          }
+                                        };
                                       }
-                                    }));
+                                    });
                                   }}
                                   className="mr-1 scale-75"
                                 />
                                 <span className="text-gray-300">{ability.slice(0, 3).toUpperCase()}</span>
+                                {increase > 0 && (
+                                  <span className="text-green-400 text-xs ml-1">+{increase}</span>
+                                )}
                               </label>
                             ))}
                           </div>
@@ -5459,16 +5767,42 @@ export default function CharacterSheet() {
                             } else if (jsonData.data && Array.isArray(jsonData.data)) {
                               spellArray = jsonData.data;
                             } else if (typeof jsonData === 'object') {
-                              // If it's an object with spell properties, treat each property as a potential spell array
-                              for (const key in jsonData) {
-                                if (Array.isArray(jsonData[key])) {
-                                  spellArray = jsonData[key];
-                                  break;
+                              // Handle object format where spell names are keys (like tadzik/5e-spells format)
+                              const spellNames = Object.keys(jsonData);
+                              if (spellNames.length > 0 && typeof jsonData[spellNames[0]] === 'object') {
+                                // Convert object format to array format
+                                spellArray = spellNames.map(spellName => ({
+                                  name: spellName,
+                                  Name: spellName,
+                                  level: jsonData[spellName].level,
+                                  Level: jsonData[spellName].level,
+                                  school: jsonData[spellName].school,
+                                  School: jsonData[spellName].school,
+                                  casting_time: jsonData[spellName].casting_time,
+                                  CastingTime: jsonData[spellName].casting_time,
+                                  range: jsonData[spellName].range,
+                                  Range: jsonData[spellName].range,
+                                  components: jsonData[spellName].components,
+                                  Components: jsonData[spellName].components,
+                                  duration: jsonData[spellName].duration,
+                                  Duration: jsonData[spellName].duration,
+                                  description: jsonData[spellName].description,
+                                  Description: jsonData[spellName].description,
+                                  effect: jsonData[spellName].description,
+                                  Effect: jsonData[spellName].description
+                                }));
+                              } else {
+                                // If it's an object with spell properties, treat each property as a potential spell array
+                                for (const key in jsonData) {
+                                  if (Array.isArray(jsonData[key])) {
+                                    spellArray = jsonData[key];
+                                    break;
+                                  }
                                 }
-                              }
-                              // If no arrays found, try to treat the object itself as a single spell
-                              if (spellArray.length === 0) {
-                                spellArray = [jsonData];
+                                // If no arrays found, try to treat the object itself as a single spell
+                                if (spellArray.length === 0) {
+                                  spellArray = [jsonData];
+                                }
                               }
                             }
 
