@@ -1475,9 +1475,94 @@ export default function CharacterSheet() {
   const [encumbrance, setEncumbrance] = useState({
     openSlots: 18,
     maxSlots: 18,
-    yourBulk: 20,
-    status: 'Unencumbered'
+    yourBulk: 0,
+    status: 'Normal'
   });
+
+  // Calculate inventory slots based on creature size and STR modifier
+  const calculateMaxSlots = () => {
+    const strMod = getModifier(character.abilityScores.strength);
+    const sizeData = {
+      'Tiny': { base: 6, strMultiplier: 1 },
+      'Small': { base: 14, strMultiplier: 1 },
+      'Medium': { base: 18, strMultiplier: 1 },
+      'Large': { base: 22, strMultiplier: 2 },
+      'Huge': { base: 30, strMultiplier: 4 },
+      'Gargantuan': { base: 46, strMultiplier: 8 }
+    };
+
+    const size = sizeData[carryingSize as keyof typeof sizeData];
+    return size.base + (strMod * size.strMultiplier);
+  };
+
+  // Calculate minimum bulk based on creature size
+  const calculateMinBulk = () => {
+    const minBulkBySize = {
+      'Tiny': 5,
+      'Small': 10,
+      'Medium': 20,
+      'Large': 40,
+      'Huge': 80,
+      'Gargantuan': 160
+    };
+    return minBulkBySize[carryingSize as keyof typeof minBulkBySize];
+  };
+
+  // Calculate encumbrance status
+  const calculateEncumbranceStatus = (currentBulk?: number) => {
+    const maxSlots = calculateMaxSlots();
+    const bulk = currentBulk !== undefined ? currentBulk : calculateTotalBulk();
+    const maxCapacity = maxSlots + Math.floor(maxSlots / 2);
+
+    if (bulk <= maxSlots) {
+      return 'Normal';
+    } else if (bulk <= maxCapacity) {
+      return 'Encumbered';
+    } else {
+      return 'Overloaded';
+    }
+  };
+
+  // Calculate effective speed with encumbrance penalty
+  const getEffectiveSpeed = (baseSpeed: number) => {
+    if (encumbrance.status === 'Encumbered' || encumbrance.status === 'Overloaded') {
+      return Math.floor(baseSpeed / 2);
+    }
+    return baseSpeed;
+  };
+
+  // Calculate total bulk from all inventory sources
+  const calculateInventoryBulk = () => {
+    let totalBulk = 0;
+
+    // Add bulk from equipped items
+    totalBulk += equippedItems.reduce((sum, item) => sum + (item.bulk || 0), 0);
+
+    // Add bulk from inventory items
+    totalBulk += inventoryItems.reduce((sum, item) => sum + (item.bulk || 0), 0);
+
+    // Add bulk from purse (coins) - 50 coins = 1 bulk
+    totalBulk += calculatePurseBulk();
+
+    // Add bulk from ration box
+    totalBulk += rationBox.totalBulk;
+
+    // Add bulk from waterskin box
+    totalBulk += waterskinBox.totalBulk;
+
+    return totalBulk;
+  };
+
+  // Calculate Your Bulk using the D&D formula
+  const calculateYourBulk = () => {
+    const maxSlots = calculateMaxSlots();
+    const inventoryBulk = calculateInventoryBulk();
+    const usedSlots = inventoryBulk; // Used slots = inventory bulk
+    const minBulk = calculateMinBulk();
+
+    return Math.max(minBulk, usedSlots);
+  };
+
 
   const [purse, setPurse] = useState({
     iron: { amount: 0, value: 0.01 },
@@ -1500,10 +1585,10 @@ export default function CharacterSheet() {
   });
 
   const [magicalContainers, setMagicalContainers] = useState({
-    bagOfHolding: { owned: 6, slots: 6 },
-    portableHole: { owned: 9, slots: 9 },
-    handyHaversack: { owned: 12, slots: 12 },
-    quiverOfEhlonna: { owned: 9, slots: 9 }
+    bagOfHolding: { owned: '', slots: 6 },
+    portableHole: { owned: '', slots: 9 },
+    handyHaversack: { owned: '', slots: 12 },
+    quiverOfEhlonna: { owned: '', slots: 9 }
   });
 
   const [purchaseCalculator, setPurchaseCalculator] = useState({
@@ -1560,6 +1645,31 @@ export default function CharacterSheet() {
   ]);
 
   const itemTypes = ['Armor', 'Ammunition', 'Attire', 'Ring', 'Shield', 'Weapon', 'Spell Focus'];
+
+  // Update encumbrance calculations when dependencies change
+  useEffect(() => {
+    const newMaxSlots = calculateMaxSlots();
+    const inventoryBulk = calculateInventoryBulk();
+    const newOpenSlots = newMaxSlots - inventoryBulk;
+    const newYourBulk = calculateYourBulk();
+    const newStatus = calculateEncumbranceStatus(newYourBulk);
+
+    setEncumbrance(prev => ({
+      ...prev,
+      maxSlots: newMaxSlots,
+      openSlots: newOpenSlots,
+      yourBulk: newYourBulk,
+      status: newStatus
+    }));
+  }, [
+    character.abilityScores.strength,
+    carryingSize,
+    equippedItems,
+    inventoryItems,
+    purse,
+    rationBox.totalBulk,
+    waterskinBox.totalBulk
+  ]);
 
   const addEquippedItem = () => {
     setEquippedItems([...equippedItems, { type: '', item: '', itemBonus: '', range: '', notches: '', valueSP: 0, bulk: 0, reqAtt: false }]);
@@ -1983,6 +2093,12 @@ export default function CharacterSheet() {
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       />
+                      {/* Show effective speed if encumbered */}
+                      {(encumbrance.status === 'Encumbered' || encumbrance.status === 'Overloaded') && (
+                        <div className="text-xs text-red-400 mt-1">
+                          Effective: {getEffectiveSpeed(character.speed)} ft
+                        </div>
+                      )}
                       
                       {/* Speed Pie Chart Tooltip */}
                       <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
@@ -3549,9 +3665,11 @@ export default function CharacterSheet() {
         {/* Spells Tab */}
         {activeTab === 'Spells' && (
           <div className="space-y-8">
-            {/* Spellcasting Controls */}
-            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-              <div className="grid grid-cols-4 gap-6">
+            {/* Top Row: Spellcasting Controls and Spell Slots Side by Side */}
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left: Spellcasting Controls */}
+              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className="grid grid-cols-2 gap-4">
                 {/* Spellcasting Ability */}
                 <div className="text-center">
                   <label className="block text-sm font-bold text-gray-300 mb-2">
@@ -3629,32 +3747,11 @@ export default function CharacterSheet() {
                     } focus:outline-none focus:ring-2 focus:ring-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                   />
                 </div>
-              </div>
-            </div>
-
-            {/* Spell Slots Tracker */}
-            <div className={`p-6 rounded-lg border w-fit mx-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-orange-400">Spell Slots</h3>
-                <div className="flex gap-2">
-                  <button
-                    onClick={shortRest}
-                    className={`px-3 py-1 text-xs rounded border transition-colors ${
-                      isDarkMode ? 'bg-blue-600 border-blue-500 text-white hover:bg-blue-500' : 'bg-blue-200 border-blue-300 text-blue-700 hover:bg-blue-300'
-                    }`}
-                  >
-                    Short Rest {character.class === 'Warlock' ? '(Restore All)' : ''}
-                  </button>
-                  <button
-                    onClick={longRest}
-                    className={`px-3 py-1 text-xs rounded border transition-colors ${
-                      isDarkMode ? 'bg-green-600 border-green-500 text-white hover:bg-green-500' : 'bg-green-200 border-green-300 text-green-700 hover:bg-green-300'
-                    }`}
-                  >
-                    Long Rest (Restore All)
-                  </button>
                 </div>
               </div>
+
+              {/* Right: Spell Slots Tracker */}
+              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
 
               {Object.keys(spellSlots).length > 0 ? (
                 <div className="flex items-start gap-4">
@@ -3665,19 +3762,74 @@ export default function CharacterSheet() {
                   </div>
 
                   {/* Main Tracker Grid */}
-                  <div className="w-96 h-24">
-                    <div className="grid grid-cols-9 gap-2 h-full">
+                  <div className="flex-1">
+                    <div className="grid grid-cols-9 gap-1 items-start">
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(level => {
                         const slots = spellSlots[level];
                         const hasSlots = slots && slots.max > 0;
 
+                        // Color scheme for spell levels
+                        const levelColors = {
+                          1: { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800', slot: 'border-blue-400', slotUsed: 'bg-blue-500', slotHover: 'hover:bg-blue-200' },
+                          2: { bg: 'bg-green-100', border: 'border-green-300', text: 'text-green-800', slot: 'border-green-400', slotUsed: 'bg-green-500', slotHover: 'hover:bg-green-200' },
+                          3: { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-800', slot: 'border-purple-400', slotUsed: 'bg-purple-500', slotHover: 'hover:bg-purple-200' },
+                          4: { bg: 'bg-red-100', border: 'border-red-300', text: 'text-red-800', slot: 'border-red-400', slotUsed: 'bg-red-500', slotHover: 'hover:bg-red-200' },
+                          5: { bg: 'bg-yellow-100', border: 'border-yellow-300', text: 'text-yellow-800', slot: 'border-yellow-400', slotUsed: 'bg-yellow-500', slotHover: 'hover:bg-yellow-200' },
+                          6: { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-800', slot: 'border-indigo-400', slotUsed: 'bg-indigo-500', slotHover: 'hover:bg-indigo-200' },
+                          7: { bg: 'bg-pink-100', border: 'border-pink-300', text: 'text-pink-800', slot: 'border-pink-400', slotUsed: 'bg-pink-500', slotHover: 'hover:bg-pink-200' },
+                          8: { bg: 'bg-cyan-100', border: 'border-cyan-300', text: 'text-cyan-800', slot: 'border-cyan-400', slotUsed: 'bg-cyan-500', slotHover: 'hover:bg-cyan-200' },
+                          9: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-800', slot: 'border-orange-400', slotUsed: 'bg-orange-500', slotHover: 'hover:bg-orange-200' }
+                        };
+
+                        const colors = levelColors[level as keyof typeof levelColors];
+
                         return (
-                          <div key={level} className="flex flex-col items-center">
+                          <div key={level} className={`flex flex-col items-center relative ${hasSlots ? 'p-1 rounded-lg ' + colors.bg + ' ' + colors.border + ' border' : ''}`}>
+                            {/* Quick Use Buttons */}
+                            {hasSlots && (
+                              <div className="absolute -top-1 -right-1 flex gap-1">
+                                {/* Restore One Slot Button */}
+                                <button
+                                  onClick={() => {
+                                    setSpellSlots(prev => ({
+                                      ...prev,
+                                      [level]: {
+                                        ...prev[level],
+                                        used: Math.max(0, prev[level].used - 1)
+                                      }
+                                    }));
+                                  }}
+                                  className="w-3 h-3 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
+                                  title="Restore one slot"
+                                  disabled={slots.used <= 0}
+                                >
+                                  -
+                                </button>
+                                {/* Use One Slot Button */}
+                                <button
+                                  onClick={() => {
+                                    setSpellSlots(prev => ({
+                                      ...prev,
+                                      [level]: {
+                                        ...prev[level],
+                                        used: Math.min(prev[level].max, prev[level].used + 1)
+                                      }
+                                    }));
+                                  }}
+                                  className="w-3 h-3 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
+                                  title="Use one slot"
+                                  disabled={slots.used >= slots.max}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
+
                             {/* Square container for level number */}
                             <div
-                              className={`w-8 h-8 flex items-center justify-center border-2 mb-2 rounded ${
+                              className={`w-8 h-8 flex items-center justify-center border-2 mb-2 rounded transition-all duration-300 ${
                                 hasSlots
-                                  ? 'bg-orange-400 border-orange-300 text-slate-900'
+                                  ? colors.bg + ' ' + colors.border + ' ' + colors.text + ' shadow-sm'
                                   : 'bg-gray-600 border-gray-500 text-gray-400'
                               }`}
                             >
@@ -3687,7 +3839,7 @@ export default function CharacterSheet() {
                             </div>
 
                             {/* Level Label */}
-                            <div className="text-xs text-gray-400 mb-1 font-bold">{level}</div>
+                            <div className={`text-xs mb-1 font-bold transition-colors duration-300 ${hasSlots ? colors.text : 'text-gray-400'}`}>{level}</div>
 
                             {/* Circles for tracking used slots */}
                             <div className="flex flex-col gap-1 items-center">
@@ -3709,10 +3861,10 @@ export default function CharacterSheet() {
                                       castSpell(level);
                                     }
                                   }}
-                                  className={`w-4 h-4 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                                  className={`w-4 h-4 rounded-full border-2 transition-all duration-300 hover:scale-125 hover:shadow-lg ${
                                     index < slots.used
-                                      ? 'bg-gray-500 border-gray-400 hover:bg-gray-400' // Used slot
-                                      : 'bg-transparent border-orange-300 hover:bg-orange-100' // Available slot
+                                      ? colors.slotUsed + ' border-gray-300 hover:brightness-110 shadow-md' // Used slot - filled
+                                      : 'bg-transparent ' + colors.slot + ' ' + colors.slotHover + ' hover:border-2 hover:shadow-md' // Available slot - outline
                                   }`}
                                   title={index < slots.used ? 'Click to restore this slot' : 'Click to use this slot'}
                                 />
@@ -3730,6 +3882,27 @@ export default function CharacterSheet() {
                   <p className="text-xs mt-2">Some classes gain spellcasting at higher levels</p>
                 </div>
               )}
+
+              {/* Rest Buttons at Bottom Right */}
+              <div className="flex gap-2 justify-end mt-6">
+                <button
+                  onClick={shortRest}
+                  className={`px-3 py-1 text-xs rounded border transition-colors ${
+                    isDarkMode ? 'bg-blue-600 border-blue-500 text-white hover:bg-blue-500' : 'bg-blue-200 border-blue-300 text-blue-700 hover:bg-blue-300'
+                  }`}
+                >
+                  Short Rest {character.class === 'Warlock' ? '(Restore All)' : ''}
+                </button>
+                <button
+                  onClick={longRest}
+                  className={`px-3 py-1 text-xs rounded border transition-colors ${
+                    isDarkMode ? 'bg-green-600 border-green-500 text-white hover:bg-green-500' : 'bg-green-200 border-green-300 text-green-700 hover:bg-green-300'
+                  }`}
+                >
+                  Long Rest (Restore All)
+                </button>
+              </div>
+              </div>
             </div>
 
             {/* Spell Level Boxes */}
@@ -4093,51 +4266,64 @@ export default function CharacterSheet() {
                 <div className="grid grid-cols-3 gap-2 text-center text-sm mb-3">
                   <div>
                     <div className="text-xs text-white mb-1">Open Slots</div>
-                    <input
-                      type="number"
-                      value={encumbrance.openSlots}
-                      onChange={(e) => setEncumbrance({
-                        ...encumbrance,
-                        openSlots: parseInt(e.target.value) || 0
-                      })}
-                      className={`w-full text-center text-xl font-bold bg-transparent border rounded px-2 py-1 text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                        isDarkMode ? 'border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500' : 'border-green-400 focus:outline-none focus:ring-2 focus:ring-green-500'
-                      }`}
-                    />
+                    <div className={`w-full text-center text-xl font-bold border rounded px-2 py-1 text-white bg-gray-700 ${
+                      isDarkMode ? 'border-green-400' : 'border-green-400'
+                    }`}>
+                      {encumbrance.openSlots}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs text-white mb-1">Max Slots</div>
-                    <input
-                      type="number"
-                      value={encumbrance.maxSlots}
-                      onChange={(e) => setEncumbrance({
-                        ...encumbrance,
-                        maxSlots: parseInt(e.target.value) || 0
-                      })}
-                      className={`w-full text-center text-xl font-bold bg-transparent border rounded px-2 py-1 text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                        isDarkMode ? 'border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500' : 'border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500'
+                    <div
+                      className={`w-full text-center text-xl font-bold border rounded px-2 py-1 text-white bg-gray-700 cursor-help ${
+                        isDarkMode ? 'border-orange-400' : 'border-orange-400'
                       }`}
-                    />
+                      title={`${carryingSize} size (${
+                        carryingSize === 'Tiny' ? '6' :
+                        carryingSize === 'Small' ? '14' :
+                        carryingSize === 'Medium' ? '18' :
+                        carryingSize === 'Large' ? '22' :
+                        carryingSize === 'Huge' ? '30' : '46'
+                      }) + STR modifier (${getModifier(character.abilityScores.strength) >= 0 ? '+' : ''}${getModifier(character.abilityScores.strength)}) = ${encumbrance.maxSlots}`}
+                    >
+                      {encumbrance.maxSlots}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs text-white mb-1">Your Bulk</div>
-                    <input
-                      type="number"
-                      value={encumbrance.yourBulk}
-                      onChange={(e) => setEncumbrance({
-                        ...encumbrance,
-                        yourBulk: parseInt(e.target.value) || 0
-                      })}
-                      className={`w-full text-center text-xl font-bold bg-transparent border rounded px-2 py-1 text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                        isDarkMode ? 'border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500' : 'border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                      }`}
-                    />
+                    <div className={`w-full text-center text-xl font-bold border rounded px-2 py-1 text-white bg-gray-700 ${
+                      isDarkMode ? 'border-blue-400' : 'border-blue-400'
+                    }`}>
+                      {encumbrance.yourBulk}
+                    </div>
                   </div>
                 </div>
                 <div className="text-center pb-8">
-                  <div className="text-xs text-white mb-1">Status:</div>
-                  <div className="bg-green-500 text-white px-2 py-1 rounded text-sm font-medium">
-                    {encumbrance.status}
+                  <div className="text-xs text-white mb-2">Capacity:</div>
+                  {/* Health Bar Style Display */}
+                  <div className="w-full bg-gray-600 rounded-full h-4 mb-2">
+                    <div
+                      className={`h-4 rounded-full transition-all duration-300 ${
+                        encumbrance.openSlots <= 0 ? 'bg-red-500' :
+                        encumbrance.openSlots / encumbrance.maxSlots > 0.5 ? 'bg-green-500' :
+                        encumbrance.openSlots / encumbrance.maxSlots > 0.2 ? 'bg-yellow-500' :
+                        'bg-orange-500'
+                      }`}
+                      style={{
+                        width: `${Math.max(0, Math.min(100, (encumbrance.openSlots / encumbrance.maxSlots) * 100))}%`
+                      }}
+                    />
+                  </div>
+                  <div className="text-xs text-gray-300 mb-1">
+                    {encumbrance.openSlots >= 0
+                      ? `${Math.round((encumbrance.openSlots / encumbrance.maxSlots) * 100)}%`
+                      : `${Math.abs(encumbrance.openSlots)} over capacity (${encumbrance.yourBulk}/${encumbrance.maxSlots + Math.floor(encumbrance.maxSlots / 2)} max)`
+                    }
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {encumbrance.status === 'Normal' ? 'No penalties' :
+                     encumbrance.status === 'Encumbered' ? 'Speed halved, disadvantage on STR/DEX/CON' :
+                     'At absolute maximum capacity - cannot carry more'}
                   </div>
                 </div>
                 <div className="absolute bottom-2 left-0 right-0 text-center">
@@ -4291,22 +4477,70 @@ export default function CharacterSheet() {
                     <tbody>
                       <tr className="border-b border-slate-600">
                         <td className="py-1 text-left">Bag of Holding</td>
-                        <td className="py-1 text-center">{magicalContainers.bagOfHolding.owned}</td>
+                        <td className="py-1 text-center">
+                          <input
+                            type="text"
+                            value={magicalContainers.bagOfHolding.owned}
+                            onChange={(e) => setMagicalContainers({
+                              ...magicalContainers,
+                              bagOfHolding: { ...magicalContainers.bagOfHolding, owned: e.target.value }
+                            })}
+                            className={`w-6 text-center text-xs border rounded px-1 ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                          />
+                        </td>
                         <td className="py-1 text-center">{magicalContainers.bagOfHolding.slots}</td>
                       </tr>
                       <tr className="border-b border-slate-600">
                         <td className="py-1 text-left">Portable Hole</td>
-                        <td className="py-1 text-center">{magicalContainers.portableHole.owned}</td>
+                        <td className="py-1 text-center">
+                          <input
+                            type="text"
+                            value={magicalContainers.portableHole.owned}
+                            onChange={(e) => setMagicalContainers({
+                              ...magicalContainers,
+                              portableHole: { ...magicalContainers.portableHole, owned: e.target.value }
+                            })}
+                            className={`w-6 text-center text-xs border rounded px-1 ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                          />
+                        </td>
                         <td className="py-1 text-center">{magicalContainers.portableHole.slots}</td>
                       </tr>
                       <tr className="border-b border-slate-600">
                         <td className="py-1 text-left">Handy Haversack</td>
-                        <td className="py-1 text-center">{magicalContainers.handyHaversack.owned}</td>
+                        <td className="py-1 text-center">
+                          <input
+                            type="text"
+                            value={magicalContainers.handyHaversack.owned}
+                            onChange={(e) => setMagicalContainers({
+                              ...magicalContainers,
+                              handyHaversack: { ...magicalContainers.handyHaversack, owned: e.target.value }
+                            })}
+                            className={`w-6 text-center text-xs border rounded px-1 ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                          />
+                        </td>
                         <td className="py-1 text-center">{magicalContainers.handyHaversack.slots}</td>
                       </tr>
                       <tr className="border-b border-slate-600">
                         <td className="py-1 text-left">Quiver of Ehlonna</td>
-                        <td className="py-1 text-center">{magicalContainers.quiverOfEhlonna.owned}</td>
+                        <td className="py-1 text-center">
+                          <input
+                            type="text"
+                            value={magicalContainers.quiverOfEhlonna.owned}
+                            onChange={(e) => setMagicalContainers({
+                              ...magicalContainers,
+                              quiverOfEhlonna: { ...magicalContainers.quiverOfEhlonna, owned: e.target.value }
+                            })}
+                            className={`w-6 text-center text-xs border rounded px-1 ${
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            }`}
+                          />
+                        </td>
                         <td className="py-1 text-center">{magicalContainers.quiverOfEhlonna.slots}</td>
                       </tr>
                     </tbody>
@@ -4728,7 +4962,7 @@ export default function CharacterSheet() {
                       <tr className="border-b border-slate-600">
                         <th className="text-left py-1 w-32">Item</th>
                         <th className="text-left py-1">Details</th>
-                        <th className="text-center py-1 w-10">Amount</th>
+                        <th className="text-center py-1 w-8">Amount</th>
                         <th className="text-center py-1 w-10">SP</th>
                         <th className="text-center py-1 w-10">Bulk</th>
                       </tr>
