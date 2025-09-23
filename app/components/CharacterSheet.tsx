@@ -205,6 +205,22 @@ const RACIAL_SKILLS: { [key: string]: string[] } = {
   'Tiefling': []
 };
 
+// D&D 5e Class Hit Dice (Player's Handbook)
+const CLASS_HIT_DICE: { [key: string]: string } = {
+  'Barbarian': 'd12',
+  'Bard': 'd8',
+  'Cleric': 'd8',
+  'Druid': 'd8',
+  'Fighter': 'd10',
+  'Monk': 'd8',
+  'Paladin': 'd10',
+  'Ranger (*LL Alt)': 'd10',
+  'Rogue': 'd8',
+  'Sorcerer': 'd6',
+  'Warlock': 'd8',
+  'Wizard': 'd6'
+};
+
 interface Character {
   name: string;
   class: string;
@@ -585,6 +601,33 @@ export default function CharacterSheet() {
       'Wizard': ['Arcana', 'Investigation']
     };
     return priorities[className] || [];
+  };
+
+  // Calculate hit dice based on class and level
+  const calculateHitDice = () => {
+    const hitDieType = CLASS_HIT_DICE[character.class] || 'd8';
+    const calculatedHitDice = {
+      d4: 0,
+      d6: 0,
+      d8: 0,
+      d10: 0,
+      d12: 0
+    };
+
+    // Set the appropriate die type based on class and level
+    if (hitDieType === 'd4') calculatedHitDice.d4 = character.level;
+    else if (hitDieType === 'd6') calculatedHitDice.d6 = character.level;
+    else if (hitDieType === 'd8') calculatedHitDice.d8 = character.level;
+    else if (hitDieType === 'd10') calculatedHitDice.d10 = character.level;
+    else if (hitDieType === 'd12') calculatedHitDice.d12 = character.level;
+
+    return calculatedHitDice;
+  };
+
+  // Format hit dice for display (e.g., "3d10")
+  const formatHitDiceDisplay = () => {
+    const hitDieType = CLASS_HIT_DICE[character.class] || 'd8';
+    return `${character.level}${hitDieType}`;
   };
 
   const getSkillModifier = (skill: string, ability: keyof typeof character.abilityScores): number => {
@@ -2466,16 +2509,27 @@ export default function CharacterSheet() {
                           }`}
                         />
                       </div>
-                      <div className="text-center">
+                      <div className="text-center relative group">
                         <div className="text-xs font-bold text-white mb-2">Max Dice</div>
-                        <input
-                          type="number"
-                          value={maxHitDice}
-                          onChange={(e) => setMaxHitDice(parseInt(e.target.value) || 0)}
-                          className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        <div
+                          className={`w-full text-center border rounded px-2 py-1 font-bold cursor-help ${
+                            isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-300' : 'bg-gray-100 border-gray-300 text-gray-600'
                           }`}
-                        />
+                          title="Auto-calculated from class and level"
+                        >
+                          {formatHitDiceDisplay()}
+                        </div>
+
+                        {/* Hover tooltip for hit dice explanation */}
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                          <div className="bg-slate-800 border border-orange-500 rounded px-3 py-2 text-xs whitespace-nowrap">
+                            <div className="text-white font-bold mb-1">Hit Dice Calculation:</div>
+                            <div className="text-blue-400">Class: {character.class}</div>
+                            <div className="text-green-400">Hit Die Type: {CLASS_HIT_DICE[character.class] || 'd8'}</div>
+                            <div className="text-yellow-400">Level: {character.level}</div>
+                            <div className="text-orange-400 border-t border-slate-600 pt-1 font-bold">Total: {formatHitDiceDisplay()}</div>
+                          </div>
+                        </div>
                       </div>
                       <div className="text-center">
                         <div className="text-xs font-bold text-white mb-2">Reduction</div>
@@ -5520,27 +5574,34 @@ export default function CharacterSheet() {
                 {/* Hit Die Box */}
                 <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Hit Die</h3>
-                  <p className="text-xs text-gray-400 mb-4">The number of hit dice of each type you have from your class levels.</p>
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-400 mb-2">Auto-calculated based on your class and level.</p>
+                    <p className="text-xs text-blue-400">
+                      {character.class}: {CLASS_HIT_DICE[character.class] || 'd8'} × {character.level} level{character.level !== 1 ? 's' : ''}
+                    </p>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(hitDice).map(([dieType, count]) => (
+                    {Object.entries(calculateHitDice()).map(([dieType, count]) => (
                       <div key={dieType} className="flex items-center justify-between">
                         <label className="text-sm font-medium text-gray-300">{dieType}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={count}
-                          onChange={(e) => setHitDice({
-                            ...hitDice,
-                            [dieType]: parseInt(e.target.value) || 0
-                          })}
+                        <div
                           className={`w-12 text-center text-sm border rounded px-1 py-1 ${
-                            isDarkMode
-                              ? 'bg-slate-700 border-slate-600 text-white'
-                              : 'bg-white border-gray-300 text-gray-900'
+                            count > 0
+                              ? isDarkMode
+                                ? 'bg-slate-600 border-slate-500 text-white font-bold'
+                                : 'bg-gray-100 border-gray-300 text-gray-900 font-bold'
+                              : isDarkMode
+                              ? 'bg-slate-700 border-slate-600 text-gray-500'
+                              : 'bg-white border-gray-300 text-gray-400'
                           }`}
-                        />
+                        >
+                          {count}
+                        </div>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-3 text-xs text-gray-400 italic">
+                    Note: Hit dice are used during short rests to recover HP. You regain spent hit dice on a long rest (up to half your total).
                   </div>
                 </div>
 
