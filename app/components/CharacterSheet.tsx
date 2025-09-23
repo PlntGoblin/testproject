@@ -351,6 +351,7 @@ export default function CharacterSheet() {
   const [selectedSpellClass, setSelectedSpellClass] = useState('All Classes');
   const [selectedSpellLevels, setSelectedSpellLevels] = useState<Set<number>>(new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
   const [hoveredSpell, setHoveredSpell] = useState<any>(null);
+  const [knownSpellsOverride, setKnownSpellsOverride] = useState<number | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [spellSlots, setSpellSlots] = useState<{[key: number]: {max: number, used: number}}>({});
 
@@ -699,6 +700,50 @@ export default function CharacterSheet() {
     return character.proficiencyBonus + abilityModifier;
   };
 
+  // Calculate known/prepared spells based on class, level, and ability modifier
+  const calculateKnownSpells = (): number => {
+    const characterClass = character.class.toLowerCase();
+    const level = character.level;
+    const spellcastingAbility = getSpellcastingAbility();
+    const abilityModifier = Math.max(1, getModifier(getFinalAbilityScore(spellcastingAbility)));
+
+    // D&D 5e spell progression by class
+    const spellProgression: { [key: string]: (level: number, modifier: number) => number } = {
+      'wizard': (level, modifier) => level === 1 ? 6 : Math.min(25, 6 + (level - 1) * 2), // Spells known from spellbook
+      'sorcerer': (level, modifier) => {
+        if (level === 1) return 2;
+        if (level <= 3) return level + 1;
+        if (level <= 5) return level + 2;
+        if (level <= 7) return level + 3;
+        if (level <= 9) return level + 4;
+        return 15; // Max at level 10+
+      },
+      'bard': (level, modifier) => {
+        if (level === 1) return 4;
+        if (level <= 3) return level + 3;
+        if (level <= 5) return level + 4;
+        if (level <= 7) return level + 5;
+        if (level <= 9) return level + 6;
+        return 22; // Max at level 10+
+      },
+      'warlock': (level, modifier) => Math.min(15, Math.floor((level + 1) / 2) + 1),
+      'ranger': (level, modifier) => level < 2 ? 0 : Math.min(11, Math.floor(level / 2) + 1),
+      'paladin': (level, modifier) => level < 2 ? 0 : Math.floor(level / 2) + modifier,
+      'eldritch knight': (level, modifier) => level < 3 ? 0 : Math.min(13, Math.floor((level - 2) / 3) + 2),
+      'arcane trickster': (level, modifier) => level < 3 ? 0 : Math.min(13, Math.floor((level - 2) / 3) + 2),
+      'cleric': (level, modifier) => level + modifier,
+      'druid': (level, modifier) => level + modifier,
+    };
+
+    const calculator = spellProgression[characterClass] || spellProgression['cleric']; // Default to cleric progression
+    return calculator(level, abilityModifier);
+  };
+
+  // Get effective known spells (override if set, otherwise calculated)
+  const getEffectiveKnownSpells = (): number => {
+    return knownSpellsOverride !== null ? knownSpellsOverride : calculateKnownSpells();
+  };
+
   const getSkillModifier = (skill: string, ability: keyof typeof character.abilityScores): number => {
     const finalScore = getFinalAbilityScore(ability);
     const baseModifier = getModifier(finalScore);
@@ -1001,6 +1046,7 @@ export default function CharacterSheet() {
     const savedSpellList = localStorage.getItem('dnd-master-spell-list');
     const savedKnownSpells = localStorage.getItem('dnd-known-spells');
     const savedSpellSlots = localStorage.getItem('dnd-spell-slots');
+    const savedKnownSpellsOverride = localStorage.getItem('dnd-known-spells-override');
     const savedManualFeats = localStorage.getItem('dnd-manual-feats');
 
     if (savedCharacter) {
@@ -1075,6 +1121,16 @@ export default function CharacterSheet() {
         });
       } catch (error) {
         console.warn('Failed to load spell slots from localStorage:', error);
+      }
+    }
+
+    // Load known spells override from localStorage
+    if (savedKnownSpellsOverride) {
+      try {
+        const override = parseInt(savedKnownSpellsOverride);
+        setKnownSpellsOverride(isNaN(override) ? null : override);
+      } catch (error) {
+        console.warn('Failed to load known spells override from localStorage:', error);
       }
     }
 
@@ -1246,6 +1302,19 @@ export default function CharacterSheet() {
       console.warn('Failed to save spell slots to localStorage:', error);
     }
   }, [spellSlots]);
+
+  // Save known spells override to localStorage
+  useEffect(() => {
+    try {
+      if (knownSpellsOverride !== null) {
+        localStorage.setItem('dnd-known-spells-override', knownSpellsOverride.toString());
+      } else {
+        localStorage.removeItem('dnd-known-spells-override');
+      }
+    } catch (error) {
+      console.warn('Failed to save known spells override to localStorage:', error);
+    }
+  }, [knownSpellsOverride]);
 
   // Save manual feats to localStorage
   useEffect(() => {
@@ -4270,20 +4339,46 @@ export default function CharacterSheet() {
                   <label className="block text-sm font-bold text-gray-300 mb-2">
                     Known/Prepared Spells
                   </label>
-                  <select
-                    value={character.knownPreparedSpells}
-                    onChange={(e) => setCharacter({
-                      ...character,
-                      knownPreparedSpells: parseInt(e.target.value)
-                    })}
-                    className={`w-full px-3 py-2 rounded border bg-transparent text-white text-center font-bold ${
-                      isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                    } focus:outline-none focus:ring-2 focus:ring-orange-500`}
-                  >
-                    {Array.from({ length: 40 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={num} className="bg-slate-800 text-center font-bold">{num}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      value={getEffectiveKnownSpells()}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        const calculated = calculateKnownSpells();
+                        setKnownSpellsOverride(value === calculated ? null : value);
+                        setCharacter({
+                          ...character,
+                          knownPreparedSpells: value
+                        });
+                      }}
+                      onFocus={(e) => e.target.select()}
+                      className={`w-full px-3 py-2 rounded border text-white text-center font-bold ${
+                        knownSpellsOverride !== null
+                          ? 'bg-orange-900 border-orange-500'
+                          : 'bg-transparent border-slate-600'
+                      } focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                      title={knownSpellsOverride !== null
+                        ? `Manual override: ${knownSpellsOverride} (Auto: ${calculateKnownSpells()})`
+                        : `Auto-calculated: ${calculateKnownSpells()}`}
+                    />
+                    {knownSpellsOverride !== null && (
+                      <button
+                        onClick={() => {
+                          setKnownSpellsOverride(null);
+                          setCharacter({
+                            ...character,
+                            knownPreparedSpells: calculateKnownSpells()
+                          });
+                        }}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 text-orange-400 hover:text-orange-300 text-xs"
+                        title="Reset to auto-calculated value"
+                      >
+                        ↻
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Spell DC */}
