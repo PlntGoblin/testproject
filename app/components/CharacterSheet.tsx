@@ -221,6 +221,23 @@ const CLASS_HIT_DICE: { [key: string]: string } = {
   'Wizard': 'd6'
 };
 
+// D&D 5e Class Spellcasting Abilities
+const CLASS_SPELLCASTING_ABILITY: { [key: string]: string } = {
+  'Bard': 'charisma',
+  'Cleric': 'wisdom',
+  'Druid': 'wisdom',
+  'Paladin': 'charisma',
+  'Ranger (*LL Alt)': 'wisdom',
+  'Sorcerer': 'charisma',
+  'Warlock': 'charisma',
+  'Wizard': 'intelligence',
+  // Non-spellcasters default to wisdom for multiclass scenarios
+  'Barbarian': 'wisdom',
+  'Fighter': 'intelligence', // Eldritch Knight uses INT
+  'Monk': 'wisdom',
+  'Rogue': 'intelligence' // Arcane Trickster uses INT
+};
+
 interface Character {
   name: string;
   class: string;
@@ -363,7 +380,7 @@ export default function CharacterSheet() {
       charisma: 16,
     },
     proficiencyBonus: 3,
-    armorClass: 12,
+    armorClass: null,
     initiative: 2,
     speed: 30,
     skills: {
@@ -455,26 +472,26 @@ export default function CharacterSheet() {
     nicknames: '',
     weapons: [
       {
-        name: 'Quarterstaff',
+        name: '',
         type: 'Melee',
         finesse: false,
-        proficient: true,
-        notches: '1',
-        range: '5 ft',
+        proficient: false,
+        notches: '',
+        range: '',
         ability: 'STR',
-        atkBonus: '+3',
-        damage: '1d6+0'
+        atkBonus: '',
+        damage: ''
       },
       {
-        name: 'Dagger',
+        name: '',
         type: 'Melee',
-        finesse: true,
-        proficient: true,
-        notches: '1',
-        range: '20/60 ft',
-        ability: 'DEX',
-        atkBonus: '+5',
-        damage: '1d4+2'
+        finesse: false,
+        proficient: false,
+        notches: '',
+        range: '',
+        ability: 'STR',
+        atkBonus: '',
+        damage: ''
       }
     ],
     survivalConditions: {
@@ -628,6 +645,58 @@ export default function CharacterSheet() {
   const formatHitDiceDisplay = () => {
     const hitDieType = CLASS_HIT_DICE[character.class] || 'd8';
     return `${character.level}${hitDieType}`;
+  };
+
+  // Calculate total initiative modifier
+  const calculateInitiativeModifier = () => {
+    let totalModifier = getModifier(getFinalAbilityScore('dexterity')); // Base Dexterity modifier
+
+    // Alert feat: +5 to initiative
+    if (initiativeModifiers.alert) {
+      totalModifier += 5;
+    }
+
+    // Jack of All Trades: +half proficiency bonus (rounded down)
+    if (initiativeModifiers.jackOfAllTrades) {
+      totalModifier += Math.floor(character.proficiencyBonus / 2);
+    }
+
+    // Manual ability modifiers
+    if (initiativeModifiers.wisMod) {
+      totalModifier += getModifier(getFinalAbilityScore('wisdom'));
+    }
+
+    if (initiativeModifiers.intMod) {
+      totalModifier += getModifier(getFinalAbilityScore('intelligence'));
+    }
+
+    if (initiativeModifiers.chaMod) {
+      totalModifier += getModifier(getFinalAbilityScore('charisma'));
+    }
+
+    // Additional bonus
+    totalModifier += initiativeModifiers.additionalBonus;
+
+    return totalModifier;
+  };
+
+  // Get spellcasting ability for current class
+  const getSpellcastingAbility = (): string => {
+    return CLASS_SPELLCASTING_ABILITY[character.class] || 'wisdom';
+  };
+
+  // Calculate Spell Save DC (8 + proficiency bonus + spellcasting ability modifier)
+  const calculateSpellDC = (): number => {
+    const spellcastingAbility = getSpellcastingAbility();
+    const abilityModifier = getModifier(getFinalAbilityScore(spellcastingAbility));
+    return 8 + character.proficiencyBonus + abilityModifier;
+  };
+
+  // Calculate Spell Attack Bonus (proficiency bonus + spellcasting ability modifier)
+  const calculateSpellAttack = (): number => {
+    const spellcastingAbility = getSpellcastingAbility();
+    const abilityModifier = getModifier(getFinalAbilityScore(spellcastingAbility));
+    return character.proficiencyBonus + abilityModifier;
   };
 
   const getSkillModifier = (skill: string, ability: keyof typeof character.abilityScores): number => {
@@ -1042,6 +1111,102 @@ export default function CharacterSheet() {
       }
     }
 
+    // Load Initiative modifiers from localStorage
+    const savedInitiativeModifiers = localStorage.getItem('dnd-initiative-modifiers');
+    if (savedInitiativeModifiers) {
+      try {
+        const initModifiers = JSON.parse(savedInitiativeModifiers);
+        setInitiativeModifiers(initModifiers);
+      } catch (error) {
+        console.warn('Failed to load initiative modifiers from localStorage:', error);
+      }
+    }
+
+    // Load Inventory data from localStorage
+    const savedEquippedItems = localStorage.getItem('dnd-equipped-items');
+    if (savedEquippedItems) {
+      try {
+        const equipped = JSON.parse(savedEquippedItems);
+        setEquippedItems(equipped);
+      } catch (error) {
+        console.warn('Failed to load equipped items from localStorage:', error);
+      }
+    }
+
+    const savedAttunedItems = localStorage.getItem('dnd-attuned-items');
+    if (savedAttunedItems) {
+      try {
+        const attuned = JSON.parse(savedAttunedItems);
+        setAttunedItems(attuned);
+      } catch (error) {
+        console.warn('Failed to load attuned items from localStorage:', error);
+      }
+    }
+
+    const savedInventoryItems = localStorage.getItem('dnd-inventory-items');
+    if (savedInventoryItems) {
+      try {
+        const inventory = JSON.parse(savedInventoryItems);
+        setInventoryItems(inventory);
+      } catch (error) {
+        console.warn('Failed to load inventory items from localStorage:', error);
+      }
+    }
+
+    const savedPurse = localStorage.getItem('dnd-purse');
+    if (savedPurse) {
+      try {
+        const purseData = JSON.parse(savedPurse);
+        setPurse(purseData);
+      } catch (error) {
+        console.warn('Failed to load purse from localStorage:', error);
+      }
+    }
+
+    const savedRationBox = localStorage.getItem('dnd-ration-box');
+    if (savedRationBox) {
+      try {
+        const rationData = JSON.parse(savedRationBox);
+        setRationBox(rationData);
+      } catch (error) {
+        console.warn('Failed to load ration box from localStorage:', error);
+      }
+    }
+
+    const savedWaterskinBox = localStorage.getItem('dnd-waterskin-box');
+    if (savedWaterskinBox) {
+      try {
+        const waterskinData = JSON.parse(savedWaterskinBox);
+        setWaterskinBox(waterskinData);
+      } catch (error) {
+        console.warn('Failed to load waterskin box from localStorage:', error);
+      }
+    }
+
+    // Load Weather state from localStorage
+    const savedWeather = localStorage.getItem('dnd-weather');
+    if (savedWeather) {
+      try {
+        const weatherState = JSON.parse(savedWeather);
+        setCurrentWeather(weatherState);
+      } catch (error) {
+        console.warn('Failed to load weather from localStorage:', error);
+      }
+    }
+
+    // Load Calendar state from localStorage
+    const savedCalendar = localStorage.getItem('dnd-calendar');
+    if (savedCalendar) {
+      try {
+        const calendarData = JSON.parse(savedCalendar);
+        if (calendarData.currentSeason !== undefined) setCurrentSeason(calendarData.currentSeason);
+        if (calendarData.currentDay !== undefined) setCurrentDay(calendarData.currentDay);
+        if (calendarData.currentYear !== undefined) setCurrentYear(calendarData.currentYear);
+      } catch (error) {
+        console.warn('Failed to load calendar from localStorage:', error);
+      }
+    }
+
   }, []);
 
   // Save character data to localStorage whenever it changes
@@ -1144,7 +1309,6 @@ export default function CharacterSheet() {
       console.warn('Failed to save HP bonuses to localStorage:', error);
     }
   }, [additionalHPBonuses, hasToughness, isPHBHillDwarf]);
-
 
   // Auto-assign skills when race or class changes
   useEffect(() => {
@@ -2037,6 +2201,90 @@ export default function CharacterSheet() {
 
   const tabs = ['Stats', 'Inventory', 'Character', 'Spells', 'Library', 'Data'];
 
+  // Save initiative modifiers to localStorage
+  useEffect(() => {
+    if (initiativeModifiers) {
+      localStorage.setItem('initiativeModifiers', JSON.stringify(initiativeModifiers));
+    }
+  }, [initiativeModifiers]);
+
+  // Save inventory items to localStorage
+  useEffect(() => {
+    if (inventoryItems) {
+      localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
+    }
+  }, [inventoryItems]);
+
+  // Save equipped items to localStorage
+  useEffect(() => {
+    if (equippedItems) {
+      localStorage.setItem('equippedItems', JSON.stringify(equippedItems));
+    }
+  }, [equippedItems]);
+
+  // Save attuned items to localStorage
+  useEffect(() => {
+    if (attunedItems) {
+      localStorage.setItem('attunedItems', JSON.stringify(attunedItems));
+    }
+  }, [attunedItems]);
+
+  // Save external storage to localStorage
+  useEffect(() => {
+    if (externalStorage) {
+      localStorage.setItem('externalStorage', JSON.stringify(externalStorage));
+    }
+  }, [externalStorage]);
+
+  // Save calendar date to localStorage
+  useEffect(() => {
+    if (currentDate) {
+      localStorage.setItem('currentDate', JSON.stringify(currentDate));
+    }
+  }, [currentDate]);
+
+  // Save images to localStorage (URLs only, skip base64 data)
+  useEffect(() => {
+    try {
+      // Only save if it's a URL (not base64 data)
+      if (statsImage && !statsImage.startsWith('data:')) {
+        localStorage.setItem('statsImage', statsImage);
+      }
+    } catch (e) {
+      console.warn('Failed to save statsImage to localStorage:', e);
+    }
+  }, [statsImage]);
+
+  useEffect(() => {
+    try {
+      // Only save if it's a URL (not base64 data)
+      if (backgroundImage && !backgroundImage.startsWith('data:')) {
+        localStorage.setItem('backgroundImage', backgroundImage);
+      }
+    } catch (e) {
+      console.warn('Failed to save backgroundImage to localStorage:', e);
+    }
+  }, [backgroundImage]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('backgroundBlur', backgroundBlur.toString());
+    } catch (e) {
+      console.warn('Failed to save backgroundBlur to localStorage:', e);
+    }
+  }, [backgroundBlur]);
+
+  useEffect(() => {
+    try {
+      // Only save if it's a URL (not base64 data)
+      if (characterImage && !characterImage.startsWith('data:')) {
+        localStorage.setItem('characterImage', characterImage);
+      }
+    } catch (e) {
+      console.warn('Failed to save characterImage to localStorage:', e);
+    }
+  }, [characterImage]);
+
   return (
     <div 
       className={`min-h-screen p-4 font-sans relative ${isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-black'}`}
@@ -2348,14 +2596,14 @@ export default function CharacterSheet() {
                     </div>
                     <div className="text-center">
                       <div className="text-xs font-bold text-white mb-2">Initiative</div>
-                      <input
-                        type="number"
-                        value={character.initiative}
-                        onChange={(e) => updateCharacter({ initiative: parseInt(e.target.value) || 0 })}
-                        className={`w-full text-center border rounded px-3 py-2 text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                      <div
+                        className={`w-full text-center border rounded px-3 py-2 text-lg font-bold cursor-help ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'
                         }`}
-                      />
+                        title="Auto-calculated from Dexterity and modifiers in Data tab"
+                      >
+                        {calculateInitiativeModifier() >= 0 ? '+' : ''}{calculateInitiativeModifier()}
+                      </div>
                     </div>
                     <div className="text-center relative group">
                       <div className="text-xs font-bold text-white mb-2">Speed</div>
@@ -3227,7 +3475,7 @@ export default function CharacterSheet() {
 
                     {/* Header Row */}
                     <div className="flex items-center space-x-2">
-                      <div className="w-16 text-xs font-semibold text-gray-400"></div>
+                      <div className="w-16 text-xs font-semibold text-gray-400 text-right"></div>
                       <div className="w-32 text-xs font-semibold text-gray-400 px-1">Type</div>
                       <div className="w-40 text-xs font-semibold text-gray-400 px-2">Item</div>
                       <div className="w-12 text-xs font-semibold text-gray-400 text-center">+</div>
@@ -3236,11 +3484,11 @@ export default function CharacterSheet() {
 
                     {/* Armor Row */}
                     <div className="flex items-center space-x-2">
-                      <div className="w-16 text-xs font-semibold text-gray-400">Armor</div>
+                      <div className="w-16 text-xs font-semibold text-gray-400 text-right">Armor</div>
                       <select
                         value={armor.armorType.item}
                         onChange={(e) => updateArmor('armorType', 'item', e.target.value)}
-                        className={`w-32 text-xs border rounded px-1 py-1 appearance-none ${
+                        className={`w-32 text-xs border rounded px-2 py-1 appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       >
@@ -3279,11 +3527,11 @@ export default function CharacterSheet() {
 
                     {/* Shield Row */}
                     <div className="flex items-center space-x-2">
-                      <div className="w-16 text-xs font-semibold text-gray-400">Shield</div>
+                      <div className="w-16 text-xs font-semibold text-gray-400 text-left">Shield</div>
                       <select
                         value={armor.shieldType.item}
                         onChange={(e) => updateArmor('shieldType', 'item', e.target.value)}
-                        className={`w-32 text-xs border rounded px-1 py-1 appearance-none ${
+                        className={`w-44 text-xs border rounded px-2 py-1 appearance-none -ml-2 ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                         }`}
                       >
@@ -3322,17 +3570,25 @@ export default function CharacterSheet() {
 
                     {/* Magical Attire Row 1 */}
                     <div className="flex items-center space-x-2">
-                      <div className="w-16 text-xs font-semibold text-gray-400">Attire</div>
+                      <div className="w-16 text-xs font-semibold text-gray-400 text-right">Attire</div>
                       <select
                         value={armor.magicalAttire.item1}
                         onChange={(e) => updateArmor('magicalAttire', 'item1', e.target.value)}
-                        className={`w-32 text-xs border rounded px-1 py-1 appearance-none ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
+                        className={`w-32 text-xs border rounded px-2 py-1 appearance-none ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
                       >
                         {getMagicalAttireOptions().map(attire => (
                           <option key={attire} value={attire}>{attire}</option>
                         ))}
                       </select>
-                      <div className="w-40"></div>
+                      <input
+                        type="text"
+                        value={armor.magicalAttire.karuta || ''}
+                        onChange={(e) => updateArmor('magicalAttire', 'karuta', e.target.value)}
+                        className={`w-40 border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="Attire Item"
+                      />
                       <input
                         type="text"
                         value={armor.magicalAttire.plus}
@@ -3355,17 +3611,25 @@ export default function CharacterSheet() {
 
                     {/* Magical Attire Row 2 */}
                     <div className="flex items-center space-x-2">
-                      <div className="w-16 text-xs font-semibold text-gray-400"></div>
+                      <div className="w-16 text-xs font-semibold text-gray-400 text-right"></div>
                       <select
                         value={armor.magicalAttire.item2}
                         onChange={(e) => updateArmor('magicalAttire', 'item2', e.target.value)}
-                        className={`w-32 text-xs border rounded px-1 py-1 appearance-none ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
+                        className={`w-32 text-xs border rounded px-2 py-1 appearance-none ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
                       >
                         {getMagicalAttireOptions().map(attire => (
                           <option key={attire} value={attire}>{attire}</option>
                         ))}
                       </select>
-                      <div className="w-40"></div>
+                      <input
+                        type="text"
+                        value={armor.magicalAttire.karuta || ''}
+                        onChange={(e) => updateArmor('magicalAttire', 'karuta', e.target.value)}
+                        className={`w-40 border rounded px-2 py-1 text-xs ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                        placeholder="Attire Item"
+                      />
                       <input
                         type="text"
                         className={`w-12 text-center border rounded px-2 py-1 text-xs ${
@@ -3991,20 +4255,14 @@ export default function CharacterSheet() {
                   <label className="block text-sm font-bold text-gray-300 mb-2">
                     Spellcasting Ability
                   </label>
-                  <select
-                    value={character.spellcastingAbility}
-                    onChange={(e) => setCharacter({
-                      ...character,
-                      spellcastingAbility: e.target.value as 'Intelligence' | 'Wisdom' | 'Charisma'
-                    })}
-                    className={`w-full px-3 py-2 rounded border bg-transparent text-white text-center font-bold ${
-                      isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                    } focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                  <div
+                    className={`w-full px-3 py-2 rounded border text-white text-center font-bold cursor-help ${
+                      isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                    title={`Auto-determined by class: ${character.class} uses ${getSpellcastingAbility()}`}
                   >
-                    <option value="Intelligence" className="bg-slate-800 text-center font-bold">Intelligence</option>
-                    <option value="Wisdom" className="bg-slate-800 text-center font-bold">Wisdom</option>
-                    <option value="Charisma" className="bg-slate-800 text-center font-bold">Charisma</option>
-                  </select>
+                    {getSpellcastingAbility().charAt(0).toUpperCase() + getSpellcastingAbility().slice(1)}
+                  </div>
                 </div>
 
                 {/* Number of Known/Prepared Spells */}
@@ -4033,17 +4291,14 @@ export default function CharacterSheet() {
                   <label className="block text-sm font-bold text-gray-300 mb-2">
                     Spell DC
                   </label>
-                  <input
-                    type="number"
-                    value={character.spellDC}
-                    onChange={(e) => setCharacter({
-                      ...character,
-                      spellDC: parseInt(e.target.value) || 0
-                    })}
-                    className={`w-full px-3 py-2 rounded border bg-transparent text-white text-center font-bold ${
-                      isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                    } focus:outline-none focus:ring-2 focus:ring-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-                  />
+                  <div
+                    className={`w-full px-3 py-2 rounded border text-white text-center font-bold cursor-help ${
+                      isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                    title={`Auto-calculated: 8 + Prof Bonus (${character.proficiencyBonus}) + ${getSpellcastingAbility().toUpperCase()} Mod (${getModifier(getFinalAbilityScore(getSpellcastingAbility())) >= 0 ? '+' : ''}${getModifier(getFinalAbilityScore(getSpellcastingAbility()))})`}
+                  >
+                    {calculateSpellDC()}
+                  </div>
                 </div>
 
                 {/* Spell Attack */}
@@ -4051,17 +4306,14 @@ export default function CharacterSheet() {
                   <label className="block text-sm font-bold text-gray-300 mb-2">
                     Spell Attack
                   </label>
-                  <input
-                    type="number"
-                    value={character.spellAttack}
-                    onChange={(e) => setCharacter({
-                      ...character,
-                      spellAttack: parseInt(e.target.value) || 0
-                    })}
-                    className={`w-full px-3 py-2 rounded border bg-transparent text-white text-center font-bold ${
-                      isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
-                    } focus:outline-none focus:ring-2 focus:ring-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-                  />
+                  <div
+                    className={`w-full px-3 py-2 rounded border text-white text-center font-bold cursor-help ${
+                      isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                    title={`Auto-calculated: Prof Bonus (${character.proficiencyBonus}) + ${getSpellcastingAbility().toUpperCase()} Mod (${getModifier(getFinalAbilityScore(getSpellcastingAbility())) >= 0 ? '+' : ''}${getModifier(getFinalAbilityScore(getSpellcastingAbility()))})`}
+                  >
+                    {calculateSpellAttack() >= 0 ? '+' : ''}{calculateSpellAttack()}
+                  </div>
                 </div>
                 </div>
               </div>
@@ -5325,9 +5577,11 @@ export default function CharacterSheet() {
                                 newItems[index].amount = parseInt(e.target.value) || 0;
                                 setInventoryItems(newItems);
                               }}
+                              onFocus={(e) => e.target.select()}
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                               }`}
+                              placeholder="0"
                             />
                           </td>
                           <td className="py-1">
@@ -5356,9 +5610,11 @@ export default function CharacterSheet() {
                                 newItems[index].bulk = parseFloat(e.target.value) || 0;
                                 setInventoryItems(newItems);
                               }}
+                              onFocus={(e) => e.target.select()}
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
                               }`}
+                              placeholder="0"
                             />
                           </td>
                         </tr>
@@ -5608,7 +5864,19 @@ export default function CharacterSheet() {
                 {/* Initiative Box */}
                 <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Initiative</h3>
-                  <p className="text-xs text-gray-400 mb-4">Enter any additional modifiers to your initiative.</p>
+
+                  {/* Total Initiative Display */}
+                  <div className="mb-4 text-center">
+                    <div className="text-xs text-gray-400 mb-1">Total Initiative Modifier</div>
+                    <div className={`text-2xl font-bold px-4 py-2 rounded-lg border ${
+                      isDarkMode ? 'bg-slate-700 border-slate-600 text-orange-400' : 'bg-gray-100 border-gray-300 text-orange-600'
+                    }`}>
+                      {calculateInitiativeModifier() >= 0 ? '+' : ''}{calculateInitiativeModifier()}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">DEX: {getModifier(getFinalAbilityScore('dexterity')) >= 0 ? '+' : ''}{getModifier(getFinalAbilityScore('dexterity'))} + Modifiers: {calculateInitiativeModifier() - getModifier(getFinalAbilityScore('dexterity')) >= 0 ? '+' : ''}{calculateInitiativeModifier() - getModifier(getFinalAbilityScore('dexterity'))}</div>
+                  </div>
+
+                  <p className="text-xs text-gray-400 mb-4">Select applicable modifiers:</p>
                   <div className="space-y-2">
                     {Object.entries(initiativeModifiers).filter(([key]) => key !== 'additionalBonus').map(([modifier, isChecked]) => (
                       <div key={modifier} className="flex items-center justify-between">
