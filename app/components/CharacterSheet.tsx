@@ -353,6 +353,10 @@ export default function CharacterSheet() {
   const [hoveredSpell, setHoveredSpell] = useState<any>(null);
   const [knownSpellsOverride, setKnownSpellsOverride] = useState<number | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  // Custom spells state
+  const [customSpells, setCustomSpells] = useState<{[level: number]: any[]}>({});
+
   const [spellSlots, setSpellSlots] = useState<{[key: number]: {max: number, used: number}}>({});
 
   const [character, setCharacter] = useState<Character>({
@@ -1006,11 +1010,12 @@ export default function CharacterSheet() {
   };
 
   // Function to add a manual feat
-  const addManualFeat = (featName: string, description: string = '') => {
+  const addManualFeat = (featName: string, description: string = '', level?: number) => {
     const newFeat: Feat = {
       name: featName,
       description: description || 'Custom feat',
-      source: 'manual'
+      source: 'manual',
+      level: level
     };
     setManualFeats(prev => [...prev, newFeat]);
   };
@@ -1018,6 +1023,62 @@ export default function CharacterSheet() {
   // Function to remove a manual feat
   const removeManualFeat = (index: number) => {
     setManualFeats(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Function to add a custom spell
+  const addCustomSpell = (level: number) => {
+    const newSpell = {
+      Name: '',
+      name: '',
+      Level: level,
+      level: level,
+      School: '',
+      school: '',
+      CastingTime: '',
+      casting_time: '',
+      Range: '',
+      range: '',
+      Duration: '',
+      duration: '',
+      Components: '',
+      components: '',
+      'Area or Targets': '',
+      area_of_effect: '',
+      'Save or Attack': '',
+      save: '',
+      Effect: '',
+      description: '',
+      effect: '',
+      Tags: '',
+      tags: '',
+      isCustom: true,
+      id: Date.now() + Math.random() // Unique ID
+    };
+
+    setCustomSpells(prev => ({
+      ...prev,
+      [level]: [...(prev[level] || []), newSpell]
+    }));
+  };
+
+  // Function to remove a custom spell
+  const removeCustomSpell = (level: number, spellId: string | number) => {
+    setCustomSpells(prev => ({
+      ...prev,
+      [level]: (prev[level] || []).filter(spell => spell.id !== spellId)
+    }));
+  };
+
+  // Function to update a custom spell
+  const updateCustomSpell = (level: number, spellId: string | number, field: string, value: string) => {
+    setCustomSpells(prev => ({
+      ...prev,
+      [level]: (prev[level] || []).map(spell =>
+        spell.id === spellId
+          ? { ...spell, [field]: value, [field.toLowerCase()]: value }
+          : spell
+      )
+    }));
   };
 
   // Update automatic feats when character class, level, or race changes
@@ -1048,6 +1109,8 @@ export default function CharacterSheet() {
     const savedSpellSlots = localStorage.getItem('dnd-spell-slots');
     const savedKnownSpellsOverride = localStorage.getItem('dnd-known-spells-override');
     const savedManualFeats = localStorage.getItem('dnd-manual-feats');
+    const savedCustomSpells = localStorage.getItem('dnd-custom-spells');
+    const savedDeathSaves = localStorage.getItem('dnd-death-saves');
 
     if (savedCharacter) {
       try {
@@ -1144,6 +1207,27 @@ export default function CharacterSheet() {
       }
     }
 
+    // Load custom spells from localStorage
+    if (savedCustomSpells) {
+      try {
+        const customSpellsData = JSON.parse(savedCustomSpells);
+        setCustomSpells(customSpellsData);
+      } catch (error) {
+        console.warn('Failed to load custom spells from localStorage:', error);
+      }
+    }
+
+    // Load death saves from localStorage
+    if (savedDeathSaves) {
+      try {
+        const deathSavesData = JSON.parse(savedDeathSaves);
+        setDeathSaves(deathSavesData);
+      } catch (error) {
+        console.warn('Failed to load death saves from localStorage:', error);
+      }
+    }
+
+
     // Load HP-related data from localStorage
     const savedHitPointRolls = localStorage.getItem('dnd-hit-point-rolls');
     if (savedHitPointRolls) {
@@ -1178,66 +1262,7 @@ export default function CharacterSheet() {
       }
     }
 
-    // Load Inventory data from localStorage
-    const savedEquippedItems = localStorage.getItem('dnd-equipped-items');
-    if (savedEquippedItems) {
-      try {
-        const equipped = JSON.parse(savedEquippedItems);
-        setEquippedItems(equipped);
-      } catch (error) {
-        console.warn('Failed to load equipped items from localStorage:', error);
-      }
-    }
 
-    const savedAttunedItems = localStorage.getItem('dnd-attuned-items');
-    if (savedAttunedItems) {
-      try {
-        const attuned = JSON.parse(savedAttunedItems);
-        setAttunedItems(attuned);
-      } catch (error) {
-        console.warn('Failed to load attuned items from localStorage:', error);
-      }
-    }
-
-    const savedInventoryItems = localStorage.getItem('dnd-inventory-items');
-    if (savedInventoryItems) {
-      try {
-        const inventory = JSON.parse(savedInventoryItems);
-        setInventoryItems(inventory);
-      } catch (error) {
-        console.warn('Failed to load inventory items from localStorage:', error);
-      }
-    }
-
-    const savedPurse = localStorage.getItem('dnd-purse');
-    if (savedPurse) {
-      try {
-        const purseData = JSON.parse(savedPurse);
-        setPurse(purseData);
-      } catch (error) {
-        console.warn('Failed to load purse from localStorage:', error);
-      }
-    }
-
-    const savedRationBox = localStorage.getItem('dnd-ration-box');
-    if (savedRationBox) {
-      try {
-        const rationData = JSON.parse(savedRationBox);
-        setRationBox(rationData);
-      } catch (error) {
-        console.warn('Failed to load ration box from localStorage:', error);
-      }
-    }
-
-    const savedWaterskinBox = localStorage.getItem('dnd-waterskin-box');
-    if (savedWaterskinBox) {
-      try {
-        const waterskinData = JSON.parse(savedWaterskinBox);
-        setWaterskinBox(waterskinData);
-      } catch (error) {
-        console.warn('Failed to load waterskin box from localStorage:', error);
-      }
-    }
 
     // Load Weather state from localStorage
     const savedWeather = localStorage.getItem('dnd-weather');
@@ -1325,59 +1350,24 @@ export default function CharacterSheet() {
     }
   }, [manualFeats]);
 
-  // Save images to localStorage with error handling
-  useEffect(() => {
-    const images = {
-      statsImage,
-      backgroundImage,
-      characterImage,
-      backgroundBlur
-    };
-
-    try {
-      const imageData = JSON.stringify(images);
-      // Check if the data size is too large (approximate check)
-      if (imageData.length > 5000000) { // 5MB limit
-        console.warn('Image data too large for localStorage, skipping save');
-        // Clear previous saved images if they exist
-        localStorage.removeItem('dnd-images');
-        return;
-      }
-      localStorage.setItem('dnd-images', imageData);
-    } catch (error) {
-      if (error instanceof DOMException && error.code === DOMException.QUOTA_EXCEEDED_ERR) {
-        console.warn('localStorage quota exceeded, clearing image data');
-        // Clear all images from localStorage to free up space
-        localStorage.removeItem('dnd-images');
-        // Optionally notify user
-        alert('Image storage limit exceeded. Please use smaller images or fewer images.');
-      } else {
-        console.warn('Failed to save images to localStorage:', error);
-      }
-    }
-  }, [statsImage, backgroundImage, characterImage, backgroundBlur]);
-
-  // Save HP-related data to localStorage
+  // Save custom spells to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('dnd-hit-point-rolls', JSON.stringify(hitPointRolls));
+      localStorage.setItem('dnd-custom-spells', JSON.stringify(customSpells));
     } catch (error) {
-      console.warn('Failed to save hit point rolls to localStorage:', error);
+      console.warn('Failed to save custom spells to localStorage:', error);
     }
-  }, [hitPointRolls]);
+  }, [customSpells]);
 
+  // Save death saves to localStorage
   useEffect(() => {
     try {
-      const hpData = {
-        additionalHPBonuses,
-        hasToughness,
-        isPHBHillDwarf
-      };
-      localStorage.setItem('dnd-hp-bonuses', JSON.stringify(hpData));
+      localStorage.setItem('dnd-death-saves', JSON.stringify(deathSaves));
     } catch (error) {
-      console.warn('Failed to save HP bonuses to localStorage:', error);
+      console.warn('Failed to save death saves to localStorage:', error);
     }
-  }, [additionalHPBonuses, hasToughness, isPHBHillDwarf]);
+  }, [deathSaves]);
+
 
   // Auto-assign skills when race or class changes
   useEffect(() => {
@@ -1547,12 +1537,12 @@ export default function CharacterSheet() {
               <div className="absolute top-1 left-1/2 transform -translate-x-1/2">
                 <div className="w-13 h-7 bg-gray-200 rounded-full relative shadow-md">
                   {/* Cloud puffs for fluffy appearance */}
-                  <div className="absolute -left-2 top-1 w-5 h-5 bg-gray-100 rounded-full"></div>
-                  <div className="absolute -right-2 top-1 w-5 h-5 bg-gray-100 rounded-full"></div>
+                  <div className="absolute -left-2 top-1 w-5 h-5 bg-white rounded-full"></div>
+                  <div className="absolute -right-2 top-1 w-5 h-5 bg-white rounded-full"></div>
                   <div className="absolute left-1 -top-2 w-4 h-4 bg-white rounded-full opacity-90"></div>
                   <div className="absolute right-1 -top-2 w-4 h-4 bg-white rounded-full opacity-90"></div>
-                  <div className="absolute left-3 -top-3 w-6 h-6 bg-gray-100 rounded-full"></div>
-                  <div className="absolute right-3 -top-3 w-6 h-6 bg-gray-100 rounded-full"></div>
+                  <div className="absolute left-3 -top-3 w-6 h-6 bg-white rounded-full"></div>
+                  <div className="absolute right-3 -top-3 w-6 h-6 bg-white rounded-full"></div>
                   {/* Additional fluffy bits */}
                   <div className="absolute left-0 top-2 w-3 h-3 bg-gray-200 rounded-full"></div>
                   <div className="absolute right-0 top-2 w-3 h-3 bg-gray-200 rounded-full"></div>
@@ -2132,6 +2122,143 @@ export default function CharacterSheet() {
 
   const itemTypes = ['Armor', 'Ammunition', 'Attire', 'Ring', 'Shield', 'Weapon', 'Spell Focus'];
 
+  // Save inventory data to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-equipped-items', JSON.stringify(equippedItems));
+    } catch (error) {
+      console.warn('Failed to save equipped items to localStorage:', error);
+    }
+  }, [equippedItems]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-attuned-items', JSON.stringify(attunedItems));
+    } catch (error) {
+      console.warn('Failed to save attuned items to localStorage:', error);
+    }
+  }, [attunedItems]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-inventory-items', JSON.stringify(inventoryItems));
+    } catch (error) {
+      console.warn('Failed to save inventory items to localStorage:', error);
+    }
+  }, [inventoryItems]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-external-storage', JSON.stringify(externalStorage));
+    } catch (error) {
+      console.warn('Failed to save external storage to localStorage:', error);
+    }
+  }, [externalStorage]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-ammunition', JSON.stringify(ammunition));
+    } catch (error) {
+      console.warn('Failed to save ammunition to localStorage:', error);
+    }
+  }, [ammunition]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-armor', JSON.stringify(armor));
+    } catch (error) {
+      console.warn('Failed to save armor to localStorage:', error);
+    }
+  }, [armor]);
+
+  // Save resource tracking data to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-purse', JSON.stringify(purse));
+    } catch (error) {
+      console.warn('Failed to save purse to localStorage:', error);
+    }
+  }, [purse]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-ration-box', JSON.stringify(rationBox));
+    } catch (error) {
+      console.warn('Failed to save ration box to localStorage:', error);
+    }
+  }, [rationBox]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-waterskin-box', JSON.stringify(waterskinBox));
+    } catch (error) {
+      console.warn('Failed to save waterskin box to localStorage:', error);
+    }
+  }, [waterskinBox]);
+
+  // Save speeds to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-speeds', JSON.stringify(speeds));
+    } catch (error) {
+      console.warn('Failed to save speeds to localStorage:', error);
+    }
+  }, [speeds]);
+
+  // Save images to localStorage with error handling
+  useEffect(() => {
+    const images = {
+      statsImage,
+      backgroundImage,
+      characterImage,
+      backgroundBlur
+    };
+
+    try {
+      const imageData = JSON.stringify(images);
+      // Check if the data size is too large (approximate check)
+      if (imageData.length > 5000000) { // 5MB limit
+        console.warn('Image data too large for localStorage, skipping save');
+        // Clear previous saved images if they exist
+        localStorage.removeItem('dnd-images');
+        return;
+      }
+      localStorage.setItem('dnd-images', imageData);
+    } catch (error) {
+      if (error instanceof DOMException && error.code === DOMException.QUOTA_EXCEEDED_ERR) {
+        console.warn('localStorage quota exceeded, clearing image data');
+        // Clear all images from localStorage to free up space
+        localStorage.removeItem('dnd-images');
+        // Optionally notify user
+        alert('Image storage limit exceeded. Please use smaller images or fewer images.');
+      } else {
+        console.warn('Failed to save images to localStorage:', error);
+      }
+    }
+  }, [statsImage, backgroundImage, characterImage, backgroundBlur]);
+
+  // Save HP-related data to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-hit-point-rolls', JSON.stringify(hitPointRolls));
+    } catch (error) {
+      console.warn('Failed to save hit point rolls to localStorage:', error);
+    }
+  }, [hitPointRolls]);
+
+  useEffect(() => {
+    try {
+      const hpData = {
+        additionalHPBonuses,
+        hasToughness,
+        isPHBHillDwarf
+      };
+      localStorage.setItem('dnd-hp-bonuses', JSON.stringify(hpData));
+    } catch (error) {
+      console.warn('Failed to save HP bonuses to localStorage:', error);
+    }
+  }, [additionalHPBonuses, hasToughness, isPHBHillDwarf]);
+
   // Update encumbrance calculations when dependencies change
   useEffect(() => {
     const newMaxSlots = calculateMaxSlots();
@@ -2277,86 +2404,10 @@ export default function CharacterSheet() {
     }
   }, [initiativeModifiers]);
 
-  // Save inventory items to localStorage
-  useEffect(() => {
-    if (inventoryItems) {
-      localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems));
-    }
-  }, [inventoryItems]);
-
-  // Save equipped items to localStorage
-  useEffect(() => {
-    if (equippedItems) {
-      localStorage.setItem('equippedItems', JSON.stringify(equippedItems));
-    }
-  }, [equippedItems]);
-
-  // Save attuned items to localStorage
-  useEffect(() => {
-    if (attunedItems) {
-      localStorage.setItem('attunedItems', JSON.stringify(attunedItems));
-    }
-  }, [attunedItems]);
-
-  // Save external storage to localStorage
-  useEffect(() => {
-    if (externalStorage) {
-      localStorage.setItem('externalStorage', JSON.stringify(externalStorage));
-    }
-  }, [externalStorage]);
-
-  // Save calendar date to localStorage
-  useEffect(() => {
-    if (currentDate) {
-      localStorage.setItem('currentDate', JSON.stringify(currentDate));
-    }
-  }, [currentDate]);
-
-  // Save images to localStorage (URLs only, skip base64 data)
-  useEffect(() => {
-    try {
-      // Only save if it's a URL (not base64 data)
-      if (statsImage && !statsImage.startsWith('data:')) {
-        localStorage.setItem('statsImage', statsImage);
-      }
-    } catch (e) {
-      console.warn('Failed to save statsImage to localStorage:', e);
-    }
-  }, [statsImage]);
-
-  useEffect(() => {
-    try {
-      // Only save if it's a URL (not base64 data)
-      if (backgroundImage && !backgroundImage.startsWith('data:')) {
-        localStorage.setItem('backgroundImage', backgroundImage);
-      }
-    } catch (e) {
-      console.warn('Failed to save backgroundImage to localStorage:', e);
-    }
-  }, [backgroundImage]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('backgroundBlur', backgroundBlur.toString());
-    } catch (e) {
-      console.warn('Failed to save backgroundBlur to localStorage:', e);
-    }
-  }, [backgroundBlur]);
-
-  useEffect(() => {
-    try {
-      // Only save if it's a URL (not base64 data)
-      if (characterImage && !characterImage.startsWith('data:')) {
-        localStorage.setItem('characterImage', characterImage);
-      }
-    } catch (e) {
-      console.warn('Failed to save characterImage to localStorage:', e);
-    }
-  }, [characterImage]);
 
   return (
     <div 
-      className={`min-h-screen p-4 font-sans relative ${isDarkMode ? 'bg-slate-900 text-white' : 'bg-white text-black'}`}
+      className={`min-h-screen p-4 font-sans relative ${isDarkMode ? 'bg-slate-900 text-white' : 'bg-gray-100 text-black'}`}
       style={{
         backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'none',
         backgroundSize: 'cover',
@@ -2400,18 +2451,18 @@ export default function CharacterSheet() {
         {activeTab === 'Stats' && (
           <div className="space-y-8">
             {/* Character Header Section */}
-            <div className="bg-slate-800 border-2 border-orange-500 rounded-lg p-6">
+            <div className={`${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'} border-2 border-orange-500 rounded-lg p-6`}>
               <div className="grid grid-cols-2 gap-8">
                 {/* Left Column - Level, Portrait & Character Info */}
                 <div className="flex items-center gap-6">
                   {/* Level */}
-                  <div className="bg-slate-700 rounded-lg p-4 text-center">
-                    <div className="text-4xl font-bold text-white">{character.level}</div>
+                  <div className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} rounded-lg p-4 text-center`}>
+                    <div className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{character.level}</div>
                     <div className="text-sm text-gray-400">Level</div>
                   </div>
 
                   {/* Character Portrait */}
-                  <div className="w-24 h-24 bg-slate-700 rounded-lg border-2 border-slate-600 flex items-center justify-center overflow-hidden">
+                  <div className={`w-24 h-24 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-400'} rounded-lg border-2 flex items-center justify-center overflow-hidden`}>
                     {statsImage ? (
                       <img
                         src={statsImage}
@@ -2426,7 +2477,7 @@ export default function CharacterSheet() {
                   {/* Character Info */}
                   <div className="flex flex-col justify-center">
                     <h1 className="text-2xl font-bold text-orange-400 mb-1">{character.name}</h1>
-                    <p className="text-sm text-gray-300">
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       {character.race} {character.class} • {character.alignment}
                     </p>
                   </div>
@@ -2456,7 +2507,7 @@ export default function CharacterSheet() {
                     return (
                       <div
                         key={ability}
-                        className={`bg-slate-700 ${borderColors[index]} rounded-xl border-2 px-2 py-1 text-center shadow-lg transform transition-transform hover:scale-105 min-w-16 relative group`}
+                        className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} ${borderColors[index]} rounded-xl border-2 px-2 py-1 text-center shadow-lg transform transition-transform hover:scale-105 min-w-16 relative group`}
                         title={asiBonus > 0 ? `Base: ${score} + ASI: ${asiBonus} = Total: ${finalScore}` : `Score: ${score}`}
                       >
                         <div className={`text-xs font-bold ${textColors[index]} mb-1`}>{ability.slice(0, 3).toUpperCase()}</div>
@@ -2477,9 +2528,9 @@ export default function CharacterSheet() {
                               });
                             }
                           }}
-                          className="w-full text-2xl font-bold text-white bg-transparent border-0 text-center rounded-lg py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-slate-600/50"
+                          className={`w-full text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} bg-transparent border-0 text-center rounded-lg py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500 ${isDarkMode ? 'focus:bg-slate-600/50' : 'focus:bg-gray-300/50'}`}
                         />
-                        <div className="text-sm font-semibold text-white/90 mt-1">
+                        <div className={`text-sm font-semibold ${isDarkMode ? 'text-white/90' : 'text-gray-700'} mt-1`}>
                           {getModifier(finalScore) >= 0 ? '+' : ''}{getModifier(finalScore)}
                         </div>
 
@@ -2506,7 +2557,7 @@ export default function CharacterSheet() {
               <div className="grid grid-cols-2 gap-4">
               {/* Column 1: Saving Throws */}
               <div className="space-y-4">
-                <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="pb-8">
                     <div className="grid grid-cols-2 gap-3">
                       {Object.entries(character.savingThrows).map(([save, proficient]) => {
@@ -2521,9 +2572,9 @@ export default function CharacterSheet() {
                         const modifier = getSaveModifier(save, abilityMap[save]);
                         return (
                           <div key={save} className={`flex items-center justify-between px-2 py-1 rounded-full border-2 transform transition-all duration-200 hover:scale-105 ${
-                            proficient 
-                              ? 'bg-green-500/20 border-green-400' 
-                              : 'bg-slate-700 border-slate-600'
+                            proficient
+                              ? 'bg-green-500/20 border-green-400'
+                              : isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-400'
                           }`}>
                             <div className="flex items-center gap-1">
                               <input
@@ -2535,9 +2586,9 @@ export default function CharacterSheet() {
                                 })}
                                 className="w-3 h-3 accent-green-500 rounded focus:ring-2 focus:ring-green-400"
                               />
-                              <span className="text-xs font-medium">{abbreviations[save]}</span>
+                              <span className={`text-xs font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{abbreviations[save]}</span>
                             </div>
-                            <span className="font-mono text-xs font-bold">{modifier >= 0 ? '+' : ''}{modifier}</span>
+                            <span className={`font-mono text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{modifier >= 0 ? '+' : ''}{modifier}</span>
                           </div>
                         );
                       })}
@@ -2549,13 +2600,13 @@ export default function CharacterSheet() {
                 </div>
                 
                 {/* Passive Skills */}
-                <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="pb-8 space-y-3">
                     {/* Passive Perception */}
-                    <div className={`flex items-center justify-between px-2 py-1 rounded-full border-2 bg-slate-700 border-slate-600 transform transition-all duration-200 hover:scale-105`}>
+                    <div className={`flex items-center justify-between px-2 py-1 rounded-full border-2 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-400'} transform transition-all duration-200 hover:scale-105`}>
                       <div className="flex items-center">
                         <span className="mr-1 text-xs">👁️</span>
-                        <span className="text-xs">Passive Perception</span>
+                        <span className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Passive Perception</span>
                       </div>
                       <span className="font-mono text-sm font-bold text-blue-400">
                         {10 + getSkillModifier('Perception', 'wisdom')}
@@ -2563,10 +2614,10 @@ export default function CharacterSheet() {
                     </div>
                     
                     {/* Passive Investigation */}
-                    <div className={`flex items-center justify-between px-2 py-1 rounded-full border-2 bg-slate-700 border-slate-600 transform transition-all duration-200 hover:scale-105`}>
+                    <div className={`flex items-center justify-between px-2 py-1 rounded-full border-2 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-400'} transform transition-all duration-200 hover:scale-105`}>
                       <div className="flex items-center">
                         <span className="mr-1 text-xs">🔍</span>
-                        <span className="text-xs">Passive Investigation</span>
+                        <span className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Passive Investigation</span>
                       </div>
                       <span className="font-mono text-sm font-bold text-purple-400">
                         {10 + getSkillModifier('Investigation', 'intelligence')}
@@ -2574,10 +2625,10 @@ export default function CharacterSheet() {
                     </div>
                     
                     {/* Passive Insight */}
-                    <div className={`flex items-center justify-between px-2 py-1 rounded-full border-2 bg-slate-700 border-slate-600 transform transition-all duration-200 hover:scale-105`}>
+                    <div className={`flex items-center justify-between px-2 py-1 rounded-full border-2 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-400'} transform transition-all duration-200 hover:scale-105`}>
                       <div className="flex items-center">
                         <span className="mr-1 text-xs">🧠</span>
-                        <span className="text-xs">Passive Insight</span>
+                        <span className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Passive Insight</span>
                       </div>
                       <span className="font-mono text-sm font-bold text-green-400">
                         {10 + getSkillModifier('Insight', 'wisdom')}
@@ -2590,9 +2641,9 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Ammunition */}
-                <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-3 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="pb-8 space-y-3">
-                    <div className="grid grid-cols-10 gap-1 text-xs font-bold text-white mb-2">
+                    <div className={`grid grid-cols-10 gap-1 text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
                       <div className="col-span-3 text-center">Name</div>
                       <div className="col-span-4 text-center">Corr. Weapon</div>
                       <div className="col-span-3 text-center">Dice/Qty</div>
@@ -2604,7 +2655,7 @@ export default function CharacterSheet() {
                           value={ammo.name}
                           onChange={(e) => updateAmmunition(index, 'name', e.target.value)}
                           className={`col-span-3 text-center border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                           placeholder="Ammo name"
                         />
@@ -2613,7 +2664,7 @@ export default function CharacterSheet() {
                           value={ammo.weapon}
                           onChange={(e) => updateAmmunition(index, 'weapon', e.target.value)}
                           className={`col-span-4 text-center border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                           placeholder="Weapon"
                         />
@@ -2622,7 +2673,7 @@ export default function CharacterSheet() {
                           value={ammo.amount}
                           onChange={(e) => updateAmmunition(index, 'amount', e.target.value)}
                           className={`col-span-3 text-center border rounded px-2 py-1 text-xs ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                           placeholder="Dice/Qty"
                         />
@@ -2638,10 +2689,10 @@ export default function CharacterSheet() {
               {/* Column 2: Combat Stats and Health */}
               <div className="space-y-4">
                 {/* Combat Stats Box */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="grid grid-cols-2 gap-2 pb-8 max-w-xs mx-auto">
                     <div className="text-center">
-                      <div className="text-xs font-bold text-white mb-2">AC</div>
+                      <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>AC</div>
                       <input
                         type="number"
                         value={character.armorClass || calculateTotalAC()}
@@ -2649,7 +2700,7 @@ export default function CharacterSheet() {
                         className={`w-full text-center border rounded px-3 py-2 text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           character.armorClass
                             ? (isDarkMode ? 'bg-yellow-700 border-yellow-500 text-yellow-200' : 'bg-yellow-100 border-yellow-400 text-yellow-800')
-                            : (isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900')
+                            : (isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900')
                         }`}
                         placeholder={calculateTotalAC().toString()}
                         title={character.armorClass
@@ -2664,65 +2715,35 @@ export default function CharacterSheet() {
                       />
                     </div>
                     <div className="text-center">
-                      <div className="text-xs font-bold text-white mb-2">Initiative</div>
+                      <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Initiative</div>
                       <div
                         className={`w-full text-center border rounded px-3 py-2 text-lg font-bold cursor-help ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         title="Auto-calculated from Dexterity and modifiers in Data tab"
                       >
                         {calculateInitiativeModifier() >= 0 ? '+' : ''}{calculateInitiativeModifier()}
                       </div>
                     </div>
-                    <div className="text-center relative group">
-                      <div className="text-xs font-bold text-white mb-2">Speed</div>
+                    <div className="text-center relative">
+                      <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Speed</div>
                       <input
                         type="number"
                         value={character.speed}
                         onChange={(e) => updateCharacter({ speed: parseInt(e.target.value) || 0 })}
                         className={`w-full text-center border rounded px-3 py-2 text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
-                      
-                      {/* Speed Pie Chart Tooltip */}
-                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-                        <div className="relative w-16 h-16 bg-slate-800 border-2 border-orange-500 rounded-full overflow-hidden">
-                          {/* Pie segments using CSS clip-path for 4 quarters */}
-                          <div className="absolute inset-0 bg-blue-600 opacity-70" style={{clipPath: 'polygon(50% 50%, 50% 0%, 100% 0%, 100% 50%)'}}></div>
-                          <div className="absolute inset-0 bg-green-600 opacity-70" style={{clipPath: 'polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%)'}}></div>
-                          <div className="absolute inset-0 bg-yellow-600 opacity-70" style={{clipPath: 'polygon(50% 50%, 50% 100%, 0% 100%, 0% 50%)'}}></div>
-                          <div className="absolute inset-0 bg-purple-600 opacity-70" style={{clipPath: 'polygon(50% 50%, 0% 50%, 0% 0%, 50% 0%)'}}></div>
-                          
-                          {/* Speed labels positioned in each quarter */}
-                          <div className="absolute top-1 right-1 text-xs font-bold text-white">
-                            C:{speeds.climb}
-                          </div>
-                          <div className="absolute bottom-1 right-1 text-xs font-bold text-white">
-                            S:{speeds.swim}
-                          </div>
-                          <div className="absolute bottom-1 left-1 text-xs font-bold text-white">
-                            B:{speeds.burrow}
-                          </div>
-                          <div className="absolute top-1 left-1 text-xs font-bold text-white">
-                            F:{speeds.fly}
-                          </div>
-                          
-                          {/* Center circle */}
-                          <div className="absolute inset-3 bg-slate-800 rounded-full border border-slate-600 flex items-center justify-center">
-                            <div className="text-xs font-bold text-orange-400">Spd</div>
-                          </div>
-                        </div>
-                      </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xs font-bold text-white mb-2">Prof Bonus</div>
+                      <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Prof Bonus</div>
                       <input
                         type="number"
                         value={character.proficiencyBonus}
                         onChange={(e) => updateCharacter({ proficiencyBonus: parseInt(e.target.value) || 0 })}
                         className={`w-full text-center border rounded px-3 py-2 text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
                     </div>
@@ -2733,7 +2754,7 @@ export default function CharacterSheet() {
                 </div>
                 
                 {/* Health Box */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="space-y-4 pb-8">
                   {/* Health Bar - At the top */}
                   <div className="space-y-2">
@@ -2762,7 +2783,7 @@ export default function CharacterSheet() {
                     {/* HP Section - Horizontal Layout */}
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center">
-                        <div className="text-xs font-bold text-white mb-2">HP</div>
+                        <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>HP</div>
                         <input
                           type="number"
                           value={character.hitPoints.current}
@@ -2770,12 +2791,12 @@ export default function CharacterSheet() {
                             hitPoints: { ...character.hitPoints, current: parseInt(e.target.value) || 0 }
                           })}
                           className={`w-full text-center border rounded px-2 py-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                         />
                       </div>
                       <div className="text-center relative group">
-                        <div className="text-xs font-bold text-white mb-2">Max HP</div>
+                        <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Max HP</div>
                         <div
                           className={`w-full text-center border rounded px-2 py-1 font-bold cursor-help ${
                             isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-300' : 'bg-gray-100 border-gray-300 text-gray-600'
@@ -2799,7 +2820,7 @@ export default function CharacterSheet() {
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-xs font-bold text-white mb-2">Temp HP</div>
+                        <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Temp HP</div>
                         <input
                           type="number"
                           value={character.hitPoints.temporary}
@@ -2807,7 +2828,7 @@ export default function CharacterSheet() {
                             hitPoints: { ...character.hitPoints, temporary: parseInt(e.target.value) || 0 }
                           })}
                           className={`w-full text-center border rounded px-2 py-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                         />
                       </div>
@@ -2816,18 +2837,18 @@ export default function CharacterSheet() {
                     {/* Hit Dice Section */}
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center">
-                        <div className="text-xs font-bold text-white mb-2">Hit Dice</div>
+                        <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Hit Dice</div>
                         <input
                           type="number"
                           value={currentHitDice}
                           onChange={(e) => setCurrentHitDice(parseInt(e.target.value) || 0)}
                           className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                         />
                       </div>
                       <div className="text-center relative group">
-                        <div className="text-xs font-bold text-white mb-2">Max Dice</div>
+                        <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Max Dice</div>
                         <div
                           className={`w-full text-center border rounded px-2 py-1 font-bold cursor-help ${
                             isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-300' : 'bg-gray-100 border-gray-300 text-gray-600'
@@ -2849,13 +2870,13 @@ export default function CharacterSheet() {
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-xs font-bold text-white mb-2">Reduction</div>
+                        <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Reduction</div>
                         <input
                           type="number"
                           value={damageReduction}
                           onChange={(e) => setDamageReduction(parseInt(e.target.value) || 0)}
                           className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                         />
                       </div>
@@ -2864,17 +2885,17 @@ export default function CharacterSheet() {
                     {/* Resistance and Death Saves Section */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="text-center">
-                        <div className="text-xs font-bold text-white mb-2">Resistance</div>
+                        <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Resistance</div>
                         <textarea
                           placeholder="Resistances..."
                           rows={3}
                           className={`w-full text-xs text-center border rounded px-2 py-1 resize-none ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                         />
                       </div>
                       <div className="text-center">
-                        <div className="text-xs font-bold text-white mb-2">Death Saves</div>
+                        <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Death Saves</div>
                         <div className="space-y-2">
                           <div className="flex justify-center space-x-2">
                             <span className="text-sm">☠️</span>
@@ -2886,8 +2907,8 @@ export default function CharacterSheet() {
                                   newFailures[i] = !newFailures[i];
                                   setDeathSaves({...deathSaves, failures: newFailures});
                                 }}
-                                className={`w-5 h-5 border-2 border-slate-600 rounded cursor-pointer transition-colors ${
-                                  failed ? 'bg-red-600 border-red-500' : 'bg-slate-700 hover:bg-red-600'
+                                className={`w-5 h-5 border-2 ${isDarkMode ? 'border-slate-600' : 'border-gray-400'} rounded cursor-pointer transition-colors ${
+                                  failed ? 'bg-red-600 border-red-500' : isDarkMode ? 'bg-slate-700 hover:bg-red-600' : 'bg-gray-200 hover:bg-red-600'
                                 }`}
                               ></div>
                             ))}
@@ -2902,8 +2923,8 @@ export default function CharacterSheet() {
                                   newSuccesses[i] = !newSuccesses[i];
                                   setDeathSaves({...deathSaves, successes: newSuccesses});
                                 }}
-                                className={`w-5 h-5 border-2 border-slate-600 rounded cursor-pointer transition-colors ${
-                                  succeeded ? 'bg-green-600 border-green-500' : 'bg-slate-700 hover:bg-green-600'
+                                className={`w-5 h-5 border-2 ${isDarkMode ? 'border-slate-600' : 'border-gray-400'} rounded cursor-pointer transition-colors ${
+                                  succeeded ? 'bg-green-600 border-green-500' : isDarkMode ? 'bg-slate-700 hover:bg-green-600' : 'bg-gray-200 hover:bg-green-600'
                                 }`}
                               ></div>
                             ))}
@@ -2927,7 +2948,7 @@ export default function CharacterSheet() {
               {/* Column 3: Skills and Ammunition */}
               <div className="space-y-4">
               {/* Editable Skills */}
-              <div className={`p-3 rounded-lg border relative self-start ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-3 rounded-lg border relative self-start ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
 
                 <div className="space-y-0.5 pb-3">
                   {/* All skills in a simple list */}
@@ -3031,12 +3052,12 @@ export default function CharacterSheet() {
                         <div
                           className={`w-10 text-center font-mono text-xs border rounded transition-all duration-200 py-1 cursor-help ${
                             modifier >= 5
-                              ? 'border-green-500 bg-green-500/20 text-green-300'
+                              ? `border-green-500 bg-green-500/20 ${isDarkMode ? 'text-green-300' : 'text-green-700'}`
                               : modifier >= 0
-                              ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                              ? `border-blue-500 bg-blue-500/20 ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`
                               : modifier >= -2
-                              ? 'border-yellow-500 bg-yellow-500/20 text-yellow-300'
-                              : 'border-red-500 bg-red-500/20 text-red-300'
+                              ? `border-yellow-500 bg-yellow-500/20 ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'}`
+                              : `border-red-500 bg-red-500/20 ${isDarkMode ? 'text-red-300' : 'text-red-700'}`
                           }`}
                           title={`${skill} Calculation:\nAbility (${ability.toUpperCase()}): ${abilityMod >= 0 ? '+' : ''}${abilityMod}\nProficiency: ${profBonus > 0 ? `+${profBonus}` : '0'}\nExpertise: ${expBonus > 0 ? `+${expBonus}` : '0'}\nTotal: ${modifier >= 0 ? '+' : ''}${modifier}`}
                         >
@@ -3069,7 +3090,7 @@ export default function CharacterSheet() {
               {/* Column 4: Current Date and Survival Conditions */}
               <div className="space-y-4">
                 {/* Current Date Display - Compact */}
-                <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   {/* Weather Icon */}
                   <div className="flex justify-center mb-3">
                     <WeatherIcon type={currentWeather} />
@@ -3080,14 +3101,14 @@ export default function CharacterSheet() {
                     <div className="text-lg font-bold text-orange-400 mb-1">
                       {getOrdinalNumber(currentDate.day)} of {currentDate.season}
                     </div>
-                    <div className="text-sm text-gray-300">
+                    <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                       {currentDate.year} Year of the Ivory
                     </div>
                   </div>
                 </div>
 
                 {/* Survival Conditions */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="pb-8">
                 <div className="space-y-2">
                   {/* Headers */}
@@ -3102,7 +3123,7 @@ export default function CharacterSheet() {
                     character.survivalConditions.hunger.effect === -1 ? 'bg-green-500/20' :
                     character.survivalConditions.hunger.effect === 1 ? 'bg-red-500/20' : ''
                   }`} style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
-                    <div className="text-gray-300">Hunger</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Hunger</div>
                     <div className="text-center">
                       <select
                         value={character.survivalConditions.hunger.stage}
@@ -3117,8 +3138,8 @@ export default function CharacterSheet() {
                             }
                           });
                         }}
-                        className={`w-full text-xs text-center rounded px-1 py-0.5 appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        className={`w-full text-xs text-center border rounded px-1 py-0.5 appearance-none ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       >
                         <option value="Stuffed">Stuffed</option>
@@ -3147,7 +3168,7 @@ export default function CharacterSheet() {
                     character.survivalConditions.thirst.effect === -1 ? 'bg-green-500/20' :
                     character.survivalConditions.thirst.effect === 1 ? 'bg-red-500/20' : ''
                   }`} style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
-                    <div className="text-gray-300">Thirst</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Thirst</div>
                     <div className="text-center">
                       <select
                         value={character.survivalConditions.thirst.stage}
@@ -3162,8 +3183,8 @@ export default function CharacterSheet() {
                             }
                           });
                         }}
-                        className={`w-full text-xs text-center rounded px-1 py-0.5 appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        className={`w-full text-xs text-center border rounded px-1 py-0.5 appearance-none ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       >
                         <option value="Quenched">Quenched</option>
@@ -3192,7 +3213,7 @@ export default function CharacterSheet() {
                     character.survivalConditions.fatigue.effect === -1 ? 'bg-green-500/20' :
                     character.survivalConditions.fatigue.effect === 1 ? 'bg-red-500/20' : ''
                   }`} style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
-                    <div className="text-gray-300">Fatigue</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Fatigue</div>
                     <div className="text-center">
                       <select
                         value={character.survivalConditions.fatigue.stage}
@@ -3207,8 +3228,8 @@ export default function CharacterSheet() {
                             }
                           });
                         }}
-                        className={`w-full text-xs text-center rounded px-1 py-0.5 appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        className={`w-full text-xs text-center border rounded px-1 py-0.5 appearance-none ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       >
                         <option value="Energized">Energized</option>
@@ -3234,7 +3255,7 @@ export default function CharacterSheet() {
                   
                   {/* Additional Exhaustion */}
                   <div className="grid gap-1 text-xs rounded px-2 py-1" style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
-                    <div className="text-gray-300">Addt'l Exhaustion</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Addt'l Exhaustion</div>
                     <div></div>
                     <div className="text-center">
                       <input
@@ -3246,8 +3267,8 @@ export default function CharacterSheet() {
                             additionalExhaustion: parseInt(e.target.value) || 0
                           }
                         })}
-                        className={`w-4/5 text-xs text-center rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        className={`w-4/5 text-xs text-center border rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
                     </div>
@@ -3255,14 +3276,14 @@ export default function CharacterSheet() {
                   
                   {/* Total Exhaustion */}
                   <div className="grid gap-1 text-xs border-t border-slate-600 pt-1 rounded px-2 py-1" style={{gridTemplateColumns: "1fr 1.4fr 0.8fr"}}>
-                    <div className="text-gray-300 font-semibold">Total Exhaustion</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-semibold`}>Total Exhaustion</div>
                     <div></div>
                     <div className="text-center">
                       <input
                         type="number"
                         value={character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion}
                         readOnly
-                        className={`w-full text-xs text-center rounded px-1 py-0.5 font-semibold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                        className={`w-full text-xs text-center border rounded px-1 py-0.5 font-semibold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-600 border-slate-500 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
@@ -3280,7 +3301,7 @@ export default function CharacterSheet() {
 
             <div className="grid grid-cols-2 gap-6 mt-6">
                 {/* Left side - Weapons */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="space-y-3 pb-8">
                     {/* Column Headers */}
                     <div className="grid gap-1 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600" style={{gridTemplateColumns: "1.8fr 0.8fr 0.5fr 0.5fr 0.4fr 0.8fr 0.7fr 1fr 0.5fr"}}>
@@ -3308,7 +3329,7 @@ export default function CharacterSheet() {
                               updateCharacter({ weapons: newWeapons });
                             }}
                             className={`w-full border rounded px-1 py-1 text-xs ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                             placeholder="Weapon name"
                           />
@@ -3336,7 +3357,7 @@ export default function CharacterSheet() {
                               updateCharacter({ weapons: newWeapons });
                             }}
                             className={`w-full border rounded px-1 py-1 text-xs appearance-none ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                           >
                             <option value="Melee">Melee</option>
@@ -3393,7 +3414,7 @@ export default function CharacterSheet() {
                               updateCharacter({ weapons: newWeapons });
                             }}
                             className={`w-full border rounded px-1 py-1 text-xs text-center ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                             placeholder="+0"
                           />
@@ -3409,7 +3430,7 @@ export default function CharacterSheet() {
                               updateCharacter({ weapons: newWeapons });
                             }}
                             className={`w-full border rounded px-1 py-1 text-xs text-center appearance-none ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                           >
                             <option value="STR">STR</option>
@@ -3434,7 +3455,7 @@ export default function CharacterSheet() {
                             className={`w-full border rounded px-1 py-1 text-xs text-center ${
                               weapon.atkBonus
                                 ? (isDarkMode ? 'bg-slate-600 border-yellow-500 text-yellow-200' : 'bg-yellow-50 border-yellow-400 text-gray-900')
-                                : (isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900')
+                                : (isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900')
                             }`}
                             placeholder={calculateWeaponAttackBonus(weapon)}
                             title={weapon.atkBonus ? "Manual override - clear to use auto-calculation" : "Auto-calculated: ability mod + prof bonus + weapon bonus"}
@@ -3457,7 +3478,7 @@ export default function CharacterSheet() {
                               updateCharacter({ weapons: newWeapons });
                             }}
                             className={`w-full border rounded px-1 py-1 text-xs text-center ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                             placeholder="1d8+2"
                           />
@@ -3474,7 +3495,7 @@ export default function CharacterSheet() {
                               updateCharacter({ weapons: newWeapons });
                             }}
                             className={`w-full border rounded px-1 py-1 text-xs text-center ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                             placeholder="0"
                           />
@@ -3505,8 +3526,8 @@ export default function CharacterSheet() {
                         disabled={character.weapons.length >= 5}
                         className={`flex-1 py-1 px-3 text-xs rounded transition-colors ${
                           character.weapons.length >= 5
-                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                            : 'bg-orange-600 hover:bg-orange-700 text-white'
+                            ? isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                            : isDarkMode ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'
                         }`}
                         title={character.weapons.length >= 5 ? "Maximum 5 weapons allowed" : "Add weapon"}
                       >
@@ -3523,8 +3544,8 @@ export default function CharacterSheet() {
                         disabled={character.weapons.length <= 2}
                         className={`flex-1 py-1 px-3 text-xs rounded transition-colors ${
                           character.weapons.length <= 2
-                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                            : 'bg-red-600 hover:bg-red-700 text-white'
+                            ? isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                            : isDarkMode ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-500 hover:bg-red-600 text-white'
                         }`}
                         title={character.weapons.length <= 2 ? "Cannot remove - minimum 2 weapons required" : "Remove last weapon"}
                       >
@@ -3538,7 +3559,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Right side - Armor */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="space-y-2 pb-8">
 
 
@@ -3558,7 +3579,7 @@ export default function CharacterSheet() {
                         value={armor.armorType.item}
                         onChange={(e) => updateArmor('armorType', 'item', e.target.value)}
                         className={`w-32 text-xs border rounded px-2 py-1 appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       >
                         {getArmorOptions().map(armorType => (
@@ -3570,7 +3591,7 @@ export default function CharacterSheet() {
                         value={armor.armorType.karuta}
                         onChange={(e) => updateArmor('armorType', 'karuta', e.target.value)}
                         className={`w-40 border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="Armor Item"
                       />
@@ -3579,7 +3600,7 @@ export default function CharacterSheet() {
                         value={armor.armorType.plus}
                         onChange={(e) => updateArmor('armorType', 'plus', e.target.value)}
                         className={`w-12 text-center border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="+"
                       />
@@ -3588,7 +3609,7 @@ export default function CharacterSheet() {
                         value={armor.armorType.notches}
                         onChange={(e) => updateArmor('armorType', 'notches', e.target.value)}
                         className={`w-16 text-center border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="Notches"
                       />
@@ -3601,7 +3622,7 @@ export default function CharacterSheet() {
                         value={armor.shieldType.item}
                         onChange={(e) => updateArmor('shieldType', 'item', e.target.value)}
                         className={`w-44 text-xs border rounded px-2 py-1 appearance-none -ml-2 ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       >
                         {getShieldOptions().map(shieldType => (
@@ -3613,7 +3634,7 @@ export default function CharacterSheet() {
                         value={armor.shieldType.karuta || ''}
                         onChange={(e) => updateArmor('shieldType', 'karuta', e.target.value)}
                         className={`w-40 border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="Shield Item"
                       />
@@ -3622,7 +3643,7 @@ export default function CharacterSheet() {
                         value={armor.shieldType.plus}
                         onChange={(e) => updateArmor('shieldType', 'plus', e.target.value)}
                         className={`w-12 text-center border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="+"
                       />
@@ -3631,7 +3652,7 @@ export default function CharacterSheet() {
                         value={armor.shieldType.notches}
                         onChange={(e) => updateArmor('shieldType', 'notches', e.target.value)}
                         className={`w-16 text-center border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="Notches"
                       />
@@ -3643,7 +3664,7 @@ export default function CharacterSheet() {
                       <select
                         value={armor.magicalAttire.item1}
                         onChange={(e) => updateArmor('magicalAttire', 'item1', e.target.value)}
-                        className={`w-32 text-xs border rounded px-2 py-1 appearance-none ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
+                        className={`w-32 text-xs border rounded px-2 py-1 appearance-none ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'}`}
                       >
                         {getMagicalAttireOptions().map(attire => (
                           <option key={attire} value={attire}>{attire}</option>
@@ -3654,7 +3675,7 @@ export default function CharacterSheet() {
                         value={armor.magicalAttire.karuta || ''}
                         onChange={(e) => updateArmor('magicalAttire', 'karuta', e.target.value)}
                         className={`w-40 border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="Attire Item"
                       />
@@ -3663,7 +3684,7 @@ export default function CharacterSheet() {
                         value={armor.magicalAttire.plus}
                         onChange={(e) => updateArmor('magicalAttire', 'plus', e.target.value)}
                         className={`w-12 text-center border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="+"
                       />
@@ -3672,7 +3693,7 @@ export default function CharacterSheet() {
                         value={armor.magicalAttire.notches}
                         onChange={(e) => updateArmor('magicalAttire', 'notches', e.target.value)}
                         className={`w-16 text-center border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="Notches"
                       />
@@ -3684,7 +3705,7 @@ export default function CharacterSheet() {
                       <select
                         value={armor.magicalAttire.item2}
                         onChange={(e) => updateArmor('magicalAttire', 'item2', e.target.value)}
-                        className={`w-32 text-xs border rounded px-2 py-1 appearance-none ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'}`}
+                        className={`w-32 text-xs border rounded px-2 py-1 appearance-none ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'}`}
                       >
                         {getMagicalAttireOptions().map(attire => (
                           <option key={attire} value={attire}>{attire}</option>
@@ -3695,21 +3716,21 @@ export default function CharacterSheet() {
                         value={armor.magicalAttire.karuta || ''}
                         onChange={(e) => updateArmor('magicalAttire', 'karuta', e.target.value)}
                         className={`w-40 border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="Attire Item"
                       />
                       <input
                         type="text"
                         className={`w-12 text-center border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="+"
                       />
                       <input
                         type="text"
                         className={`w-16 text-center border rounded px-2 py-1 text-xs ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="Notches"
                       />
@@ -3726,16 +3747,16 @@ export default function CharacterSheet() {
             <div className="grid grid-cols-4 gap-4 mt-8">
 
               {/* Box 1: Racial Features */}
-              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <h4 className="text-base font-semibold text-blue-400 mb-3">Racial Features</h4>
                   <div className="space-y-2">
                     {characterFeats.filter(feat => feat.source === 'race').map((feat, index) => (
-                      <div key={index} className="bg-slate-700 border border-blue-500/30 rounded p-2">
+                      <div key={index} className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} border border-blue-500/30 rounded p-2`}>
                         <div className="flex justify-between items-start mb-1">
                           <span className="text-sm font-medium text-blue-300">{feat.name}</span>
                           <span className="text-xs text-blue-400 bg-blue-500/20 px-1 py-0.5 rounded">Race</span>
                         </div>
-                        <p className="text-xs text-gray-300">{feat.description}</p>
+                        <p className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{feat.description}</p>
                       </div>
                     ))}
                     {characterFeats.filter(feat => feat.source === 'race').length === 0 && (
@@ -3745,11 +3766,11 @@ export default function CharacterSheet() {
               </div>
 
               {/* Box 2: Class Features */}
-              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <h4 className="text-base font-semibold text-purple-400 mb-3">Class Features</h4>
                   <div className="space-y-2">
                     {characterFeats.filter(feat => feat.source === 'class').map((feat, index) => (
-                      <div key={index} className="bg-slate-700 border border-purple-500/30 rounded p-2">
+                      <div key={index} className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} border border-purple-500/30 rounded p-2`}>
                         <div className="flex justify-between items-start mb-1">
                           <div className="flex items-center gap-1">
                             <span className="text-sm font-medium text-purple-300">{feat.name}</span>
@@ -3757,7 +3778,7 @@ export default function CharacterSheet() {
                           </div>
                           <span className="text-xs text-purple-400 bg-purple-500/20 px-1 py-0.5 rounded">Class</span>
                         </div>
-                        <p className="text-xs text-gray-300">{feat.description}</p>
+                        <p className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{feat.description}</p>
                       </div>
                     ))}
                     {characterFeats.filter(feat => feat.source === 'class').length === 0 && (
@@ -3767,23 +3788,38 @@ export default function CharacterSheet() {
               </div>
 
               {/* Box 3: Feats */}
-              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <h4 className="text-base font-semibold text-orange-400 mb-3">Feats</h4>
                 <div className="space-y-2">
                   {manualFeats.slice(Math.ceil(manualFeats.length / 2)).map((feat, index) => (
-                    <div key={index + Math.ceil(manualFeats.length / 2)} className="bg-slate-700 border border-orange-500/30 rounded p-2">
+                    <div key={index + Math.ceil(manualFeats.length / 2)} className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} border border-orange-500/30 rounded p-2`}>
                       <div className="flex justify-between items-start mb-1">
-                        <input
-                          type="text"
-                          value={feat.name}
-                          onChange={(e) => {
-                            const newFeats = [...manualFeats];
-                            newFeats[index + Math.ceil(manualFeats.length / 2)] = { ...newFeats[index + Math.ceil(manualFeats.length / 2)], name: e.target.value };
-                            setManualFeats(newFeats);
-                          }}
-                          className="bg-transparent text-sm font-medium text-orange-300 border-none outline-none flex-1 mr-2"
-                          placeholder="Feat name..."
-                        />
+                        <div className="flex items-center gap-1 flex-1">
+                          <input
+                            type="text"
+                            value={feat.name}
+                            onChange={(e) => {
+                              const newFeats = [...manualFeats];
+                              newFeats[index + Math.ceil(manualFeats.length / 2)] = { ...newFeats[index + Math.ceil(manualFeats.length / 2)], name: e.target.value };
+                              setManualFeats(newFeats);
+                            }}
+                            className={`bg-transparent text-sm font-medium ${isDarkMode ? 'text-orange-300' : 'text-orange-700'} border-none outline-none flex-1 mr-2`}
+                            placeholder="Feat name..."
+                          />
+                          <input
+                            type="number"
+                            value={feat.level || ''}
+                            onChange={(e) => {
+                              const newFeats = [...manualFeats];
+                              newFeats[index + Math.ceil(manualFeats.length / 2)] = { ...newFeats[index + Math.ceil(manualFeats.length / 2)], level: parseInt(e.target.value) || undefined };
+                              setManualFeats(newFeats);
+                            }}
+                            className="bg-transparent text-xs text-gray-400 border-none outline-none w-12"
+                            placeholder="Lvl"
+                            min="1"
+                            max="20"
+                          />
+                        </div>
                         <button
                           onClick={() => removeManualFeat(index + Math.ceil(manualFeats.length / 2))}
                           className="text-red-400 hover:text-red-300 text-xs flex-shrink-0"
@@ -3799,7 +3835,7 @@ export default function CharacterSheet() {
                           newFeats[index + Math.ceil(manualFeats.length / 2)] = { ...newFeats[index + Math.ceil(manualFeats.length / 2)], description: e.target.value };
                           setManualFeats(newFeats);
                         }}
-                        className="bg-transparent text-xs text-gray-300 border-none outline-none w-full resize-none"
+                        className={`bg-transparent text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} border-none outline-none w-full resize-none`}
                         placeholder="Feat description..."
                         rows={2}
                       />
@@ -3817,23 +3853,38 @@ export default function CharacterSheet() {
               </div>
 
               {/* Box 4: Feats */}
-              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <h4 className="text-base font-semibold text-orange-400 mb-3">Feats</h4>
                 <div className="space-y-2">
                   {manualFeats.slice(0, Math.ceil(manualFeats.length / 2)).map((feat, index) => (
-                    <div key={index} className="bg-slate-700 border border-orange-500/30 rounded p-2">
+                    <div key={index} className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} border border-orange-500/30 rounded p-2`}>
                       <div className="flex justify-between items-start mb-1">
-                        <input
-                          type="text"
-                          value={feat.name}
-                          onChange={(e) => {
-                            const newFeats = [...manualFeats];
-                            newFeats[index] = { ...newFeats[index], name: e.target.value };
-                            setManualFeats(newFeats);
-                          }}
-                          className="bg-transparent text-sm font-medium text-orange-300 border-none outline-none flex-1 mr-2"
-                          placeholder="Feat name..."
-                        />
+                        <div className="flex items-center gap-1 flex-1">
+                          <input
+                            type="text"
+                            value={feat.name}
+                            onChange={(e) => {
+                              const newFeats = [...manualFeats];
+                              newFeats[index] = { ...newFeats[index], name: e.target.value };
+                              setManualFeats(newFeats);
+                            }}
+                            className={`bg-transparent text-sm font-medium ${isDarkMode ? 'text-orange-300' : 'text-orange-700'} border-none outline-none flex-1 mr-2`}
+                            placeholder="Feat name..."
+                          />
+                          <input
+                            type="number"
+                            value={feat.level || ''}
+                            onChange={(e) => {
+                              const newFeats = [...manualFeats];
+                              newFeats[index] = { ...newFeats[index], level: parseInt(e.target.value) || undefined };
+                              setManualFeats(newFeats);
+                            }}
+                            className="bg-transparent text-xs text-gray-400 border-none outline-none w-12"
+                            placeholder="Lvl"
+                            min="1"
+                            max="20"
+                          />
+                        </div>
                         <button
                           onClick={() => removeManualFeat(index)}
                           className="text-red-400 hover:text-red-300 text-xs flex-shrink-0"
@@ -3849,7 +3900,7 @@ export default function CharacterSheet() {
                           newFeats[index] = { ...newFeats[index], description: e.target.value };
                           setManualFeats(newFeats);
                         }}
-                        className="bg-transparent text-xs text-gray-300 border-none outline-none w-full resize-none"
+                        className={`bg-transparent text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} border-none outline-none w-full resize-none`}
                         placeholder="Feat description..."
                         rows={2}
                       />
@@ -3922,7 +3973,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Profile Details Section */}
-                <div className={`border-2 p-6 rounded-lg shadow-xl ${isDarkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-stone-300'}`}>
+                <div className={`border-2 p-6 rounded-lg shadow-xl ${isDarkMode ? 'bg-slate-800 border-slate-600' : 'bg-gray-100 border-stone-300'}`}>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div className="space-y-3">
@@ -4207,10 +4258,7 @@ export default function CharacterSheet() {
                       </div>
 
                       {/* Skills Bar Chart */}
-                      <div className="w-64 h-50">
-                        <h3 className={`text-sm font-bold mb-3 text-center ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>
-                          Skills Overview
-                        </h3>
+                      <div className="w-56 h-44 pb-2">
                         <div className="space-y-1">
                           {(() => {
                             // Get all skills with their modifiers
@@ -4288,7 +4336,7 @@ export default function CharacterSheet() {
 
               {/* Attack Field - Full Height */}
               <div className="flex justify-center items-start">
-                <div className={`rounded-lg shadow-2xl overflow-hidden border-4 w-full ${isDarkMode ? 'border-orange-400 bg-slate-800' : 'border-stone-300 bg-white'}`}>
+                <div className={`rounded-lg shadow-2xl overflow-hidden border-4 w-full ${isDarkMode ? 'border-orange-400 bg-slate-800' : 'border-stone-300 bg-gray-100'}`}>
                   {characterImage ? (
                     <img
                       src={characterImage}
@@ -4317,16 +4365,16 @@ export default function CharacterSheet() {
             {/* Top Row: Spellcasting Controls and Spell Slots Side by Side */}
             <div className="grid grid-cols-2 gap-6">
               {/* Left: Spellcasting Controls */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="grid grid-cols-2 gap-4">
                 {/* Spellcasting Ability */}
                 <div className="text-center">
-                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                  <label className={`block text-sm font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
                     Spellcasting Ability
                   </label>
                   <div
-                    className={`w-full px-3 py-2 rounded border text-white text-center font-bold cursor-help ${
-                      isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300 text-gray-900'
+                    className={`w-full px-3 py-2 rounded border text-center font-bold cursor-help ${
+                      isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
                     }`}
                     title={`Auto-determined by class: ${character.class} uses ${getSpellcastingAbility()}`}
                   >
@@ -4336,7 +4384,7 @@ export default function CharacterSheet() {
 
                 {/* Number of Known/Prepared Spells */}
                 <div className="text-center">
-                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                  <label className={`block text-sm font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
                     Known/Prepared Spells
                   </label>
                   <div className="relative">
@@ -4354,10 +4402,10 @@ export default function CharacterSheet() {
                         });
                       }}
                       onFocus={(e) => e.target.select()}
-                      className={`w-full px-3 py-2 rounded border text-white text-center font-bold ${
+                      className={`w-full px-3 py-2 rounded border text-center font-bold ${
                         knownSpellsOverride !== null
-                          ? 'bg-orange-900 border-orange-500'
-                          : 'bg-transparent border-slate-600'
+                          ? 'bg-orange-900 border-orange-500 text-white'
+                          : isDarkMode ? 'bg-transparent border-slate-600 text-white' : 'bg-transparent border-gray-400 text-gray-900'
                       } focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-500`}
                       title={knownSpellsOverride !== null
                         ? `Manual override: ${knownSpellsOverride} (Auto: ${calculateKnownSpells()})`
@@ -4383,12 +4431,12 @@ export default function CharacterSheet() {
 
                 {/* Spell DC */}
                 <div className="text-center">
-                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                  <label className={`block text-sm font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
                     Spell DC
                   </label>
                   <div
-                    className={`w-full px-3 py-2 rounded border text-white text-center font-bold cursor-help ${
-                      isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300 text-gray-900'
+                    className={`w-full px-3 py-2 rounded border text-center font-bold cursor-help ${
+                      isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
                     }`}
                     title={`Auto-calculated: 8 + Prof Bonus (${character.proficiencyBonus}) + ${getSpellcastingAbility().toUpperCase()} Mod (${getModifier(getFinalAbilityScore(getSpellcastingAbility())) >= 0 ? '+' : ''}${getModifier(getFinalAbilityScore(getSpellcastingAbility()))})`}
                   >
@@ -4398,12 +4446,12 @@ export default function CharacterSheet() {
 
                 {/* Spell Attack */}
                 <div className="text-center">
-                  <label className="block text-sm font-bold text-gray-300 mb-2">
+                  <label className={`block text-sm font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
                     Spell Attack
                   </label>
                   <div
-                    className={`w-full px-3 py-2 rounded border text-white text-center font-bold cursor-help ${
-                      isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-300 text-gray-900'
+                    className={`w-full px-3 py-2 rounded border text-center font-bold cursor-help ${
+                      isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
                     }`}
                     title={`Auto-calculated: Prof Bonus (${character.proficiencyBonus}) + ${getSpellcastingAbility().toUpperCase()} Mod (${getModifier(getFinalAbilityScore(getSpellcastingAbility())) >= 0 ? '+' : ''}${getModifier(getFinalAbilityScore(getSpellcastingAbility()))})`}
                   >
@@ -4414,12 +4462,12 @@ export default function CharacterSheet() {
               </div>
 
               {/* Right: Spell Slots Tracker */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
 
               {Object.keys(spellSlots).length > 0 ? (
                 <div className="flex items-start gap-4">
                   {/* Vertical Label */}
-                  <div className="flex flex-col items-center text-gray-400 text-sm font-bold mt-8">
+                  <div className={`flex flex-col items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm font-bold mt-8`}>
                     <div className="transform -rotate-90 whitespace-nowrap">TOTAL</div>
                     <div className="transform -rotate-90 whitespace-nowrap mt-8">SLOTS</div>
                   </div>
@@ -4540,7 +4588,7 @@ export default function CharacterSheet() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center text-gray-400 py-8">
+                <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} py-8`}>
                   <p>No spell slots available for {character.class} level {character.level}</p>
                   <p className="text-xs mt-2">Some classes gain spellcasting at higher levels</p>
                 </div>
@@ -4569,14 +4617,25 @@ export default function CharacterSheet() {
             </div>
 
             {/* Spell Level Boxes */}
-            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
               <div className="space-y-4">
                 {/* Cantrips Box */}
                 <div className={`p-4 rounded border ${
                   isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300'
                 }`}>
-                  <div className="text-left text-lg font-bold text-gray-300 mb-4 py-2">Cantrips</div>
-                  <div className="grid text-xs font-bold text-gray-300 mb-2" style={{ gridTemplateColumns: '20fr 7fr 7fr 7fr 8fr 28fr 6fr 6fr 4fr 5fr 6fr' }}>
+                  <div className="flex justify-between items-center mb-4 py-2">
+                    <div className={`text-left text-lg font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Cantrips</div>
+                    <button
+                      onClick={() => addCustomSpell(0)}
+                      className={`text-sm px-2 py-1 rounded border transition-colors ${
+                        isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
+                      }`}
+                      title="Add custom cantrip"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className={`grid text-xs font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`} style={{ gridTemplateColumns: '20fr 7fr 7fr 7fr 8fr 28fr 6fr 6fr 4fr 5fr 6fr' }}>
                     <div className="text-center">Spell Name</div>
                     <div className="text-center">School</div>
                     <div className="text-center">Casting Time</div>
@@ -4639,6 +4698,120 @@ export default function CharacterSheet() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Display Custom Cantrips */}
+                  {(customSpells[0] || []).map((spell) => (
+                    <div
+                      key={`custom-cantrip-${spell.id}`}
+                      className="grid mt-1 transition-colors"
+                      style={{ gridTemplateColumns: '20fr 7fr 7fr 7fr 8fr 28fr 6fr 6fr 4fr 5fr 6fr' }}
+                    >
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500 relative">
+                        <input
+                          type="text"
+                          value={spell.Name || spell.name}
+                          onChange={(e) => updateCustomSpell(0, spell.id, 'Name', e.target.value)}
+                          className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                          placeholder="Spell name..."
+                        />
+                        <button
+                          onClick={() => removeCustomSpell(0, spell.id)}
+                          className="absolute -top-1 -right-1 text-red-400 hover:text-red-300 text-xs bg-slate-800 rounded-full w-4 h-4 flex items-center justify-center"
+                          title="Remove custom cantrip"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        <input
+                          type="text"
+                          value={spell.School || spell.school}
+                          onChange={(e) => updateCustomSpell(0, spell.id, 'School', e.target.value)}
+                          className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                          placeholder="School..."
+                        />
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        <input
+                          type="text"
+                          value={spell.CastingTime || spell.casting_time}
+                          onChange={(e) => updateCustomSpell(0, spell.id, 'CastingTime', e.target.value)}
+                          className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                          placeholder="Cast time..."
+                        />
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        <input
+                          type="text"
+                          value={spell.Range || spell.range}
+                          onChange={(e) => updateCustomSpell(0, spell.id, 'Range', e.target.value)}
+                          className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                          placeholder="Range..."
+                        />
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        <input
+                          type="text"
+                          value={spell['Area or Targets'] || spell.area_of_effect}
+                          onChange={(e) => updateCustomSpell(0, spell.id, 'Area or Targets', e.target.value)}
+                          className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                          placeholder="Area/Targets..."
+                        />
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        <textarea
+                          value={spell.Effect || spell.description || spell.effect}
+                          onChange={(e) => updateCustomSpell(0, spell.id, 'Effect', e.target.value)}
+                          className="bg-transparent text-xs text-white border-none outline-none w-full resize-none"
+                          placeholder="Effect..."
+                          rows={2}
+                        />
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        <input
+                          type="text"
+                          value={spell['Save or Attack'] || spell.save}
+                          onChange={(e) => updateCustomSpell(0, spell.id, 'Save or Attack', e.target.value)}
+                          className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                          placeholder="Save/Attack..."
+                        />
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        <input
+                          type="text"
+                          value={spell.Duration || spell.duration}
+                          onChange={(e) => updateCustomSpell(0, spell.id, 'Duration', e.target.value)}
+                          className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                          placeholder="Duration..."
+                        />
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        <input
+                          type="text"
+                          value={spell.Tags || spell.tags}
+                          onChange={(e) => updateCustomSpell(0, spell.id, 'Tags', e.target.value)}
+                          className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                          placeholder="Tags..."
+                        />
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        <input
+                          type="text"
+                          value={spell.Comp || spell.components}
+                          onChange={(e) => updateCustomSpell(0, spell.id, 'Comp', e.target.value)}
+                          className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                          placeholder="Components..."
+                        />
+                      </div>
+                      <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          title="Prepared/Known"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 {Array.from({ length: 9 }, (_, i) => i + 1).filter(level =>
@@ -4647,8 +4820,19 @@ export default function CharacterSheet() {
                   <div key={level} className={`p-4 rounded border ${
                     isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-300'
                   }`}>
-                    <div className="text-left text-lg font-bold text-gray-300 mb-4 py-2">Level {level}</div>
-                    <div className="grid text-xs font-bold text-gray-300 mb-2" style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
+                    <div className="flex justify-between items-center mb-4 py-2">
+                      <div className={`text-left text-lg font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Level {level}</div>
+                      <button
+                        onClick={() => addCustomSpell(level)}
+                        className={`text-sm px-2 py-1 rounded border transition-colors ${
+                          isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
+                        }`}
+                        title={`Add custom level ${level} spell`}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className={`grid text-xs font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`} style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}>
                       <div className="text-center">Spell Name</div>
                       <div className="text-center">School</div>
                       <div className="text-center">Casting Time</div>
@@ -4710,6 +4894,111 @@ export default function CharacterSheet() {
                         </div>
                       </div>
                     ))}
+
+                    {/* Display Custom Spells for Current Level */}
+                    {(customSpells[level] || []).map((spell) => (
+                      <div
+                        key={`custom-level-${level}-spell-${spell.id}`}
+                        className="grid mt-1 transition-colors"
+                        style={{ gridTemplateColumns: '24fr 8fr 8fr 8fr 9fr 32fr 7fr 7fr 5fr 6fr' }}
+                      >
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500 relative">
+                          <input
+                            type="text"
+                            value={spell.Name || spell.name}
+                            onChange={(e) => updateCustomSpell(level, spell.id, 'Name', e.target.value)}
+                            className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                            placeholder="Spell name..."
+                          />
+                          <button
+                            onClick={() => removeCustomSpell(level, spell.id)}
+                            className="absolute -top-1 -right-1 text-red-400 hover:text-red-300 text-xs bg-slate-800 rounded-full w-4 h-4 flex items-center justify-center"
+                            title={`Remove custom level ${level} spell`}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          <input
+                            type="text"
+                            value={spell.School || spell.school}
+                            onChange={(e) => updateCustomSpell(level, spell.id, 'School', e.target.value)}
+                            className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                            placeholder="School..."
+                          />
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          <input
+                            type="text"
+                            value={spell.CastingTime || spell.casting_time}
+                            onChange={(e) => updateCustomSpell(level, spell.id, 'CastingTime', e.target.value)}
+                            className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                            placeholder="Cast time..."
+                          />
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          <input
+                            type="text"
+                            value={spell.Range || spell.range}
+                            onChange={(e) => updateCustomSpell(level, spell.id, 'Range', e.target.value)}
+                            className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                            placeholder="Range..."
+                          />
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          <input
+                            type="text"
+                            value={spell['Area or Targets'] || spell.area_of_effect}
+                            onChange={(e) => updateCustomSpell(level, spell.id, 'Area or Targets', e.target.value)}
+                            className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                            placeholder="Area/Targets..."
+                          />
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          <textarea
+                            value={spell.Effect || spell.description || spell.effect}
+                            onChange={(e) => updateCustomSpell(level, spell.id, 'Effect', e.target.value)}
+                            className="bg-transparent text-xs text-white border-none outline-none w-full resize-none"
+                            placeholder="Effect..."
+                            rows={2}
+                          />
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          <input
+                            type="text"
+                            value={spell['Save or Attack'] || spell.save}
+                            onChange={(e) => updateCustomSpell(level, spell.id, 'Save or Attack', e.target.value)}
+                            className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                            placeholder="Save/Attack..."
+                          />
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          <input
+                            type="text"
+                            value={spell.Duration || spell.duration}
+                            onChange={(e) => updateCustomSpell(level, spell.id, 'Duration', e.target.value)}
+                            className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                            placeholder="Duration..."
+                          />
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          <input
+                            type="text"
+                            value={spell.Tags || spell.tags}
+                            onChange={(e) => updateCustomSpell(level, spell.id, 'Tags', e.target.value)}
+                            className="bg-transparent text-xs text-white text-center border-none outline-none w-full"
+                            placeholder="Tags..."
+                          />
+                        </div>
+                        <div className="px-2 py-1 text-xs text-white text-center bg-slate-600/50 rounded border border-slate-500">
+                          <input
+                            type="checkbox"
+                            className="rounded"
+                            title="Prepared/Known"
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -4722,13 +5011,13 @@ export default function CharacterSheet() {
         {activeTab === 'Library' && (
           <div className="space-y-8">
             {/* Spell Filters */}
-            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
               <h3 className="text-xl font-semibold text-orange-400 mb-4">Spell Filters</h3>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Search Bar */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Search Spells</label>
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Search Spells</label>
                   <input
                     type="text"
                     placeholder="Search by name, school, or description..."
@@ -4737,21 +5026,21 @@ export default function CharacterSheet() {
                     className={`w-full border rounded px-3 py-2 ${
                       isDarkMode
                         ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400'
-                        : 'bg-white border-gray-300 text-gray-900'
+                        : 'bg-gray-100 border-gray-300 text-gray-900'
                     }`}
                   />
                 </div>
 
                 {/* Class Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Class</label>
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Class</label>
                   <select
                     value={selectedSpellClass}
                     onChange={(e) => setSelectedSpellClass(e.target.value)}
                     className={`w-full border rounded px-3 py-2 ${
                       isDarkMode
                         ? 'bg-slate-700 border-slate-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
+                        : 'bg-gray-100 border-gray-300 text-gray-900'
                     }`}
                   >
                     <option value="All Classes">All Classes</option>
@@ -4770,7 +5059,7 @@ export default function CharacterSheet() {
 
                 {/* Level Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Spell Levels</label>
+                  <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Spell Levels</label>
                   <div className="grid grid-cols-5 gap-2">
                     {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter(level =>
                       getAccessibleSpellLevels(character.class, character.level).includes(level)
@@ -4791,7 +5080,7 @@ export default function CharacterSheet() {
                           }}
                           className="w-4 h-4 text-orange-400 bg-transparent border-slate-600 rounded focus:ring-orange-500 mr-1"
                         />
-                        <span className="text-xs text-gray-300">
+                        <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                           {level === 0 ? 'C' : level}
                         </span>
                       </label>
@@ -4830,11 +5119,11 @@ export default function CharacterSheet() {
             </div>
 
             {/* Spell Library Table */}
-            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold text-orange-400">Master Spell Library</h3>
                 {masterSpellList.length > 0 && (
-                  <div className="text-sm text-gray-400">
+                  <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     Showing {getFilteredSpells().length} of {masterSpellList.length} spells
                   </div>
                 )}
@@ -4843,7 +5132,7 @@ export default function CharacterSheet() {
               {masterSpellList.length > 0 ? (
                 <div className="overflow-x-auto">
                   {/* Table Header */}
-                  <div className="grid text-xs font-bold text-gray-300 mb-2 py-2 border-b border-slate-600" style={{ gridTemplateColumns: '5fr 5fr 20fr 8fr 8fr 8fr 12fr 25fr 8fr 8fr' }}>
+                  <div className={`grid text-xs font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2 py-2 border-b ${isDarkMode ? 'border-slate-600' : 'border-gray-400'}`} style={{ gridTemplateColumns: '5fr 5fr 20fr 8fr 8fr 8fr 12fr 25fr 8fr 8fr' }}>
                     <div className="text-center">Known</div>
                     <div className="text-center">Level</div>
                     <div className="text-center">Name</div>
@@ -4925,10 +5214,10 @@ export default function CharacterSheet() {
             <div className="grid grid-cols-5 gap-4">
               
               {/* 1. Encumbrance Box */}
-              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="grid grid-cols-3 gap-2 text-center text-sm mb-3">
                   <div>
-                    <div className="text-xs text-white mb-1">Open Slots</div>
+                    <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>Open Slots</div>
                     <div className={`w-full text-center text-xl font-bold border rounded px-2 py-1 text-white bg-gray-700 ${
                       isDarkMode ? 'border-green-400' : 'border-green-400'
                     }`}>
@@ -4936,7 +5225,7 @@ export default function CharacterSheet() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-white mb-1">Max Slots</div>
+                    <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>Max Slots</div>
                     <div
                       className={`w-full text-center text-xl font-bold border rounded px-2 py-1 text-white bg-gray-700 cursor-help ${
                         isDarkMode ? 'border-orange-400' : 'border-orange-400'
@@ -4953,7 +5242,7 @@ export default function CharacterSheet() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-white mb-1">Your Bulk</div>
+                    <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>Your Bulk</div>
                     <div className={`w-full text-center text-xl font-bold border rounded px-2 py-1 text-white bg-gray-700 ${
                       isDarkMode ? 'border-blue-400' : 'border-blue-400'
                     }`}>
@@ -4962,7 +5251,7 @@ export default function CharacterSheet() {
                   </div>
                 </div>
                 <div className="text-center pb-8">
-                  <div className="text-xs text-white mb-2">Capacity:</div>
+                  <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Capacity:</div>
                   {/* Health Bar Style Display */}
                   <div className="w-full bg-gray-600 rounded-full h-4 mb-2">
                     <div
@@ -4977,13 +5266,13 @@ export default function CharacterSheet() {
                       }}
                     />
                   </div>
-                  <div className="text-xs text-gray-300 mb-1">
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
                     {encumbrance.openSlots >= 0
                       ? `${Math.round((encumbrance.openSlots / encumbrance.maxSlots) * 100)}%`
                       : `${Math.abs(encumbrance.openSlots)} over capacity (${encumbrance.yourBulk}/${encumbrance.maxSlots + Math.floor(encumbrance.maxSlots / 2)} max)`
                     }
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {encumbrance.status === 'Normal' ? 'No penalties' :
                      encumbrance.status === 'Encumbered' ? 'Speed halved, disadvantage on STR/DEX/CON' :
                      'At absolute maximum capacity - cannot carry more'}
@@ -4995,20 +5284,20 @@ export default function CharacterSheet() {
               </div>
 
               {/* 2. Purse Box */}
-              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-slate-600">
-                        <th className="text-left py-1">Coin</th>
-                        <th className="text-center py-1">Amount</th>
-                        <th className="text-center py-1">Value (SP)</th>
+                      <tr className={`border-b ${isDarkMode ? 'border-slate-600' : 'border-gray-400'}`}>
+                        <th className={`text-left py-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Coin</th>
+                        <th className={`text-center py-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Amount</th>
+                        <th className={`text-center py-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Value (SP)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {Object.entries(purse).map(([coinType, data]) => (
-                        <tr key={coinType} className="border-b border-slate-600">
-                          <td className="py-1 text-left">{coinType.charAt(0).toUpperCase()}P</td>
+                        <tr key={coinType} className={`border-b ${isDarkMode ? 'border-slate-600' : 'border-gray-400'}`}>
+                          <td className={`py-1 text-left ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{coinType.charAt(0).toUpperCase()}P</td>
                           <td className="py-1 text-center">
                             <input
                               type="number"
@@ -5019,19 +5308,19 @@ export default function CharacterSheet() {
                                 [coinType]: { ...data, amount: parseInt(e.target.value) || 0 }
                               })}
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
                             />
                           </td>
-                          <td className="py-1 text-center text-gray-300">{(data.amount * data.value).toFixed(1)}</td>
+                          <td className={`py-1 text-center ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{(data.amount * data.value).toFixed(1)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 <div className="mt-2 text-center pb-8">
-                  <div className="text-xs text-gray-400">Total Bulk = {calculatePurseBulk()}</div>
-                  <div className="text-xs text-gray-400">Total Value = {calculateTotalValue().toFixed(1)} SP</div>
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Bulk = {calculatePurseBulk()}</div>
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Value = {calculateTotalValue().toFixed(1)} SP</div>
                 </div>
                 <div className="absolute bottom-2 left-0 right-0 text-center">
                   <h3 className="text-sm font-bold text-gray-400">Purse</h3>
@@ -5040,9 +5329,9 @@ export default function CharacterSheet() {
 
               {/* 3. Ration Box */}
               <div className="space-y-4">
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="space-y-2 pb-8">
-                    <div className="grid grid-cols-3 gap-1 text-xs text-gray-400 text-center">
+                    <div className={`grid grid-cols-3 gap-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-center`}>
                       <div># of Boxes</div>
                       <div># of Rations</div>
                       <div>Total Bulk</div>
@@ -5054,7 +5343,7 @@ export default function CharacterSheet() {
                         value={rationBox.boxes}
                         onChange={(e) => setRationBox({...rationBox, boxes: parseInt(e.target.value) || 0})}
                         className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
                       <input
@@ -5063,7 +5352,7 @@ export default function CharacterSheet() {
                         value={rationBox.rations}
                         onChange={(e) => setRationBox({...rationBox, rations: parseInt(e.target.value) || 0})}
                         className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
                       <input
@@ -5072,7 +5361,7 @@ export default function CharacterSheet() {
                         value={rationBox.totalBulk}
                         onChange={(e) => setRationBox({...rationBox, totalBulk: parseInt(e.target.value) || 0})}
                         className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
                     </div>
@@ -5083,9 +5372,9 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* 4. Waterskin Box (beneath Ration Box) */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="space-y-2 pb-8">
-                    <div className="grid grid-cols-3 gap-1 text-xs text-gray-400 text-center">
+                    <div className={`grid grid-cols-3 gap-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-center`}>
                       <div># of Skins</div>
                       <div># of Rations</div>
                       <div>Total Bulk</div>
@@ -5097,7 +5386,7 @@ export default function CharacterSheet() {
                         value={waterskinBox.skins}
                         onChange={(e) => setWaterskinBox({...waterskinBox, skins: parseInt(e.target.value) || 0})}
                         className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
                       <input
@@ -5106,7 +5395,7 @@ export default function CharacterSheet() {
                         value={waterskinBox.rations}
                         onChange={(e) => setWaterskinBox({...waterskinBox, rations: parseInt(e.target.value) || 0})}
                         className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
                       <input
@@ -5115,7 +5404,7 @@ export default function CharacterSheet() {
                         value={waterskinBox.totalBulk}
                         onChange={(e) => setWaterskinBox({...waterskinBox, totalBulk: parseInt(e.target.value) || 0})}
                         className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       />
                     </div>
@@ -5127,7 +5416,7 @@ export default function CharacterSheet() {
               </div>
 
               {/* 5. Magical Containers Box */}
-              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
@@ -5149,7 +5438,7 @@ export default function CharacterSheet() {
                               bagOfHolding: { ...magicalContainers.bagOfHolding, owned: e.target.value }
                             })}
                             className={`w-6 text-center text-xs border rounded px-1 ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                           />
                         </td>
@@ -5166,7 +5455,7 @@ export default function CharacterSheet() {
                               portableHole: { ...magicalContainers.portableHole, owned: e.target.value }
                             })}
                             className={`w-6 text-center text-xs border rounded px-1 ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                           />
                         </td>
@@ -5183,7 +5472,7 @@ export default function CharacterSheet() {
                               handyHaversack: { ...magicalContainers.handyHaversack, owned: e.target.value }
                             })}
                             className={`w-6 text-center text-xs border rounded px-1 ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                           />
                         </td>
@@ -5200,7 +5489,7 @@ export default function CharacterSheet() {
                               quiverOfEhlonna: { ...magicalContainers.quiverOfEhlonna, owned: e.target.value }
                             })}
                             className={`w-6 text-center text-xs border rounded px-1 ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                           />
                         </td>
@@ -5215,7 +5504,7 @@ export default function CharacterSheet() {
               </div>
 
               {/* 6. Purchase Calculator Box */}
-              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
@@ -5239,7 +5528,7 @@ export default function CharacterSheet() {
                                 [coinType]: { ...data, purchase: parseInt(e.target.value) || 0 }
                               })}
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
                             />
                           </td>
@@ -5269,7 +5558,7 @@ export default function CharacterSheet() {
               <div className="space-y-6">
                 
                 {/* 1. Equipped Items */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
@@ -5298,7 +5587,7 @@ export default function CharacterSheet() {
                                   syncEquippedItemToSystems(newItems[index], index);
                                 }}
                                 className={`w-full text-xs border rounded px-1 ${
-                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
                               >
                                 <option value="">-</option>
@@ -5319,7 +5608,7 @@ export default function CharacterSheet() {
                                   syncEquippedItemToSystems(newItems[index], index);
                                 }}
                                 className={`w-full text-xs border rounded px-1 ${
-                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
                               />
                             </td>
@@ -5335,7 +5624,7 @@ export default function CharacterSheet() {
                                   syncEquippedItemToSystems(newItems[index], index);
                                 }}
                                 className={`w-12 text-center text-xs border rounded px-1 ${
-                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
                               />
                             </td>
@@ -5349,7 +5638,7 @@ export default function CharacterSheet() {
                                   setEquippedItems(newItems);
                                 }}
                                 className={`w-12 text-center text-xs border rounded px-1 ${
-                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
                               />
                             </td>
@@ -5365,7 +5654,7 @@ export default function CharacterSheet() {
                                   syncEquippedItemToSystems(newItems[index], index);
                                 }}
                                 className={`w-12 text-center text-xs border rounded px-1 ${
-                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
                               />
                             </td>
@@ -5380,7 +5669,7 @@ export default function CharacterSheet() {
                                   setEquippedItems(newItems);
                                 }}
                                 className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
                               />
                             </td>
@@ -5396,7 +5685,7 @@ export default function CharacterSheet() {
                                   setEquippedItems(newItems);
                                 }}
                                 className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
                               />
                             </td>
@@ -5445,7 +5734,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* 2. External Storage */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
@@ -5468,7 +5757,7 @@ export default function CharacterSheet() {
                                   setExternalStorage(newItems);
                                 }}
                                 className={`w-full text-xs border rounded px-1 ${
-                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
                               />
                             </td>
@@ -5484,7 +5773,7 @@ export default function CharacterSheet() {
                                   setExternalStorage(newItems);
                                 }}
                                 className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
                               />
                             </td>
@@ -5498,7 +5787,7 @@ export default function CharacterSheet() {
                                   setExternalStorage(newItems);
                                 }}
                                 className={`w-full text-xs border rounded px-1 ${
-                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                  isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
                               />
                             </td>
@@ -5534,7 +5823,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* 3. Attuned Items */}
-                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
@@ -5562,7 +5851,7 @@ export default function CharacterSheet() {
                                     setAttunedItems(newItems);
                                   }}
                                   className={`w-full text-xs border rounded px-1 ${
-                                    isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                    isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                   }`}
                                 />
                               ) : (
@@ -5583,7 +5872,7 @@ export default function CharacterSheet() {
                                     setAttunedItems(newItems);
                                   }}
                                   className={`w-full text-xs border rounded px-1 ${
-                                    isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                    isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                   }`}
                                 />
                               ) : (
@@ -5618,7 +5907,7 @@ export default function CharacterSheet() {
               </div>
 
               {/* Right Column: Inventory */}
-              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
@@ -5643,7 +5932,7 @@ export default function CharacterSheet() {
                                 setInventoryItems(newItems);
                               }}
                               className={`w-full text-xs border rounded px-1 ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
                             />
                           </td>
@@ -5657,7 +5946,7 @@ export default function CharacterSheet() {
                                 setInventoryItems(newItems);
                               }}
                               className={`w-full text-xs border rounded px-1 ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
                               placeholder="Details"
                             />
@@ -5674,7 +5963,7 @@ export default function CharacterSheet() {
                               }}
                               onFocus={(e) => e.target.select()}
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
                               placeholder="0"
                             />
@@ -5690,7 +5979,7 @@ export default function CharacterSheet() {
                                 setInventoryItems(newItems);
                               }}
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
                             />
                           </td>
@@ -5707,7 +5996,7 @@ export default function CharacterSheet() {
                               }}
                               onFocus={(e) => e.target.select()}
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
                               placeholder="0"
                             />
@@ -5756,7 +6045,7 @@ export default function CharacterSheet() {
             <div className="grid grid-cols-4 gap-x-6 gap-y-6 items-start">
 
               {/* Column 1: Level & Hit Points */}
-              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+              <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 {/* Level Selection */}
                 <div className="mb-4">
                   <div className="text-xs font-bold text-orange-400 mb-2">Level</div>
@@ -5767,7 +6056,7 @@ export default function CharacterSheet() {
                     value={character.level || 1}
                     onChange={(e) => updateCharacter({ level: parseInt(e.target.value) })}
                     className={`w-full text-center border rounded px-2 py-1 font-bold ${
-                      isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                      isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                     }`}
                   >
                     {Array.from({ length: 20 }, (_, i) => i + 1).map(level => (
@@ -5788,7 +6077,7 @@ export default function CharacterSheet() {
                     <div className="space-y-1">
                       {Array.from({ length: 10 }, (_, i) => (
                         <div key={i} className="flex items-center gap-2">
-                          <div className="w-6 text-xs font-bold text-gray-400 text-center">
+                          <div className={`w-6 text-xs font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-center`}>
                             {i + 1}
                           </div>
                           <input
@@ -5804,7 +6093,7 @@ export default function CharacterSheet() {
                             className={`w-12 text-center text-sm border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                               isDarkMode
                                 ? 'bg-slate-700 border-slate-600 text-white'
-                                : 'bg-white border-gray-300 text-gray-900'
+                                : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                             placeholder="0"
                           />
@@ -5816,7 +6105,7 @@ export default function CharacterSheet() {
                     <div className="space-y-1">
                       {Array.from({ length: 10 }, (_, i) => (
                         <div key={i + 10} className="flex items-center gap-2">
-                          <div className="w-6 text-xs font-bold text-gray-400 text-center">
+                          <div className={`w-6 text-xs font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-center`}>
                             {i + 11}
                           </div>
                           <input
@@ -5832,7 +6121,7 @@ export default function CharacterSheet() {
                             className={`w-12 text-center text-sm border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                               isDarkMode
                                 ? 'bg-slate-700 border-slate-600 text-white'
-                                : 'bg-white border-gray-300 text-gray-900'
+                                : 'bg-gray-100 border-gray-300 text-gray-900'
                             }`}
                             placeholder="0"
                           />
@@ -5845,7 +6134,7 @@ export default function CharacterSheet() {
                 {/* Additional Options */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-300">Addt'l Bonuses</span>
+                    <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Addt'l Bonuses</span>
                     <input
                       type="number"
                       value={additionalHPBonuses}
@@ -5853,21 +6142,21 @@ export default function CharacterSheet() {
                       className={`w-16 text-center text-sm border rounded px-2 py-1 ${
                         isDarkMode
                           ? 'bg-slate-700 border-slate-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
+                          : 'bg-gray-100 border-gray-300 text-gray-900'
                       }`}
                       placeholder="+0"
                     />
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-300">Toughness?</span>
+                    <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Toughness?</span>
                     <select
                       value={hasToughness ? 'Yes' : 'No'}
                       onChange={(e) => setHasToughness(e.target.value === 'Yes')}
                       className={`text-center text-sm border rounded px-2 py-1 ${
                         isDarkMode
                           ? 'bg-slate-700 border-slate-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
+                          : 'bg-gray-100 border-gray-300 text-gray-900'
                       }`}
                     >
                       <option value="No">No</option>
@@ -5876,14 +6165,14 @@ export default function CharacterSheet() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-300">PHB Hill Dwarf?</span>
+                    <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>PHB Hill Dwarf?</span>
                     <select
                       value={isPHBHillDwarf ? 'Yes' : 'No'}
                       onChange={(e) => setIsPHBHillDwarf(e.target.value === 'Yes')}
                       className={`text-center text-sm border rounded px-2 py-1 ${
                         isDarkMode
                           ? 'bg-slate-700 border-slate-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
+                          : 'bg-gray-100 border-gray-300 text-gray-900'
                       }`}
                     >
                       <option value="No">No</option>
@@ -5896,13 +6185,13 @@ export default function CharacterSheet() {
               {/* Column 2: Speed, Hit Die, Initiative */}
               <div className="space-y-6 h-fit">
                 {/* Speed Box */}
-                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Speed</h3>
-                  <p className="text-xs text-gray-400 mb-4">Enter any base speeds you have below.</p>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-4`}>Enter any base speeds you have below.</p>
                   <div className="space-y-2">
                     {Object.entries(speeds).map(([speedType, value]) => (
                       <div key={speedType} className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-300 capitalize">{speedType}</label>
+                        <label className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} capitalize`}>{speedType}</label>
                         <input
                           type="number"
                           min="0"
@@ -5914,7 +6203,7 @@ export default function CharacterSheet() {
                           className={`w-16 text-center text-sm border rounded px-2 py-1 ${
                             isDarkMode
                               ? 'bg-slate-700 border-slate-600 text-white'
-                              : 'bg-white border-gray-300 text-gray-900'
+                              : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                         />
                       </div>
@@ -5923,10 +6212,10 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Hit Die Box */}
-                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Hit Die</h3>
                   <div className="mb-3">
-                    <p className="text-xs text-gray-400 mb-2">Auto-calculated based on your class and level.</p>
+                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Auto-calculated based on your class and level.</p>
                     <p className="text-xs text-blue-400">
                       {character.class}: {CLASS_HIT_DICE[character.class] || 'd8'} × {character.level} level{character.level !== 1 ? 's' : ''}
                     </p>
@@ -5934,7 +6223,7 @@ export default function CharacterSheet() {
                   <div className="grid grid-cols-2 gap-2">
                     {Object.entries(calculateHitDice()).map(([dieType, count]) => (
                       <div key={dieType} className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-300">{dieType}</label>
+                        <label className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{dieType}</label>
                         <div
                           className={`w-12 text-center text-sm border rounded px-1 py-1 ${
                             count > 0
@@ -5943,7 +6232,7 @@ export default function CharacterSheet() {
                                 : 'bg-gray-100 border-gray-300 text-gray-900 font-bold'
                               : isDarkMode
                               ? 'bg-slate-700 border-slate-600 text-gray-500'
-                              : 'bg-white border-gray-300 text-gray-400'
+                              : 'bg-gray-100 border-gray-300 text-gray-400'
                           }`}
                         >
                           {count}
@@ -5957,7 +6246,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Initiative Box */}
-                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Initiative</h3>
 
                   {/* Total Initiative Display */}
@@ -6006,7 +6295,7 @@ export default function CharacterSheet() {
                         className={`w-16 text-center text-sm border rounded px-2 py-1 ${
                           isDarkMode
                             ? 'bg-slate-700 border-slate-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
+                            : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="0"
                       />
@@ -6018,9 +6307,9 @@ export default function CharacterSheet() {
               {/* Column 3: Feat/ASI Choices & Master Spell List */}
               <div className="space-y-6 h-fit">
                 {/* Feat/ASI Choices Box */}
-                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Feat/ASI Choices</h3>
-                  <p className="text-xs text-gray-400 mb-4">Track your ability score improvements and feats by level.</p>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-4`}>Track your ability score improvements and feats by level.</p>
 
                   <div className="space-y-2">
                     {Object.entries(asiChoices).map(([levelKey, choice]) => (
@@ -6028,7 +6317,7 @@ export default function CharacterSheet() {
                       <div className="space-y-1">
                         {/* Level and ASI/Feat Toggle on same row */}
                         <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-semibold text-white">Level {levelKey.replace('level', '')}</h4>
+                          <h4 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Level {levelKey.replace('level', '')}</h4>
                           <div className="flex items-center gap-4">
                             <label className="flex items-center">
                               <input
@@ -6043,7 +6332,7 @@ export default function CharacterSheet() {
                                 }}
                                 className="mr-1"
                               />
-                              <span className="text-xs text-gray-300">ASI</span>
+                              <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>ASI</span>
                             </label>
                             <label className="flex items-center">
                               <input
@@ -6058,7 +6347,7 @@ export default function CharacterSheet() {
                                 }}
                                 className="mr-1"
                               />
-                              <span className="text-xs text-gray-300">Feat</span>
+                              <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Feat</span>
                             </label>
                           </div>
                         </div>
@@ -6128,7 +6417,7 @@ export default function CharacterSheet() {
                                   }}
                                   className="mr-1 scale-75"
                                 />
-                                <span className="text-gray-300">{ability.slice(0, 3).toUpperCase()}</span>
+                                <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{ability.slice(0, 3).toUpperCase()}</span>
                                 {increase > 0 && (
                                   <span className="text-green-400 text-xs ml-1">+{increase}</span>
                                 )}
@@ -6154,7 +6443,7 @@ export default function CharacterSheet() {
                                 }
                               }}
                               className={`w-full text-xs border rounded px-2 py-1 ${
-                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
                             />
                             <p className="text-xs text-gray-500 italic">This feat will also appear in the Character Features section below.</p>
@@ -6167,7 +6456,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Master Spell List Box */}
-                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Master Spell List</h3>
                   <input
                     type="file"
@@ -6253,11 +6542,11 @@ export default function CharacterSheet() {
                         reader.readAsText(file);
                       }
                     }}
-                    className={`w-full px-2 py-1 text-xs rounded border bg-transparent text-white mb-2 ${
+                    className={`w-full px-2 py-1 text-xs rounded border bg-transparent ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2 ${
                       isDarkMode ? 'border-slate-600 focus:border-orange-400' : 'border-gray-400 focus:border-orange-500'
                     } focus:outline-none focus:ring-1 focus:ring-orange-500`}
                   />
-                  <p className="text-xs text-gray-400">Upload JSON file</p>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Upload JSON file</p>
                   {masterSpellList.length > 0 && (
                     <div className="mt-2 text-center">
                       <p className="text-xs text-green-400">✓ {masterSpellList.length} spells loaded</p>
@@ -6269,7 +6558,7 @@ export default function CharacterSheet() {
               {/* Column 4: Calendar & Carrying Size */}
               <div className="space-y-6 h-fit">
                 {/* Calendar Box */}
-                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Calendar</h3>
                   <p className="text-xs text-gray-400 mb-4">Set the current game date.</p>
                   
@@ -6285,7 +6574,7 @@ export default function CharacterSheet() {
                             day: parseInt(e.target.value)
                           })}
                           className={`w-full text-center text-sm border rounded px-2 py-1 ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                         >
                           {Array.from({ length: getMaxDaysForSeason(currentDate.season) }, (_, i) => i + 1).map(day => (
@@ -6306,7 +6595,7 @@ export default function CharacterSheet() {
                             year: parseInt(e.target.value) || 4122
                           })}
                           className={`w-full text-center text-sm border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
                         />
                       </div>
@@ -6323,7 +6612,7 @@ export default function CharacterSheet() {
                           day: Math.min(currentDate.day, getMaxDaysForSeason(e.target.value))
                         })}
                         className={`w-full text-sm border rounded px-2 py-1 ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                       >
                         {seasons.map(season => (
@@ -6337,7 +6626,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Carrying Size Box */}
-                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Carrying Size</h3>
                   <p className="text-xs text-gray-400 mb-4">Select the size you count as when determining carrying capacity.</p>
                   <select
@@ -6346,7 +6635,7 @@ export default function CharacterSheet() {
                     className={`w-full border rounded px-3 py-2 ${
                       isDarkMode
                         ? 'bg-slate-700 border-slate-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
+                        : 'bg-gray-100 border-gray-300 text-gray-900'
                     }`}
                   >
                     <option value="Tiny">Tiny</option>
@@ -6359,7 +6648,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Images Box */}
-                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-300'}`}>
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Images</h3>
                   <p className="text-xs text-gray-400 mb-4">Upload images for character display and background.</p>
                   
@@ -6466,7 +6755,7 @@ export default function CharacterSheet() {
             <div className={`p-4 rounded-lg border shadow-xl ${
               isDarkMode
                 ? 'bg-slate-800 border-slate-600 text-white'
-                : 'bg-white border-gray-300 text-gray-900'
+                : 'bg-gray-100 border-gray-300 text-gray-900'
             }`}>
               <div className="space-y-3">
                 {/* Spell Name and Level */}
@@ -6474,7 +6763,7 @@ export default function CharacterSheet() {
                   <h3 className="text-lg font-bold text-orange-400">
                     {hoveredSpell.Name || hoveredSpell.name || 'Unknown Spell'}
                   </h3>
-                  <div className="text-sm text-gray-400">
+                  <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {isNaN(parseFloat(hoveredSpell.Level !== undefined ? hoveredSpell.Level : hoveredSpell.level))
                       ? 'Unknown Level'
                       : parseFloat(hoveredSpell.Level !== undefined ? hoveredSpell.Level : hoveredSpell.level) === 0
@@ -6488,19 +6777,19 @@ export default function CharacterSheet() {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="font-semibold text-orange-300">Casting Time:</span>
-                    <div className="text-gray-300">{hoveredSpell.CastingTime || hoveredSpell.casting_time || hoveredSpell.castingTime || 'Unknown'}</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{hoveredSpell.CastingTime || hoveredSpell.casting_time || hoveredSpell.castingTime || 'Unknown'}</div>
                   </div>
                   <div>
                     <span className="font-semibold text-orange-300">Range:</span>
-                    <div className="text-gray-300">{hoveredSpell.Range || hoveredSpell.range || 'Unknown'}</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{hoveredSpell.Range || hoveredSpell.range || 'Unknown'}</div>
                   </div>
                   <div>
                     <span className="font-semibold text-orange-300">Duration:</span>
-                    <div className="text-gray-300">{hoveredSpell.Duration || hoveredSpell.duration || 'Unknown'}</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{hoveredSpell.Duration || hoveredSpell.duration || 'Unknown'}</div>
                   </div>
                   <div>
                     <span className="font-semibold text-orange-300">Components:</span>
-                    <div className="text-gray-300">{hoveredSpell.Components || hoveredSpell.components || 'Unknown'}</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{hoveredSpell.Components || hoveredSpell.components || 'Unknown'}</div>
                   </div>
                 </div>
 
@@ -6508,7 +6797,7 @@ export default function CharacterSheet() {
                 {(hoveredSpell['Area or Targets'] || hoveredSpell.area_of_effect || hoveredSpell.areaOfEffect || hoveredSpell.targets) && (
                   <div className="text-sm">
                     <span className="font-semibold text-orange-300">Area/Targets:</span>
-                    <div className="text-gray-300">{hoveredSpell['Area or Targets'] || hoveredSpell.area_of_effect || hoveredSpell.areaOfEffect || hoveredSpell.targets}</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{hoveredSpell['Area or Targets'] || hoveredSpell.area_of_effect || hoveredSpell.areaOfEffect || hoveredSpell.targets}</div>
                   </div>
                 )}
 
@@ -6516,14 +6805,14 @@ export default function CharacterSheet() {
                 {(hoveredSpell['Save or Attack'] || hoveredSpell.save || hoveredSpell.attack) && (
                   <div className="text-sm">
                     <span className="font-semibold text-orange-300">Save/Attack:</span>
-                    <div className="text-gray-300">{hoveredSpell['Save or Attack'] || hoveredSpell.save || hoveredSpell.attack}</div>
+                    <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{hoveredSpell['Save or Attack'] || hoveredSpell.save || hoveredSpell.attack}</div>
                   </div>
                 )}
 
                 {/* Effect/Description */}
                 <div className="text-sm">
                   <span className="font-semibold text-orange-300">Effect:</span>
-                  <div className="text-gray-300 mt-1 max-h-32 overflow-y-auto">
+                  <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-900'} mt-1 max-h-32 overflow-y-auto`}>
                     {hoveredSpell.Effect || hoveredSpell.description || hoveredSpell.effect || 'No description available'}
                   </div>
                 </div>
