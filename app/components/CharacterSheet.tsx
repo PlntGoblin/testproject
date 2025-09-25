@@ -385,7 +385,7 @@ export default function CharacterSheet() {
       charisma: 16,
     },
     proficiencyBonus: 3,
-    armorClass: null,
+    armorClass: 0,
     initiative: 2,
     speed: 30,
     skills: {
@@ -956,7 +956,7 @@ export default function CharacterSheet() {
   const [armor, setArmor] = useState({
     armorType: { item: 'Studded Leather', karuta: 'Armor Item', plus: '', notches: '' },
     shieldType: { item: 'None', karuta: '', plus: '', notches: '' },
-    magicalAttire: { item1: 'None', item2: 'None', plus: '', notches: '' }
+    magicalAttire: { item1: 'None', item2: 'None', plus: '', notches: '', karuta: '' }
   });
 
   // Image state
@@ -1280,9 +1280,12 @@ export default function CharacterSheet() {
     if (savedCalendar) {
       try {
         const calendarData = JSON.parse(savedCalendar);
-        if (calendarData.currentSeason !== undefined) setCurrentSeason(calendarData.currentSeason);
-        if (calendarData.currentDay !== undefined) setCurrentDay(calendarData.currentDay);
-        if (calendarData.currentYear !== undefined) setCurrentYear(calendarData.currentYear);
+        setCurrentDate(prevDate => ({
+          ...prevDate,
+          season: calendarData.currentSeason !== undefined ? calendarData.currentSeason : prevDate.season,
+          day: calendarData.currentDay !== undefined ? calendarData.currentDay : prevDate.day,
+          year: calendarData.currentYear !== undefined ? calendarData.currentYear : prevDate.year
+        }));
       } catch (error) {
         console.warn('Failed to load calendar from localStorage:', error);
       }
@@ -1304,6 +1307,11 @@ export default function CharacterSheet() {
   useEffect(() => {
     localStorage.setItem('dnd-dark-mode', JSON.stringify(isDarkMode));
   }, [isDarkMode]);
+
+  // Save current weather to localStorage
+  useEffect(() => {
+    localStorage.setItem('dnd-weather', JSON.stringify(currentWeather));
+  }, [currentWeather]);
 
   // Save ASI choices to localStorage
   useEffect(() => {
@@ -2324,7 +2332,8 @@ export default function CharacterSheet() {
             item1: item || prev.magicalAttire.item1,
             item2: prev.magicalAttire.item2,
             plus: itemBonus || prev.magicalAttire.plus,
-            notches: notches || prev.magicalAttire.notches
+            notches: notches || prev.magicalAttire.notches,
+            karuta: prev.magicalAttire.karuta
           }
         }));
         break;
@@ -2400,14 +2409,14 @@ export default function CharacterSheet() {
   // Save initiative modifiers to localStorage
   useEffect(() => {
     if (initiativeModifiers) {
-      localStorage.setItem('initiativeModifiers', JSON.stringify(initiativeModifiers));
+      localStorage.setItem('dnd-initiative-modifiers', JSON.stringify(initiativeModifiers));
     }
   }, [initiativeModifiers]);
 
 
   return (
     <div 
-      className={`min-h-screen p-4 font-sans relative ${isDarkMode ? 'bg-slate-900 text-white' : 'bg-gray-100 text-black'}`}
+      className={`min-h-screen p-4 font-sans relative ${isDarkMode ? 'bg-slate-900 text-white' : 'bg-gray-200 text-black'}`}
       style={{
         backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'none',
         backgroundSize: 'cover',
@@ -3794,7 +3803,7 @@ export default function CharacterSheet() {
                   {manualFeats.slice(Math.ceil(manualFeats.length / 2)).map((feat, index) => (
                     <div key={index + Math.ceil(manualFeats.length / 2)} className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} border border-orange-500/30 rounded p-2`}>
                       <div className="flex justify-between items-start mb-1">
-                        <div className="flex items-center gap-1 flex-1">
+                        <div className="flex items-center gap-1 flex-1 min-w-0">
                           <input
                             type="text"
                             value={feat.name}
@@ -3803,7 +3812,7 @@ export default function CharacterSheet() {
                               newFeats[index + Math.ceil(manualFeats.length / 2)] = { ...newFeats[index + Math.ceil(manualFeats.length / 2)], name: e.target.value };
                               setManualFeats(newFeats);
                             }}
-                            className={`bg-transparent text-sm font-medium ${isDarkMode ? 'text-orange-300' : 'text-orange-700'} border-none outline-none flex-1 mr-2`}
+                            className={`bg-transparent text-sm font-medium ${isDarkMode ? 'text-orange-300' : 'text-orange-700'} border-none outline-none flex-1 min-w-0`}
                             placeholder="Feat name..."
                           />
                           <input
@@ -3814,8 +3823,8 @@ export default function CharacterSheet() {
                               newFeats[index + Math.ceil(manualFeats.length / 2)] = { ...newFeats[index + Math.ceil(manualFeats.length / 2)], level: parseInt(e.target.value) || undefined };
                               setManualFeats(newFeats);
                             }}
-                            className="bg-transparent text-xs text-gray-400 border-none outline-none w-12"
-                            placeholder="Lvl"
+                            className="bg-transparent text-xs text-gray-400 border-none outline-none w-6 flex-shrink-0 text-center"
+                            placeholder="L"
                             min="1"
                             max="20"
                           />
@@ -3859,7 +3868,7 @@ export default function CharacterSheet() {
                   {manualFeats.slice(0, Math.ceil(manualFeats.length / 2)).map((feat, index) => (
                     <div key={index} className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} border border-orange-500/30 rounded p-2`}>
                       <div className="flex justify-between items-start mb-1">
-                        <div className="flex items-center gap-1 flex-1">
+                        <div className="flex items-center gap-1 flex-1 min-w-0">
                           <input
                             type="text"
                             value={feat.name}
@@ -3868,7 +3877,7 @@ export default function CharacterSheet() {
                               newFeats[index] = { ...newFeats[index], name: e.target.value };
                               setManualFeats(newFeats);
                             }}
-                            className={`bg-transparent text-sm font-medium ${isDarkMode ? 'text-orange-300' : 'text-orange-700'} border-none outline-none flex-1 mr-2`}
+                            className={`bg-transparent text-sm font-medium ${isDarkMode ? 'text-orange-300' : 'text-orange-700'} border-none outline-none flex-1 min-w-0`}
                             placeholder="Feat name..."
                           />
                           <input
@@ -3879,8 +3888,8 @@ export default function CharacterSheet() {
                               newFeats[index] = { ...newFeats[index], level: parseInt(e.target.value) || undefined };
                               setManualFeats(newFeats);
                             }}
-                            className="bg-transparent text-xs text-gray-400 border-none outline-none w-12"
-                            placeholder="Lvl"
+                            className="bg-transparent text-xs text-gray-400 border-none outline-none w-6 flex-shrink-0 text-center"
+                            placeholder="L"
                             min="1"
                             max="20"
                           />
@@ -3924,7 +3933,7 @@ export default function CharacterSheet() {
 
         {/* Character Tab */}
         {activeTab === 'Character' && (
-          <div className={`min-h-screen p-8 font-serif ${isDarkMode ? 'bg-slate-900 text-stone-200' : 'bg-stone-100 text-stone-800'}`}>
+          <div className={`min-h-screen p-8 font-serif ${isDarkMode ? 'bg-slate-900 text-stone-200' : 'bg-gray-200 text-stone-800'}`}>
             {/* Decorative Header */}
             <div className={`text-center border-b-2 border-t-2 py-6 ${isDarkMode ? 'border-orange-400' : 'border-stone-400'}`}>
               <div className="mb-3">
@@ -4151,7 +4160,7 @@ export default function CharacterSheet() {
 
                   {/* Ability Scores Radar Chart */}
                   <div className="mt-6 pt-4 border-t border-stone-300">
-                    <div className="flex justify-start gap-8">
+                    <div className="flex justify-center gap-8">
                       {/* Ability Scores Radar Chart */}
                       <div className="w-50 h-50 relative">
                         <svg viewBox="0 0 320 320" className="w-full h-full">
@@ -4347,8 +4356,8 @@ export default function CharacterSheet() {
                     <div className={`w-full h-[600px] flex items-center justify-center ${isDarkMode ? 'bg-slate-700 text-stone-400' : 'bg-stone-200 text-stone-500'}`}>
                       <div className="text-center">
                         <div className="text-6xl mb-4">⚔️</div>
-                        <p className="text-sm">Attack Field</p>
-                        <p className="text-xs mt-2">Combat area placeholder</p>
+                        <p className="text-sm">Portrait Place Holder</p>
+                        <p className="text-xs mt-2">Upload in the Data Tab</p>
                       </div>
                     </div>
                   )}
@@ -6382,7 +6391,7 @@ export default function CharacterSheet() {
                                             updatedIncreases[key as keyof typeof updatedIncreases] = bonusPerAbility;
                                           }
                                         });
-                                        updatedIncreases[ability] = bonusPerAbility;
+                                        updatedIncreases[ability as keyof typeof updatedIncreases] = bonusPerAbility;
 
                                         return {
                                           ...prev,
