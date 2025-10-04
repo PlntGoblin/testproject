@@ -5321,7 +5321,25 @@ export default function CharacterSheet() {
                               }`}
                             />
                           </td>
-                          <td className={`py-1 text-center ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{(data.amount * data.value).toFixed(1)}</td>
+                          <td className="py-1 text-center">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={(data.amount * data.value).toFixed(2)}
+                              onChange={(e) => {
+                                const spValue = parseFloat(e.target.value) || 0;
+                                const newAmount = spValue / data.value;
+                                setPurse({
+                                  ...purse,
+                                  [coinType]: { ...data, amount: Math.round(newAmount * 100) / 100 }
+                                });
+                              }}
+                              className={`w-16 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
+                              }`}
+                            />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -5577,7 +5595,7 @@ export default function CharacterSheet() {
                           <th className="text-center py-1">Bonus</th>
                           <th className="text-center py-1">Range</th>
                           <th className="text-center py-1">Notches</th>
-                          <th className="text-center py-1">Value</th>
+                          <th className="text-center py-1">SP</th>
                           <th className="text-center py-1">Bulk</th>
                           <th className="text-center py-1">Att?</th>
                         </tr>
@@ -5671,10 +5689,11 @@ export default function CharacterSheet() {
                               <input
                                 type="number"
                                 min="0"
+                                step="0.01"
                                 value={equippedItem.valueSP}
                                 onChange={(e) => {
                                   const newItems = [...equippedItems];
-                                  newItems[index].valueSP = parseInt(e.target.value) || 0;
+                                  newItems[index].valueSP = parseFloat(e.target.value) || 0;
                                   setEquippedItems(newItems);
                                 }}
                                 className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
@@ -5981,10 +6000,11 @@ export default function CharacterSheet() {
                             <input
                               type="number"
                               min="0"
+                              step="0.01"
                               value={inventoryItem.valueSP}
                               onChange={(e) => {
                                 const newItems = [...inventoryItems];
-                                newItems[index].valueSP = parseInt(e.target.value) || 0;
+                                newItems[index].valueSP = parseFloat(e.target.value) || 0;
                                 setInventoryItems(newItems);
                               }}
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
