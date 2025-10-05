@@ -897,17 +897,8 @@ export default function CharacterSheet() {
     return getEquippedItemsByType('Ammunition');
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, setImage: (value: string) => void) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setImage(e.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleImageUrlChange = (url: string, setImage: (value: string) => void) => {
+    setImage(url);
   };
 
   // Helper functions for ability score calculations
@@ -964,6 +955,10 @@ export default function CharacterSheet() {
   const [backgroundImage, setBackgroundImage] = useState<string>('');
   const [backgroundBlur, setBackgroundBlur] = useState<number>(0);
   const [characterImage, setCharacterImage] = useState<string>('');
+
+  // Vibe Effects state (ambiance effects)
+  const [vibeEffects, setVibeEffects] = useState<string>('none');
+  const [vibeOpacity, setVibeOpacity] = useState<number>(50);
 
   // Ability Score Rolling Tracking
   const [abilityScoreRolls, setAbilityScoreRolls] = useState({
@@ -1111,6 +1106,7 @@ export default function CharacterSheet() {
     const savedManualFeats = localStorage.getItem('dnd-manual-feats');
     const savedCustomSpells = localStorage.getItem('dnd-custom-spells');
     const savedDeathSaves = localStorage.getItem('dnd-death-saves');
+    const savedVibeEffects = localStorage.getItem('dnd-vibe-effects');
 
     if (savedCharacter) {
       try {
@@ -1227,6 +1223,16 @@ export default function CharacterSheet() {
       }
     }
 
+    // Load vibe effects from localStorage
+    if (savedVibeEffects) {
+      try {
+        const vibeData = JSON.parse(savedVibeEffects);
+        setVibeEffects(vibeData.effect || 'none');
+        setVibeOpacity(vibeData.opacity || 50);
+      } catch (error) {
+        console.warn('Failed to load vibe effects from localStorage:', error);
+      }
+    }
 
     // Load HP-related data from localStorage
     const savedHitPointRolls = localStorage.getItem('dnd-hit-point-rolls');
@@ -1376,6 +1382,14 @@ export default function CharacterSheet() {
     }
   }, [deathSaves]);
 
+  // Save vibe effects to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-vibe-effects', JSON.stringify({ effect: vibeEffects, opacity: vibeOpacity }));
+    } catch (error) {
+      console.warn('Failed to save vibe effects to localStorage:', error);
+    }
+  }, [vibeEffects, vibeOpacity]);
 
   // Auto-assign skills when race or class changes
   useEffect(() => {
@@ -2425,7 +2439,7 @@ export default function CharacterSheet() {
       }}
     >
       {backgroundImage && (
-        <div 
+        <div
           className="absolute inset-0 z-0"
           style={{
             backgroundImage: `url(${backgroundImage})`,
@@ -2436,6 +2450,214 @@ export default function CharacterSheet() {
           }}
         />
       )}
+
+      {/* Vibe Effects Overlay */}
+      {vibeEffects !== 'none' && (
+        <div
+          className="absolute inset-0 pointer-events-none overflow-hidden"
+          style={{
+            opacity: vibeOpacity / 100,
+            zIndex: 5
+          }}
+        >
+          {vibeEffects === 'rain' && (
+            <div className="absolute inset-0">
+              {[...Array(50)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute bg-blue-400"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `-${Math.random() * 100}px`,
+                    width: '2px',
+                    height: `${20 + Math.random() * 30}px`,
+                    animation: `fall ${0.5 + Math.random() * 0.5}s linear infinite`,
+                    animationDelay: `${Math.random() * 2}s`
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {vibeEffects === 'snow' && (
+            <div className="absolute inset-0">
+              {[...Array(50)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute bg-white rounded-full"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `-${Math.random() * 100}px`,
+                    width: `${4 + Math.random() * 6}px`,
+                    height: `${4 + Math.random() * 6}px`,
+                    animation: `fall ${2 + Math.random() * 2}s linear infinite`,
+                    animationDelay: `${Math.random() * 3}s`
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {vibeEffects === 'fog' && (
+            <div className="absolute inset-0 bg-gradient-to-b from-gray-400/30 via-gray-300/20 to-transparent" />
+          )}
+
+          {vibeEffects === 'stars' && (
+            <div className="absolute inset-0">
+              {[...Array(100)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute bg-white rounded-full"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    width: `${1 + Math.random() * 2}px`,
+                    height: `${1 + Math.random() * 2}px`,
+                    animation: `twinkle ${1 + Math.random() * 2}s ease-in-out infinite`,
+                    animationDelay: `${Math.random() * 3}s`
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {vibeEffects === 'magic' && (
+            <div className="absolute inset-0">
+              {[...Array(30)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute rounded-full"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    width: `${10 + Math.random() * 20}px`,
+                    height: `${10 + Math.random() * 20}px`,
+                    background: `radial-gradient(circle, ${['#a855f7', '#ec4899', '#3b82f6', '#10b981'][Math.floor(Math.random() * 4)]} 0%, transparent 70%)`,
+                    animation: `float ${3 + Math.random() * 3}s ease-in-out infinite`,
+                    animationDelay: `${Math.random() * 2}s`
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {vibeEffects === 'leaves' && (
+            <div className="absolute inset-0">
+              {[...Array(40)].map((_, i) => {
+                const colors = ['#d97706', '#dc2626', '#ea580c', '#92400e'];
+                return (
+                  <div
+                    key={i}
+                    className="absolute rounded-sm"
+                    style={{
+                      left: `${Math.random() * 100}%`,
+                      top: `-${Math.random() * 100}px`,
+                      width: `${8 + Math.random() * 12}px`,
+                      height: `${6 + Math.random() * 8}px`,
+                      backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+                      animation: `fallSway ${3 + Math.random() * 2}s linear infinite`,
+                      animationDelay: `${Math.random() * 3}s`,
+                      transform: `rotate(${Math.random() * 360}deg)`
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {vibeEffects === 'embers' && (
+            <div className="absolute inset-0">
+              {[...Array(30)].map((_, i) => {
+                const colors = ['#ef4444', '#f97316', '#fbbf24'];
+                return (
+                  <div
+                    key={i}
+                    className="absolute rounded-full"
+                    style={{
+                      left: `${Math.random() * 100}%`,
+                      bottom: `-${Math.random() * 50}px`,
+                      width: `${3 + Math.random() * 5}px`,
+                      height: `${3 + Math.random() * 5}px`,
+                      backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+                      boxShadow: `0 0 ${8 + Math.random() * 8}px ${colors[Math.floor(Math.random() * colors.length)]}`,
+                      animation: `rise ${4 + Math.random() * 3}s ease-in infinite`,
+                      animationDelay: `${Math.random() * 2}s`
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {vibeEffects === 'ash' && (
+            <div className="absolute inset-0">
+              {[...Array(50)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute bg-gray-600 rounded-sm"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `-${Math.random() * 100}px`,
+                    width: `${2 + Math.random() * 4}px`,
+                    height: `${2 + Math.random() * 4}px`,
+                    animation: `fallSway ${3 + Math.random() * 3}s linear infinite`,
+                    animationDelay: `${Math.random() * 3}s`,
+                    opacity: 0.6
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fall {
+          to {
+            transform: translateY(100vh);
+          }
+        }
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        @keyframes fallSway {
+          0% {
+            transform: translateY(0) translateX(0) rotate(0deg);
+          }
+          25% {
+            transform: translateY(25vh) translateX(20px) rotate(90deg);
+          }
+          50% {
+            transform: translateY(50vh) translateX(-10px) rotate(180deg);
+          }
+          75% {
+            transform: translateY(75vh) translateX(15px) rotate(270deg);
+          }
+          100% {
+            transform: translateY(100vh) translateX(0) rotate(360deg);
+          }
+        }
+        @keyframes rise {
+          0% {
+            transform: translateY(0) translateX(0);
+            opacity: 1;
+          }
+          50% {
+            transform: translateY(-50vh) translateX(${Math.random() > 0.5 ? '' : '-'}20px);
+            opacity: 0.8;
+          }
+          100% {
+            transform: translateY(-100vh) translateX(0);
+            opacity: 0;
+          }
+        }
+      `}</style>
+
       <div className="relative z-10">
       <div className="max-w-5xl mx-auto">
         {/* Tab Navigation - Above Main Box */}
@@ -6582,6 +6804,43 @@ export default function CharacterSheet() {
                     </div>
                   )}
                 </div>
+
+                {/* Vibe Effects Box */}
+                <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
+                  <h3 className="text-lg font-semibold text-orange-400 mb-2">Vibe Effects</h3>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-3`}>Select an ambiance effect for your adventure.</p>
+                  <div className="space-y-2 mb-4">
+                    {['none', 'rain', 'snow', 'fog', 'stars', 'magic', 'leaves', 'embers', 'ash'].map((effect) => (
+                      <label key={effect} className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          name="vibeEffect"
+                          value={effect}
+                          checked={vibeEffects === effect}
+                          onChange={(e) => setVibeEffects(e.target.value)}
+                          className="mr-2"
+                        />
+                        <span className={`text-sm capitalize ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          {effect}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-medium mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Opacity: {vibeOpacity}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={vibeOpacity}
+                      onChange={(e) => setVibeOpacity(parseInt(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Column 4: Calendar & Carrying Size */}
@@ -6682,22 +6941,18 @@ export default function CharacterSheet() {
                   <p className="text-xs text-gray-400 mb-4">Upload images for character display and background.</p>
                   
                   <div className="space-y-4">
-                    {/* Stats Image Upload */}
+                    {/* Stats Image URL */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-medium text-gray-300">Stats Page Image</label>
-                        <label className={`cursor-pointer px-3 py-1 text-xs rounded border transition-colors ${
-                          isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
-                        }`}>
-                          Choose Image
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageUpload(e, setStatsImage)}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
+                      <label className="text-sm font-medium text-gray-300 mb-2 block">Stats Page Image URL</label>
+                      <input
+                        type="text"
+                        placeholder="https://imgur.com/your-image.jpg"
+                        value={statsImage}
+                        onChange={(e) => handleImageUrlChange(e.target.value, setStatsImage)}
+                        className={`w-full text-sm border rounded px-3 py-2 ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
                       {statsImage && (
                         <div className="mt-2">
                           <img src={statsImage} alt="Stats preview" className="w-full h-20 object-cover rounded border" />
@@ -6705,22 +6960,18 @@ export default function CharacterSheet() {
                       )}
                     </div>
 
-                    {/* Background Image Upload with Opacity */}
+                    {/* Background Image URL with Blur */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-medium text-gray-300">Background Image</label>
-                        <label className={`cursor-pointer px-3 py-1 text-xs rounded border transition-colors ${
-                          isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
-                        }`}>
-                          Choose Image
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageUpload(e, setBackgroundImage)}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
+                      <label className="text-sm font-medium text-gray-300 mb-2 block">Background Image URL</label>
+                      <input
+                        type="text"
+                        placeholder="https://imgur.com/your-background.jpg"
+                        value={backgroundImage}
+                        onChange={(e) => handleImageUrlChange(e.target.value, setBackgroundImage)}
+                        className={`w-full text-sm border rounded px-3 py-2 ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
                       <div className="mt-2">
                         <label className="block text-xs font-medium text-gray-400 mb-1">Blur: {backgroundBlur}px</label>
                         <input
@@ -6740,22 +6991,18 @@ export default function CharacterSheet() {
                       )}
                     </div>
 
-                    {/* Character Image Upload */}
+                    {/* Character Image URL */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-medium text-gray-300">Character Tab Image</label>
-                        <label className={`cursor-pointer px-3 py-1 text-xs rounded border transition-colors ${
-                          isDarkMode ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500' : 'bg-gray-200 border-gray-300 text-gray-700 hover:bg-gray-300'
-                        }`}>
-                          Choose Image
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageUpload(e, setCharacterImage)}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
+                      <label className="text-sm font-medium text-gray-300 mb-2 block">Character Tab Image URL</label>
+                      <input
+                        type="text"
+                        placeholder="https://imgur.com/your-character.jpg"
+                        value={characterImage}
+                        onChange={(e) => handleImageUrlChange(e.target.value, setCharacterImage)}
+                        className={`w-full text-sm border rounded px-3 py-2 ${
+                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
                       {characterImage && (
                         <div className="mt-2">
                           <img src={characterImage} alt="Character preview" className="w-full h-20 object-cover rounded border" />
