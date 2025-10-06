@@ -20,6 +20,7 @@ const DND_CLASSES = [
 
 // D&D 5e Player's Handbook Races
 const DND_RACES = [
+  'Custom Lineage',
   'Dragonborn',
   'Dwarf',
   'Elf',
@@ -306,6 +307,10 @@ interface Character {
   spellSlots: {
     [key: string]: { total: number; used: number };
   };
+  sorceryPoints: {
+    max: number;
+    used: number;
+  };
   spellcastingAbility: 'Intelligence' | 'Wisdom' | 'Charisma';
   knownPreparedSpells: number;
   spellDC: number;
@@ -444,6 +449,10 @@ export default function CharacterSheet() {
       '1st': { total: 4, used: 1 },
       '2nd': { total: 3, used: 0 },
       '3rd': { total: 2, used: 1 },
+    },
+    sorceryPoints: {
+      max: 0,
+      used: 0,
     },
     spellcastingAbility: 'Intelligence',
     knownPreparedSpells: 9,
@@ -753,14 +762,20 @@ export default function CharacterSheet() {
     const baseModifier = getModifier(finalScore);
     const skillData = character.skills[skill];
     let modifier = baseModifier;
-    
+
     if (skillData.proficient) {
       modifier += character.proficiencyBonus;
     }
     if (skillData.expertise) {
       modifier += character.proficiencyBonus;
     }
-    
+
+    // Add any custom skill bonuses
+    const skillBonus = skillBonuses.find(sb => sb.skill === skill);
+    if (skillBonus) {
+      modifier += skillBonus.bonus;
+    }
+
     return modifier;
   };
 
@@ -1092,6 +1107,18 @@ export default function CharacterSheet() {
   // Weather State
   const [currentWeather, setCurrentWeather] = useState(0); // 0=morning, 1=day, 2=evening, 3=night, 4=rainy, 5=snowy
 
+  // Pre-calculated random values for visual effects (to prevent hydration errors)
+  const [effectParticles, setEffectParticles] = useState<Array<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    duration: number;
+    delay: number;
+    rotation?: number;
+    color?: string;
+  }>>([]);
+
   // Load character data from localStorage on component mount
   useEffect(() => {
     const savedCharacter = localStorage.getItem('dnd-character-data');
@@ -1110,7 +1137,12 @@ export default function CharacterSheet() {
 
     if (savedCharacter) {
       try {
-        setCharacter(JSON.parse(savedCharacter));
+        const parsed = JSON.parse(savedCharacter);
+        // Ensure sorceryPoints exists (migration for old data)
+        if (!parsed.sorceryPoints) {
+          parsed.sorceryPoints = { max: 0, used: 0 };
+        }
+        setCharacter(parsed);
       } catch (error) {
         console.warn('Failed to load character data from localStorage:', error);
       }
@@ -1297,6 +1329,35 @@ export default function CharacterSheet() {
       }
     }
 
+    // Load skill bonuses from localStorage
+    const savedSkillBonuses = localStorage.getItem('dnd-skill-bonuses');
+    if (savedSkillBonuses) {
+      try {
+        setSkillBonuses(JSON.parse(savedSkillBonuses));
+      } catch (error) {
+        console.warn('Failed to load skill bonuses from localStorage:', error);
+      }
+    }
+
+    // Generate random particles for visual effects (client-side only)
+    const generateParticles = (count: number, config: { colors?: string[] } = {}) => {
+      const particles = [];
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          left: Math.random() * 100,
+          top: Math.random() * 100,
+          width: 4 + Math.random() * 6,
+          height: 4 + Math.random() * 6,
+          duration: 2 + Math.random() * 2,
+          delay: Math.random() * 3,
+          rotation: Math.random() * 360,
+          color: config.colors ? config.colors[Math.floor(Math.random() * config.colors.length)] : undefined
+        });
+      }
+      return particles;
+    };
+
+    setEffectParticles(generateParticles(100, { colors: ['#a855f7', '#ec4899', '#3b82f6', '#10b981'] }));
   }, []);
 
   // Save character data to localStorage whenever it changes
@@ -1596,6 +1657,8 @@ export default function CharacterSheet() {
     burrow: 0,
     fly: 0
   });
+
+  const [skillBonuses, setSkillBonuses] = useState<{ skill: string; bonus: number }[]>([]);
 
   const [hitDice, setHitDice] = useState({
     d6: 0,
@@ -2227,6 +2290,15 @@ export default function CharacterSheet() {
     }
   }, [speeds]);
 
+  // Save skill bonuses to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-skill-bonuses', JSON.stringify(skillBonuses));
+    } catch (error) {
+      console.warn('Failed to save skill bonuses to localStorage:', error);
+    }
+  }, [skillBonuses]);
+
   // Save images to localStorage with error handling
   useEffect(() => {
     const images = {
@@ -2462,17 +2534,17 @@ export default function CharacterSheet() {
         >
           {vibeEffects === 'rain' && (
             <div className="absolute inset-0">
-              {[...Array(50)].map((_, i) => (
+              {effectParticles.slice(0, 50).map((particle, i) => (
                 <div
                   key={i}
                   className="absolute bg-blue-400"
                   style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `-${Math.random() * 100}px`,
+                    left: `${particle.left}%`,
+                    top: `-${particle.top}px`,
                     width: '2px',
-                    height: `${20 + Math.random() * 30}px`,
-                    animation: `fall ${0.5 + Math.random() * 0.5}s linear infinite`,
-                    animationDelay: `${Math.random() * 2}s`
+                    height: `${20 + particle.width}px`,
+                    animation: `fall ${0.5 + particle.duration * 0.25}s linear infinite`,
+                    animationDelay: `${particle.delay}s`
                   }}
                 />
               ))}
@@ -2481,40 +2553,36 @@ export default function CharacterSheet() {
 
           {vibeEffects === 'snow' && (
             <div className="absolute inset-0">
-              {[...Array(50)].map((_, i) => (
+              {effectParticles.slice(0, 50).map((particle, i) => (
                 <div
                   key={i}
                   className="absolute bg-white rounded-full"
                   style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `-${Math.random() * 100}px`,
-                    width: `${4 + Math.random() * 6}px`,
-                    height: `${4 + Math.random() * 6}px`,
-                    animation: `fall ${2 + Math.random() * 2}s linear infinite`,
-                    animationDelay: `${Math.random() * 3}s`
+                    left: `${particle.left}%`,
+                    top: `-${particle.top}px`,
+                    width: `${particle.width}px`,
+                    height: `${particle.height}px`,
+                    animation: `fall ${particle.duration}s linear infinite`,
+                    animationDelay: `${particle.delay}s`
                   }}
                 />
               ))}
             </div>
           )}
 
-          {vibeEffects === 'fog' && (
-            <div className="absolute inset-0 bg-gradient-to-b from-gray-400/30 via-gray-300/20 to-transparent" />
-          )}
-
           {vibeEffects === 'stars' && (
             <div className="absolute inset-0">
-              {[...Array(100)].map((_, i) => (
+              {effectParticles.map((particle, i) => (
                 <div
                   key={i}
                   className="absolute bg-white rounded-full"
                   style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                    width: `${1 + Math.random() * 2}px`,
-                    height: `${1 + Math.random() * 2}px`,
-                    animation: `twinkle ${1 + Math.random() * 2}s ease-in-out infinite`,
-                    animationDelay: `${Math.random() * 3}s`
+                    left: `${particle.left}%`,
+                    top: `${particle.top}%`,
+                    width: `${1 + particle.width * 0.2}px`,
+                    height: `${1 + particle.height * 0.2}px`,
+                    animation: `twinkle ${1 + particle.duration * 0.5}s ease-in-out infinite`,
+                    animationDelay: `${particle.delay}s`
                   }}
                 />
               ))}
@@ -2523,18 +2591,18 @@ export default function CharacterSheet() {
 
           {vibeEffects === 'magic' && (
             <div className="absolute inset-0">
-              {[...Array(30)].map((_, i) => (
+              {effectParticles.slice(0, 30).map((particle, i) => (
                 <div
                   key={i}
                   className="absolute rounded-full"
                   style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                    width: `${10 + Math.random() * 20}px`,
-                    height: `${10 + Math.random() * 20}px`,
-                    background: `radial-gradient(circle, ${['#a855f7', '#ec4899', '#3b82f6', '#10b981'][Math.floor(Math.random() * 4)]} 0%, transparent 70%)`,
-                    animation: `float ${3 + Math.random() * 3}s ease-in-out infinite`,
-                    animationDelay: `${Math.random() * 2}s`
+                    left: `${particle.left}%`,
+                    top: `${particle.top}%`,
+                    width: `${10 + particle.width * 2}px`,
+                    height: `${10 + particle.height * 2}px`,
+                    background: `radial-gradient(circle, ${particle.color || '#a855f7'} 0%, transparent 70%)`,
+                    animation: `float ${3 + particle.duration * 1.5}s ease-in-out infinite`,
+                    animationDelay: `${particle.delay}s`
                   }}
                 />
               ))}
@@ -2543,21 +2611,21 @@ export default function CharacterSheet() {
 
           {vibeEffects === 'leaves' && (
             <div className="absolute inset-0">
-              {[...Array(40)].map((_, i) => {
+              {effectParticles.slice(0, 40).map((particle, i) => {
                 const colors = ['#d97706', '#dc2626', '#ea580c', '#92400e'];
                 return (
                   <div
                     key={i}
                     className="absolute rounded-sm"
                     style={{
-                      left: `${Math.random() * 100}%`,
-                      top: `-${Math.random() * 100}px`,
-                      width: `${8 + Math.random() * 12}px`,
-                      height: `${6 + Math.random() * 8}px`,
-                      backgroundColor: colors[Math.floor(Math.random() * colors.length)],
-                      animation: `fallSway ${3 + Math.random() * 2}s linear infinite`,
-                      animationDelay: `${Math.random() * 3}s`,
-                      transform: `rotate(${Math.random() * 360}deg)`
+                      left: `${particle.left}%`,
+                      top: `-${particle.top}px`,
+                      width: `${8 + particle.width}px`,
+                      height: `${6 + particle.height * 0.8}px`,
+                      backgroundColor: particle.color || colors[i % colors.length],
+                      animation: `fallSway ${3 + particle.duration}s linear infinite`,
+                      animationDelay: `${particle.delay}s`,
+                      transform: `rotate(${particle.rotation}deg)`
                     }}
                   />
                 );
@@ -2567,21 +2635,22 @@ export default function CharacterSheet() {
 
           {vibeEffects === 'embers' && (
             <div className="absolute inset-0">
-              {[...Array(30)].map((_, i) => {
-                const colors = ['#ef4444', '#f97316', '#fbbf24'];
+              {effectParticles.slice(0, 30).map((particle, i) => {
+                const colors = ['#dc2626', '#ea580c', '#f97316', '#fb923c', '#fbbf24', '#fcd34d'];
+                const emberColor = colors[i % colors.length];
                 return (
                   <div
                     key={i}
                     className="absolute rounded-full"
                     style={{
-                      left: `${Math.random() * 100}%`,
-                      bottom: `-${Math.random() * 50}px`,
-                      width: `${3 + Math.random() * 5}px`,
-                      height: `${3 + Math.random() * 5}px`,
-                      backgroundColor: colors[Math.floor(Math.random() * colors.length)],
-                      boxShadow: `0 0 ${8 + Math.random() * 8}px ${colors[Math.floor(Math.random() * colors.length)]}`,
-                      animation: `rise ${4 + Math.random() * 3}s ease-in infinite`,
-                      animationDelay: `${Math.random() * 2}s`
+                      left: `${particle.left}%`,
+                      bottom: `-${particle.top * 0.5}px`,
+                      width: `${3 + particle.width * 0.5}px`,
+                      height: `${3 + particle.height * 0.5}px`,
+                      backgroundColor: emberColor,
+                      boxShadow: `0 0 ${8 + particle.width}px ${emberColor}`,
+                      animation: `rise ${4 + particle.duration}s ease-in infinite`,
+                      animationDelay: `${particle.delay}s`
                     }}
                   />
                 );
@@ -2591,17 +2660,17 @@ export default function CharacterSheet() {
 
           {vibeEffects === 'ash' && (
             <div className="absolute inset-0">
-              {[...Array(50)].map((_, i) => (
+              {effectParticles.slice(0, 50).map((particle, i) => (
                 <div
                   key={i}
                   className="absolute bg-gray-600 rounded-sm"
                   style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `-${Math.random() * 100}px`,
-                    width: `${2 + Math.random() * 4}px`,
-                    height: `${2 + Math.random() * 4}px`,
-                    animation: `fallSway ${3 + Math.random() * 3}s linear infinite`,
-                    animationDelay: `${Math.random() * 3}s`,
+                    left: `${particle.left}%`,
+                    top: `-${particle.top}px`,
+                    width: `${2 + particle.width * 0.4}px`,
+                    height: `${2 + particle.height * 0.4}px`,
+                    animation: `fallSway ${3 + particle.duration}s linear infinite`,
+                    animationDelay: `${particle.delay}s`,
                     opacity: 0.6
                   }}
                 />
@@ -2648,7 +2717,7 @@ export default function CharacterSheet() {
             opacity: 1;
           }
           50% {
-            transform: translateY(-50vh) translateX(${Math.random() > 0.5 ? '' : '-'}20px);
+            transform: translateY(-50vh) translateX(20px);
             opacity: 0.8;
           }
           100% {
@@ -2692,22 +2761,33 @@ export default function CharacterSheet() {
                     <div className="text-sm text-gray-400">Level</div>
                   </div>
 
-                  {/* Character Portrait */}
-                  <div className={`w-24 h-24 ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-400'} rounded-lg border-2 flex items-center justify-center overflow-hidden`}>
-                    {statsImage ? (
-                      <img
-                        src={statsImage}
-                        alt="Character portrait"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-lg text-gray-400">IMG</span>
-                    )}
+                  {/* Character Portrait with Frame */}
+                  <div className="relative">
+                    <div className={`absolute inset-0 ${isDarkMode ? 'bg-gradient-to-br from-orange-500 to-amber-600' : 'bg-gradient-to-br from-orange-400 to-amber-500'} rounded-lg blur-sm opacity-40`}></div>
+                    <div className={`relative w-32 h-32 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} rounded-lg p-1`}>
+                      <div className={`w-full h-full ${isDarkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-gray-300'} rounded-md border-2 flex items-center justify-center overflow-hidden`}>
+                        {statsImage ? (
+                          <img
+                            src={statsImage}
+                            alt="Character portrait"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-2xl text-gray-400">IMG</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Character Info */}
                   <div className="flex flex-col justify-center">
-                    <h1 className="text-2xl font-bold text-orange-400 mb-1">{character.name}</h1>
+                    <input
+                      type="text"
+                      value={character.name}
+                      onChange={(e) => setCharacter({ ...character, name: e.target.value })}
+                      className={`text-2xl font-bold text-orange-400 mb-1 bg-transparent border-b-2 border-transparent hover:border-orange-400/30 focus:border-orange-400 focus:outline-none transition-colors`}
+                      placeholder="Character Name"
+                    />
                     <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       {character.race} {character.class} • {character.alignment}
                     </p>
@@ -3061,6 +3141,7 @@ export default function CharacterSheet() {
                           className={`w-full text-center border rounded px-2 py-1 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
+                          placeholder="0"
                         />
                       </div>
                     </div>
@@ -3076,6 +3157,7 @@ export default function CharacterSheet() {
                           className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
+                          placeholder="0"
                         />
                       </div>
                       <div className="text-center relative group">
@@ -3109,6 +3191,7 @@ export default function CharacterSheet() {
                           className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                           }`}
+                          placeholder="0"
                         />
                       </div>
                     </div>
@@ -3979,7 +4062,29 @@ export default function CharacterSheet() {
 
               {/* Box 1: Racial Features */}
               <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
-                <h4 className="text-base font-semibold text-blue-400 mb-3">Racial Features</h4>
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-base font-semibold text-blue-400">Racial Features</h4>
+                  <button
+                    onClick={() => {
+                      const name = prompt("Racial Feature Name:");
+                      if (!name) return;
+                      const description = prompt("Racial Feature Description:");
+                      if (description === null) return;
+
+                      setManualFeats([...manualFeats, {
+                        name,
+                        description: description || '',
+                        source: 'race'
+                      }]);
+                    }}
+                    className="text-blue-400 hover:text-blue-300 transition-colors"
+                    title="Add Custom Racial Feature"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
                   <div className="space-y-2">
                     {characterFeats.filter(feat => feat.source === 'race').map((feat, index) => (
                       <div key={index} className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} border border-blue-500/30 rounded p-2`}>
@@ -3990,7 +4095,32 @@ export default function CharacterSheet() {
                         <p className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{feat.description}</p>
                       </div>
                     ))}
-                    {characterFeats.filter(feat => feat.source === 'race').length === 0 && (
+                    {manualFeats.filter(feat => feat.source === 'race').map((feat, index) => {
+                      const manualIndex = manualFeats.findIndex(f => f === feat);
+                      return (
+                        <div key={`manual-${index}`} className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} border border-blue-500/30 rounded p-2`}>
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-sm font-medium text-blue-300">{feat.name}</span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-blue-400 bg-blue-500/20 px-1 py-0.5 rounded">Race</span>
+                              <button
+                                onClick={() => {
+                                  setManualFeats(manualFeats.filter((_, i) => i !== manualIndex));
+                                }}
+                                className="text-red-400 hover:text-red-300 transition-colors"
+                                title="Remove"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                          <p className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{feat.description}</p>
+                        </div>
+                      );
+                    })}
+                    {[...characterFeats.filter(feat => feat.source === 'race'), ...manualFeats.filter(feat => feat.source === 'race')].length === 0 && (
                       <div className="text-sm text-gray-500 italic">No racial features available</div>
                     )}
                   </div>
@@ -4594,9 +4724,9 @@ export default function CharacterSheet() {
         {activeTab === 'Spells' && (
           <div className="space-y-8">
             {/* Top Row: Spellcasting Controls and Spell Slots Side by Side */}
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6 items-start">
               {/* Left: Spellcasting Controls */}
-              <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
+              <div className={`p-6 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="grid grid-cols-2 gap-4">
                 {/* Spellcasting Ability */}
                 <div className="text-center">
@@ -4692,10 +4822,137 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
-              {/* Right: Spell Slots Tracker */}
+              {/* Right: Spell Slots / Sorcery Points Tracker */}
               <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
 
-              {Object.keys(spellSlots).length > 0 ? (
+              {character.class === 'Sorcerer' ? (
+                /* Sorcery Points System for Sorcerers */
+                <div className="space-y-4">
+                  {/* Sorcery Points Tracker */}
+                  <div className="mb-6">
+                    <h3 className={`text-lg font-bold mb-3 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>Sorcery Points</h3>
+                    <div className="flex items-center gap-4 mb-2">
+                      <div className={`flex-1 ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} rounded-full h-8 relative overflow-hidden`}>
+                        <div
+                          className="h-full transition-all duration-300"
+                          style={{
+                            width: `${character.sorceryPoints.max > 0 ? ((character.sorceryPoints.max - character.sorceryPoints.used) / character.sorceryPoints.max) * 100 : 0}%`,
+                            backgroundColor: (() => {
+                              const remaining = character.sorceryPoints.max - character.sorceryPoints.used;
+                              const percentage = character.sorceryPoints.max > 0 ? (remaining / character.sorceryPoints.max) : 0;
+                              if (percentage <= 0.25) return '#ef4444'; // red
+                              if (percentage <= 0.5) return '#f59e0b'; // orange
+                              if (percentage <= 0.75) return '#eab308'; // yellow
+                              return '#10b981'; // green
+                            })()
+                          }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} drop-shadow-md`}>
+                            {character.sorceryPoints.max - character.sorceryPoints.used} / {character.sorceryPoints.max}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setCharacter(prev => ({
+                              ...prev,
+                              sorceryPoints: {
+                                ...prev.sorceryPoints,
+                                used: Math.min(prev.sorceryPoints.max, prev.sorceryPoints.used + 1)
+                              }
+                            }));
+                          }}
+                          className={`px-3 py-1 text-sm rounded border transition-colors ${
+                            isDarkMode ? 'bg-red-600 border-red-500 text-white hover:bg-red-500' : 'bg-red-200 border-red-300 text-red-700 hover:bg-red-300'
+                          }`}
+                          disabled={character.sorceryPoints.used >= character.sorceryPoints.max}
+                        >
+                          -
+                        </button>
+                        <button
+                          onClick={() => {
+                            setCharacter(prev => ({
+                              ...prev,
+                              sorceryPoints: {
+                                ...prev.sorceryPoints,
+                                used: Math.max(0, prev.sorceryPoints.used - 1)
+                              }
+                            }));
+                          }}
+                          className={`px-3 py-1 text-sm rounded border transition-colors ${
+                            isDarkMode ? 'bg-green-600 border-green-500 text-white hover:bg-green-500' : 'bg-green-200 border-green-300 text-green-700 hover:bg-green-300'
+                          }`}
+                          disabled={character.sorceryPoints.used <= 0}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} italic`}>
+                      You regain all expended Sorcery Points on a long rest.
+                    </p>
+                  </div>
+
+                  {/* Spell Cost Table */}
+                  <div>
+                    <h4 className={`text-sm font-bold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Sorcery Point Costs</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className={`p-3 rounded border ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-300'}`}>
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className={`border-b ${isDarkMode ? 'border-slate-500' : 'border-gray-400'}`}>
+                              <th className={`text-left py-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Spell Level</th>
+                              <th className={`text-right py-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Points</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr><td className={`py-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Cantrip</td><td className={`text-right ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>0</td></tr>
+                            <tr><td className={`py-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>1st</td><td className={`text-right ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>2</td></tr>
+                            <tr><td className={`py-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>2nd</td><td className={`text-right ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>3</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className={`p-3 rounded border ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-300'}`}>
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className={`border-b ${isDarkMode ? 'border-slate-500' : 'border-gray-400'}`}>
+                              <th className={`text-left py-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Spell Level</th>
+                              <th className={`text-right py-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Points</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr><td className={`py-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>3rd</td><td className={`text-right ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>5</td></tr>
+                            <tr><td className={`py-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>4th</td><td className={`text-right ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>6</td></tr>
+                            <tr><td className={`py-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>5th</td><td className={`text-right ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>7</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Long Rest Button */}
+                  <div className="flex gap-2 justify-end mt-4">
+                    <button
+                      onClick={() => {
+                        setCharacter(prev => ({
+                          ...prev,
+                          sorceryPoints: {
+                            ...prev.sorceryPoints,
+                            used: 0
+                          }
+                        }));
+                      }}
+                      className={`px-3 py-1 text-xs rounded border transition-colors ${
+                        isDarkMode ? 'bg-green-600 border-green-500 text-white hover:bg-green-500' : 'bg-green-200 border-green-300 text-green-700 hover:bg-green-300'
+                      }`}
+                    >
+                      Long Rest (Restore All)
+                    </button>
+                  </div>
+                </div>
+              ) : Object.keys(spellSlots).length > 0 ? (
                 <div className="flex items-start gap-4">
                   {/* Vertical Label */}
                   <div className={`flex flex-col items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm font-bold mt-8`}>
@@ -6431,6 +6688,128 @@ export default function CharacterSheet() {
                     </select>
                   </div>
                 </div>
+
+                {/* Sorcery Points */}
+                <div className={`mt-6 pt-6 border-t ${isDarkMode ? 'border-slate-600' : 'border-gray-300'} ${character.class !== 'Sorcerer' ? 'opacity-50' : ''}`}>
+                  <h3 className="text-lg font-semibold text-orange-400 mb-2">Sorcery Points</h3>
+                  <div className={`text-xs mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Maximum Sorcery Points (for Sorcerer class)
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Max Points</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={character.sorceryPoints.max}
+                      onChange={(e) => {
+                        const newMax = parseInt(e.target.value) || 0;
+                        setCharacter(prev => ({
+                          ...prev,
+                          sorceryPoints: {
+                            ...prev.sorceryPoints,
+                            max: newMax,
+                            used: Math.min(prev.sorceryPoints.used, newMax)
+                          }
+                        }));
+                      }}
+                      disabled={character.class !== 'Sorcerer'}
+                      className={`w-16 text-center text-sm border rounded px-2 py-1 ${
+                        character.class !== 'Sorcerer'
+                          ? isDarkMode
+                            ? 'bg-slate-800 border-slate-700 text-gray-600 cursor-not-allowed'
+                            : 'bg-gray-200 border-gray-400 text-gray-500 cursor-not-allowed'
+                          : isDarkMode
+                          ? 'bg-slate-700 border-slate-600 text-white'
+                          : 'bg-gray-100 border-gray-300 text-gray-900'
+                      }`}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                {/* Skill Bonuses */}
+                <div className={`mt-6 pt-6 border-t ${isDarkMode ? 'border-slate-600' : 'border-gray-300'}`}>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-semibold text-orange-400">Skill Bonuses</h3>
+                    <button
+                      onClick={() => {
+                        setSkillBonuses([...skillBonuses, { skill: 'Acrobatics', bonus: 0 }]);
+                      }}
+                      className="text-orange-400 hover:text-orange-300 transition-colors"
+                      title="Add Skill Bonus"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className={`text-xs mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Add bonuses to specific skills (e.g., Custom Lineage skill proficiency)
+                  </div>
+                  <div className="space-y-2">
+                    {skillBonuses.map((sb, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <select
+                          value={sb.skill}
+                          onChange={(e) => {
+                            const newBonuses = [...skillBonuses];
+                            newBonuses[index].skill = e.target.value;
+                            setSkillBonuses(newBonuses);
+                          }}
+                          className={`flex-1 min-w-0 text-sm border rounded px-2 py-1 ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
+                          }`}
+                        >
+                          <option value="Acrobatics">Acrobatics</option>
+                          <option value="Animal Handling">Animal Handling</option>
+                          <option value="Arcana">Arcana</option>
+                          <option value="Athletics">Athletics</option>
+                          <option value="Deception">Deception</option>
+                          <option value="History">History</option>
+                          <option value="Insight">Insight</option>
+                          <option value="Intimidation">Intimidation</option>
+                          <option value="Investigation">Investigation</option>
+                          <option value="Medicine">Medicine</option>
+                          <option value="Nature">Nature</option>
+                          <option value="Perception">Perception</option>
+                          <option value="Performance">Performance</option>
+                          <option value="Persuasion">Persuasion</option>
+                          <option value="Religion">Religion</option>
+                          <option value="Sleight of Hand">Sleight of Hand</option>
+                          <option value="Stealth">Stealth</option>
+                          <option value="Survival">Survival</option>
+                        </select>
+                        <input
+                          type="number"
+                          value={sb.bonus}
+                          onChange={(e) => {
+                            const newBonuses = [...skillBonuses];
+                            newBonuses[index].bonus = parseInt(e.target.value) || 0;
+                            setSkillBonuses(newBonuses);
+                          }}
+                          className={`w-14 flex-shrink-0 text-center text-sm border rounded px-1 py-1 ${
+                            isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="0"
+                        />
+                        <button
+                          onClick={() => {
+                            setSkillBonuses(skillBonuses.filter((_, i) => i !== index));
+                          }}
+                          className="flex-shrink-0 text-red-400 hover:text-red-300 transition-colors"
+                          title="Remove"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                    {skillBonuses.length === 0 && (
+                      <div className="text-sm text-gray-500 italic">No skill bonuses added</div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Column 2: Speed, Hit Die, Initiative */}
@@ -6810,7 +7189,7 @@ export default function CharacterSheet() {
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Vibe Effects</h3>
                   <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-3`}>Select an ambiance effect for your adventure.</p>
                   <div className="space-y-2 mb-4">
-                    {['none', 'rain', 'snow', 'fog', 'stars', 'magic', 'leaves', 'embers', 'ash'].map((effect) => (
+                    {['none', 'rain', 'snow', 'stars', 'magic', 'leaves', 'embers', 'ash'].map((effect) => (
                       <label key={effect} className="flex items-center cursor-pointer">
                         <input
                           type="radio"
@@ -6977,7 +7356,7 @@ export default function CharacterSheet() {
                         <input
                           type="range"
                           min="0"
-                          max="20"
+                          max="10"
                           step="1"
                           value={backgroundBlur}
                           onChange={(e) => setBackgroundBlur(parseInt(e.target.value))}
