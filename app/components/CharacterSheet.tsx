@@ -11,7 +11,7 @@ const DND_CLASSES = [
   'Fighter',
   'Monk',
   'Paladin',
-  'Ranger (*LL Alt)',
+  'Ranger',
   'Rogue',
   'Sorcerer',
   'Warlock',
@@ -215,7 +215,7 @@ const CLASS_HIT_DICE: { [key: string]: string } = {
   'Fighter': 'd10',
   'Monk': 'd8',
   'Paladin': 'd10',
-  'Ranger (*LL Alt)': 'd10',
+  'Ranger': 'd10',
   'Rogue': 'd8',
   'Sorcerer': 'd6',
   'Warlock': 'd8',
@@ -228,7 +228,7 @@ const CLASS_SPELLCASTING_ABILITY: { [key: string]: string } = {
   'Cleric': 'wisdom',
   'Druid': 'wisdom',
   'Paladin': 'charisma',
-  'Ranger (*LL Alt)': 'wisdom',
+  'Ranger': 'wisdom',
   'Sorcerer': 'charisma',
   'Warlock': 'charisma',
   'Wizard': 'intelligence',
@@ -965,6 +965,14 @@ export default function CharacterSheet() {
     magicalAttire: { item1: 'None', item2: 'None', plus: '', notches: '', karuta: '' }
   });
 
+  // Proficiencies state
+  const [proficiencies, setProficiencies] = useState({
+    armor: [] as string[],
+    weapons: [] as string[],
+    tools: [] as string[],
+    languages: [] as string[]
+  });
+
   // Image state
   const [statsImage, setStatsImage] = useState<string>('');
   const [backgroundImage, setBackgroundImage] = useState<string>('');
@@ -1336,6 +1344,16 @@ export default function CharacterSheet() {
         setSkillBonuses(JSON.parse(savedSkillBonuses));
       } catch (error) {
         console.warn('Failed to load skill bonuses from localStorage:', error);
+      }
+    }
+
+    // Load proficiencies from localStorage
+    const savedProficiencies = localStorage.getItem('dnd-proficiencies');
+    if (savedProficiencies) {
+      try {
+        setProficiencies(JSON.parse(savedProficiencies));
+      } catch (error) {
+        console.warn('Failed to load proficiencies from localStorage:', error);
       }
     }
 
@@ -1719,7 +1737,7 @@ export default function CharacterSheet() {
         selectedSpellClass === 'All Classes';
 
       // Laserllama Alternate Ranger gets access to Ranger spells + expanded spell list
-      if (selectedSpellClass === 'Ranger (*LL Alt)') {
+      if (selectedSpellClass === 'Ranger') {
         classMatch = classMatch ||
           (spell.Classes && spell.Classes.includes('Ranger')) ||
           (spell.classes && spell.classes.includes('Ranger')) ||
@@ -1868,7 +1886,7 @@ export default function CharacterSheet() {
         19: [4, 3, 3, 3, 2, 0, 0, 0, 0],
         20: [4, 3, 3, 3, 2, 0, 0, 0, 0]
       },
-      'Ranger (*LL Alt)': {
+      'Ranger': {
         1: [1, 0, 0, 0, 0, 0, 0, 0, 0],
         2: [2, 0, 0, 0, 0, 0, 0, 0, 0],
         3: [3, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -1944,7 +1962,7 @@ export default function CharacterSheet() {
     }
 
     // Alternate Rangers start casting at level 1
-    if (characterClass === 'Ranger (*LL Alt)') {
+    if (characterClass === 'Ranger') {
       if (level >= 1) accessibleLevels.push(1);
       if (level >= 5) accessibleLevels.push(2);
       if (level >= 9) accessibleLevels.push(3);
@@ -2255,6 +2273,14 @@ export default function CharacterSheet() {
       console.warn('Failed to save armor to localStorage:', error);
     }
   }, [armor]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-proficiencies', JSON.stringify(proficiencies));
+    } catch (error) {
+      console.warn('Failed to save proficiencies to localStorage:', error);
+    }
+  }, [proficiencies]);
 
   // Save resource tracking data to localStorage
   useEffect(() => {
@@ -2677,6 +2703,31 @@ export default function CharacterSheet() {
               ))}
             </div>
           )}
+
+          {vibeEffects === 'desert' && (
+            <div className="absolute inset-0">
+              {effectParticles.slice(0, 60).map((particle, i) => {
+                const colors = ['#d4a574', '#c19a6b', '#b8956a', '#d2b48c', '#c8ad7f'];
+                const sandColor = colors[i % colors.length];
+                return (
+                  <div
+                    key={i}
+                    className="absolute rounded-sm"
+                    style={{
+                      left: `-${particle.left * 0.5}%`,
+                      top: `${particle.top * 0.8}%`,
+                      width: `${1 + particle.width * 0.3}px`,
+                      height: `${1 + particle.height * 0.3}px`,
+                      backgroundColor: sandColor,
+                      animation: `blowSand ${2 + particle.duration * 0.5}s linear infinite`,
+                      animationDelay: `${particle.delay}s`,
+                      opacity: 0.7
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -2725,6 +2776,28 @@ export default function CharacterSheet() {
             opacity: 0;
           }
         }
+        @keyframes blowSand {
+          0% {
+            transform: translateX(0) translateY(0);
+            opacity: 0.3;
+          }
+          25% {
+            transform: translateX(30vw) translateY(-10px);
+            opacity: 0.7;
+          }
+          50% {
+            transform: translateX(60vw) translateY(5px);
+            opacity: 0.9;
+          }
+          75% {
+            transform: translateX(90vw) translateY(-5px);
+            opacity: 0.6;
+          }
+          100% {
+            transform: translateX(120vw) translateY(0);
+            opacity: 0;
+          }
+        }
       `}</style>
 
       <div className="relative z-10">
@@ -2751,7 +2824,7 @@ export default function CharacterSheet() {
         {activeTab === 'Stats' && (
           <div className="space-y-8">
             {/* Character Header Section */}
-            <div className={`${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'} border-2 border-orange-500 rounded-lg p-6`}>
+            <div className={`${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'} border-2 border-orange-500 rounded-lg p-3`}>
               <div className="grid grid-cols-2 gap-8">
                 {/* Left Column - Level, Portrait & Character Info */}
                 <div className="flex items-center gap-6">
@@ -2795,7 +2868,7 @@ export default function CharacterSheet() {
                 </div>
 
                 {/* Right Column - Ability Scores */}
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex items-center justify-end gap-2 h-32">
                   {Object.entries(character.abilityScores).map(([ability, score], index) => {
                     const finalScore = getFinalAbilityScore(ability);
                     const asiBonus = getAsiBonus(ability);
@@ -3134,7 +3207,7 @@ export default function CharacterSheet() {
                         <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Temp HP</div>
                         <input
                           type="number"
-                          value={character.hitPoints.temporary}
+                          value={character.hitPoints.temporary || ''}
                           onChange={(e) => updateCharacter({
                             hitPoints: { ...character.hitPoints, temporary: parseInt(e.target.value) || 0 }
                           })}
@@ -3152,7 +3225,7 @@ export default function CharacterSheet() {
                         <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Hit Dice</div>
                         <input
                           type="number"
-                          value={currentHitDice}
+                          value={currentHitDice || ''}
                           onChange={(e) => setCurrentHitDice(parseInt(e.target.value) || 0)}
                           className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
@@ -3186,7 +3259,7 @@ export default function CharacterSheet() {
                         <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Reduction</div>
                         <input
                           type="number"
-                          value={damageReduction}
+                          value={damageReduction || ''}
                           onChange={(e) => setDamageReduction(parseInt(e.target.value) || 0)}
                           className={`w-full text-center border rounded px-2 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                             isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
@@ -4286,37 +4359,36 @@ export default function CharacterSheet() {
         {/* Character Tab */}
         {activeTab === 'Character' && (
           <div className={`min-h-screen p-8 font-serif ${isDarkMode ? 'bg-slate-900 text-stone-200' : 'bg-gray-200 text-stone-800'}`}>
-            {/* Decorative Header */}
-            <div className={`text-center border-b-2 border-t-2 py-6 ${isDarkMode ? 'border-orange-400' : 'border-stone-400'}`}>
-              <div className="mb-3">
-                <textarea
-                  value={character.backstory.personalityTraits || "I am eager to learn new things and ask many questions. I speak in metaphors and parables."}
-                  onChange={(e) => updateCharacter({
-                    backstory: { ...character.backstory, personalityTraits: e.target.value }
-                  })}
-                  className={`w-full bg-transparent italic text-lg text-center border-none outline-none resize-none ${isDarkMode ? 'text-stone-300' : 'text-stone-600'} placeholder-stone-400`}
-                  placeholder="Character description..."
-                  rows={2}
-                />
-              </div>
-              <h1 className="text-6xl font-extrabold tracking-wider mb-4 font-serif">
-                {character.trueName?.toUpperCase() || 'CHARACTER NAME'}
-              </h1>
-              <div className={`py-1 px-3 inline-block rounded shadow-lg ${isDarkMode ? 'bg-orange-600 text-white' : 'bg-red-700 text-white'}`}>
-                <input
-                  type="text"
-                  value={character.mantra || 'Knowledge is the greatest treasure'}
-                  onChange={(e) => updateCharacter({ mantra: e.target.value })}
-                  className="bg-transparent font-semibold text-lg text-center border-none outline-none text-white placeholder-white/70"
-                  placeholder="Character mantra or quote"
-                />
-              </div>
-            </div>
-
-            {/* Bio + Character Image Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mt-12">
-              {/* Bio Text and Profile Details */}
+            {/* Top Section: Header + Bio on Left, Portrait on Right */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+              {/* Left Column: Header + Bio */}
               <div className="md:col-span-2 space-y-8">
+                {/* Decorative Header */}
+                <div className={`text-center border-b-2 border-t-2 py-6 ${isDarkMode ? 'border-orange-400' : 'border-stone-400'}`}>
+                  <div className="mb-3">
+                    <textarea
+                      value={character.backstory.personalityTraits || "I am eager to learn new things and ask many questions. I speak in metaphors and parables."}
+                      onChange={(e) => updateCharacter({
+                        backstory: { ...character.backstory, personalityTraits: e.target.value }
+                      })}
+                      className={`w-full bg-transparent italic text-lg text-center border-none outline-none resize-none ${isDarkMode ? 'text-stone-300' : 'text-stone-600'} placeholder-stone-400`}
+                      placeholder="Character description..."
+                      rows={2}
+                    />
+                  </div>
+                  <h1 className="text-6xl font-extrabold tracking-wider mb-4 font-serif">
+                    {character.trueName?.toUpperCase() || 'CHARACTER NAME'}
+                  </h1>
+                  <div className={`py-1 px-3 inline-block rounded shadow-lg ${isDarkMode ? 'bg-orange-600 text-white' : 'bg-red-700 text-white'}`}>
+                    <input
+                      type="text"
+                      value={character.mantra || 'Knowledge is the greatest treasure'}
+                      onChange={(e) => updateCharacter({ mantra: e.target.value })}
+                      className="bg-transparent font-semibold text-lg text-center border-none outline-none text-white placeholder-white/70"
+                      placeholder="Character mantra or quote"
+                    />
+                  </div>
+                </div>
                 {/* Bio Text */}
                 <div className="leading-relaxed text-sm space-y-3">
                   <div className="prose prose-sm max-w-none">
@@ -4332,7 +4404,104 @@ export default function CharacterSheet() {
                     />
                   </div>
                 </div>
+              </div>
 
+              {/* Character Portrait */}
+              <div className={`rounded-lg shadow-2xl overflow-hidden border-4 w-full ${isDarkMode ? 'border-orange-400 bg-slate-800' : 'border-stone-300 bg-gray-100'}`}>
+                {characterImage ? (
+                  <img
+                    src={characterImage}
+                    alt="Character portrait"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className={`w-full h-full min-h-[500px] flex items-center justify-center ${isDarkMode ? 'bg-slate-700 text-stone-400' : 'bg-stone-200 text-stone-500'}`}>
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">⚔️</div>
+                      <p className="text-sm">Portrait Place Holder</p>
+                      <p className="text-xs mt-2">Upload in the Data Tab</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Section: Proficiencies on Left, Profile Details & Ability Scores on Right */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+              {/* Left Column: Proficiencies & Languages */}
+              <div>
+                {/* Proficiencies & Languages Section */}
+                <div className={`border-2 rounded-lg shadow-xl p-4 ${isDarkMode ? 'bg-slate-800 border-slate-600' : 'bg-gray-100 border-stone-300'}`}>
+                  <h3 className={`text-lg font-bold mb-4 ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>
+                    Proficiencies & Languages
+                  </h3>
+
+                  <div className="space-y-4 text-sm">
+                    {/* Armor Proficiencies */}
+                    <div>
+                      <label className={`font-bold block mb-2 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>Armor</label>
+                      <textarea
+                        value={proficiencies.armor.join(', ')}
+                        onChange={(e) => setProficiencies({
+                          ...proficiencies,
+                          armor: e.target.value.split(',').map(s => s.trim()).filter(s => s)
+                        })}
+                        className={`w-full px-3 py-2 rounded border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-stone-300 text-stone-800'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                        placeholder="Light armor, Medium armor, Shields"
+                        rows={2}
+                      />
+                    </div>
+
+                    {/* Weapon Proficiencies */}
+                    <div>
+                      <label className={`font-bold block mb-2 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>Weapons</label>
+                      <textarea
+                        value={proficiencies.weapons.join(', ')}
+                        onChange={(e) => setProficiencies({
+                          ...proficiencies,
+                          weapons: e.target.value.split(',').map(s => s.trim()).filter(s => s)
+                        })}
+                        className={`w-full px-3 py-2 rounded border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-stone-300 text-stone-800'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                        placeholder="Simple weapons, Martial weapons"
+                        rows={2}
+                      />
+                    </div>
+
+                    {/* Tool Proficiencies */}
+                    <div>
+                      <label className={`font-bold block mb-2 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>Tools</label>
+                      <textarea
+                        value={proficiencies.tools.join(', ')}
+                        onChange={(e) => setProficiencies({
+                          ...proficiencies,
+                          tools: e.target.value.split(',').map(s => s.trim()).filter(s => s)
+                        })}
+                        className={`w-full px-3 py-2 rounded border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-stone-300 text-stone-800'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                        placeholder="Thieves' tools, Herbalism kit"
+                        rows={2}
+                      />
+                    </div>
+
+                    {/* Languages */}
+                    <div>
+                      <label className={`font-bold block mb-2 ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>Languages</label>
+                      <textarea
+                        value={proficiencies.languages.join(', ')}
+                        onChange={(e) => setProficiencies({
+                          ...proficiencies,
+                          languages: e.target.value.split(',').map(s => s.trim()).filter(s => s)
+                        })}
+                        className={`w-full px-3 py-2 rounded border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-stone-300 text-stone-800'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                        placeholder="Common, Elvish, Draconic"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Profile Details & Ability Scores */}
+              <div className="md:col-span-2 space-y-8">
                 {/* Profile Details Section */}
                 <div className={`border-2 p-6 rounded-lg shadow-xl ${isDarkMode ? 'bg-slate-800 border-slate-600' : 'bg-gray-100 border-stone-300'}`}>
 
@@ -4401,10 +4570,10 @@ export default function CharacterSheet() {
 
                       {/* Family */}
                       <div className="flex items-center gap-2">
-                        <span className="font-bold">Family:</span>
+                        <span className="font-bold">Kin:</span>
                         <input
                           type="text"
-                          value={character.family || 'Mother'}
+                          value={character.family || 'Common, Elvish'}
                           onChange={(e) => updateCharacter({ family: e.target.value })}
                           className={`flex-1 bg-transparent outline-none ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}
                         />
@@ -4694,28 +4863,6 @@ export default function CharacterSheet() {
                   </div>
                 </div>
               </div>
-
-              {/* Attack Field - Full Height */}
-              <div className="flex justify-center items-start">
-                <div className={`rounded-lg shadow-2xl overflow-hidden border-4 w-full ${isDarkMode ? 'border-orange-400 bg-slate-800' : 'border-stone-300 bg-gray-100'}`}>
-                  {characterImage ? (
-                    <img
-                      src={characterImage}
-                      alt="Character portrait"
-                      className="w-full h-full object-cover min-h-[600px]"
-                    />
-                  ) : (
-                    <div className={`w-full h-[600px] flex items-center justify-center ${isDarkMode ? 'bg-slate-700 text-stone-400' : 'bg-stone-200 text-stone-500'}`}>
-                      <div className="text-center">
-                        <div className="text-6xl mb-4">⚔️</div>
-                        <p className="text-sm">Portrait Place Holder</p>
-                        <p className="text-xs mt-2">Upload in the Data Tab</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
             </div>
           </div>
         )}
@@ -5536,7 +5683,7 @@ export default function CharacterSheet() {
                     <option value="Cleric">Cleric</option>
                     <option value="Druid">Druid</option>
                     <option value="Paladin">Paladin</option>
-                    <option value="Ranger (*LL Alt)">Ranger (*LL Alt)</option>
+                    <option value="Ranger">Ranger</option>
                     <option value="Sorcerer">Sorcerer</option>
                     <option value="Warlock">Warlock</option>
                     <option value="Wizard">Wizard</option>
@@ -5701,77 +5848,116 @@ export default function CharacterSheet() {
             {/* Row 1: Top 5 Boxes */}
             <div className="grid grid-cols-5 gap-4">
               
-              {/* 1. Encumbrance Box */}
-              <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
-                <div className="grid grid-cols-3 gap-2 text-center text-sm mb-3">
-                  <div>
-                    <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>Open Slots</div>
-                    <div className={`w-full text-center text-xl font-bold border rounded px-2 py-1 text-white bg-gray-700 ${
-                      isDarkMode ? 'border-green-400' : 'border-green-400'
-                    }`}>
-                      {encumbrance.openSlots}
+              {/* 1. Survival Guide & Encumbrance Column */}
+              <div className="space-y-4">
+                <div className={`p-2 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
+                  <div className="grid grid-cols-2 gap-2 items-center">
+                    <div className={`text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Survival Guide
                     </div>
-                  </div>
-                  <div>
-                    <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>Max Slots</div>
-                    <div
-                      className={`w-full text-center text-xl font-bold border rounded px-2 py-1 text-white bg-gray-700 cursor-help ${
-                        isDarkMode ? 'border-orange-400' : 'border-orange-400'
-                      }`}
-                      title={`${carryingSize} size (${
-                        carryingSize === 'Tiny' ? '6' :
-                        carryingSize === 'Small' ? '14' :
-                        carryingSize === 'Medium' ? '18' :
-                        carryingSize === 'Large' ? '22' :
-                        carryingSize === 'Huge' ? '30' : '46'
-                      }) + STR modifier (${getModifier(character.abilityScores.strength) >= 0 ? '+' : ''}${getModifier(character.abilityScores.strength)}) = ${encumbrance.maxSlots}`}
-                    >
-                      {encumbrance.maxSlots}
-                    </div>
-                  </div>
-                  <div>
-                    <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>Your Bulk</div>
-                    <div className={`w-full text-center text-xl font-bold border rounded px-2 py-1 text-white bg-gray-700 ${
-                      isDarkMode ? 'border-blue-400' : 'border-blue-400'
-                    }`}>
-                      {encumbrance.yourBulk}
+                    <div className="text-right">
+                      <a
+                        href="https://docs.google.com/spreadsheets/d/1gMKYyf5Z2LdGhP4zDMvolMItEbtA_w6pSNoHvhgl-fY/edit?gid=1041257008#gid=1041257008"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center justify-center px-3 py-2 rounded-lg border transition-all duration-200 text-2xl ${
+                          isDarkMode
+                            ? 'bg-gradient-to-br from-orange-600 to-amber-700 hover:from-orange-500 hover:to-amber-600 border-orange-500 shadow-md hover:shadow-orange-500/30'
+                            : 'bg-gradient-to-br from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 border-orange-400 shadow-md hover:shadow-orange-400/30'
+                        }`}
+                      >
+                        📖
+                      </a>
                     </div>
                   </div>
                 </div>
-                <div className="text-center pb-8">
-                  <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Capacity:</div>
-                  {/* Health Bar Style Display */}
-                  <div className="w-full bg-gray-600 rounded-full h-4 mb-2">
-                    <div
-                      className={`h-4 rounded-full transition-all duration-300 ${
-                        encumbrance.openSlots <= 0 ? 'bg-red-500' :
-                        encumbrance.openSlots / encumbrance.maxSlots > 0.5 ? 'bg-green-500' :
-                        encumbrance.openSlots / encumbrance.maxSlots > 0.2 ? 'bg-yellow-500' :
-                        'bg-orange-500'
-                      }`}
-                      style={{
-                        width: `${Math.max(0, Math.min(100, (encumbrance.openSlots / encumbrance.maxSlots) * 100))}%`
-                      }}
-                    />
+
+                {/* Encumbrance Box */}
+                <div className={`p-2 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
+                  <div className="grid grid-cols-3 gap-1 text-center text-sm mb-2">
+                    <div>
+                      <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Open Slots</div>
+                      <div className={`w-full text-center text-lg font-bold border rounded px-1 py-1 text-white bg-gray-700 ${
+                        isDarkMode ? 'border-green-400' : 'border-green-400'
+                      }`}>
+                        {encumbrance.openSlots}
+                      </div>
+                    </div>
+                    <div>
+                      <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Max Slots</div>
+                      <div
+                        className={`w-full text-center text-lg font-bold border rounded px-1 py-1 text-white bg-gray-700 cursor-help ${
+                          isDarkMode ? 'border-orange-400' : 'border-orange-400'
+                        }`}
+                        title={`${carryingSize} size (${
+                          carryingSize === 'Tiny' ? '6' :
+                          carryingSize === 'Small' ? '14' :
+                          carryingSize === 'Medium' ? '18' :
+                          carryingSize === 'Large' ? '22' :
+                          carryingSize === 'Huge' ? '30' : '46'
+                        }) + STR modifier (${getModifier(character.abilityScores.strength) >= 0 ? '+' : ''}${getModifier(character.abilityScores.strength)}) = ${encumbrance.maxSlots}`}
+                      >
+                        {encumbrance.maxSlots}
+                      </div>
+                    </div>
+                    <div>
+                      <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Your Bulk</div>
+                      <div className={`w-full text-center text-lg font-bold border rounded px-1 py-1 text-white bg-gray-700 ${
+                        isDarkMode ? 'border-blue-400' : 'border-blue-400'
+                      }`}>
+                        {encumbrance.yourBulk}
+                      </div>
+                    </div>
                   </div>
-                  <div className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
-                    {encumbrance.openSlots >= 0
-                      ? `${Math.round((encumbrance.openSlots / encumbrance.maxSlots) * 100)}%`
-                      : `${Math.abs(encumbrance.openSlots)} over capacity (${encumbrance.yourBulk}/${encumbrance.maxSlots + Math.floor(encumbrance.maxSlots / 2)} max)`
-                    }
+                  <div className="text-center pb-8">
+                    <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>Capacity:</div>
+                    {/* Health Bar Style Display */}
+                    <div className="w-full bg-gray-600 rounded-full h-3 mb-1">
+                      <div
+                        className={`h-3 rounded-full transition-all duration-300 ${
+                          encumbrance.openSlots <= 0 ? 'bg-red-500' :
+                          encumbrance.openSlots / encumbrance.maxSlots > 0.5 ? 'bg-green-500' :
+                          encumbrance.openSlots / encumbrance.maxSlots > 0.2 ? 'bg-yellow-500' :
+                          'bg-orange-500'
+                        }`}
+                        style={{
+                          width: `${Math.max(0, Math.min(100, (encumbrance.openSlots / encumbrance.maxSlots) * 100))}%`
+                        }}
+                      />
+                    </div>
+                    <div className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                      {encumbrance.openSlots >= 0
+                        ? `${Math.round((encumbrance.openSlots / encumbrance.maxSlots) * 100)}%`
+                        : `${Math.abs(encumbrance.openSlots)} over capacity (${encumbrance.yourBulk}/${encumbrance.maxSlots + Math.floor(encumbrance.maxSlots / 2)} max)`
+                      }
+                    </div>
+                    <div className="text-center">
+                      {encumbrance.openSlots >= 0 ? (
+                        <div className={`text-sm font-semibold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                          Unencumbered
+                        </div>
+                      ) : (
+                        <div>
+                          <div
+                            className={`text-sm font-bold cursor-help ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}
+                            title="You have disadvantage on ability checks, attack rolls, and saving throws that use Strength, Dexterity, or Constitution."
+                          >
+                            Encumbered!
+                          </div>
+                          <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            Speed halved, disadvantage on STR/DEX/CON
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {encumbrance.status === 'Normal' ? 'No penalties' :
-                     encumbrance.status === 'Encumbered' ? 'Speed halved, disadvantage on STR/DEX/CON' :
-                     'At absolute maximum capacity - cannot carry more'}
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <h3 className="text-sm font-bold text-gray-400">Encumbrance</h3>
                   </div>
-                </div>
-                <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <h3 className="text-sm font-bold text-gray-400">Encumbrance</h3>
                 </div>
               </div>
 
-              {/* 2. Purse Box */}
+              {/* 3. Purse Box */}
               <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
@@ -5790,7 +5976,7 @@ export default function CharacterSheet() {
                             <input
                               type="number"
                               min="0"
-                              value={data.amount}
+                              value={data.amount || ''}
                               onChange={(e) => setPurse({
                                 ...purse,
                                 [coinType]: { ...data, amount: parseInt(e.target.value) || 0 }
@@ -5798,6 +5984,7 @@ export default function CharacterSheet() {
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
+                              placeholder="0"
                             />
                           </td>
                           <td className="py-1 text-center">
@@ -5826,14 +6013,14 @@ export default function CharacterSheet() {
                 </div>
                 <div className="mt-2 text-center pb-8">
                   <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Bulk = {calculatePurseBulk()}</div>
-                  <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Value = {calculateTotalValue().toFixed(1)} SP</div>
+                  <div className={`text-lg font-bold ${isDarkMode ? 'text-orange-400' : 'text-orange-600'} mt-2`}>Total = {calculateTotalValue().toFixed(1)} SP</div>
                 </div>
                 <div className="absolute bottom-2 left-0 right-0 text-center">
                   <h3 className="text-sm font-bold text-gray-400">Purse</h3>
                 </div>
               </div>
 
-              {/* 3. Ration Box */}
+              {/* 4. Ration Box */}
               <div className="space-y-4">
                 <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="space-y-2 pb-8">
@@ -5846,29 +6033,36 @@ export default function CharacterSheet() {
                       <input
                         type="number"
                         min="0"
-                        value={rationBox.boxes}
-                        onChange={(e) => setRationBox({...rationBox, boxes: parseInt(e.target.value) || 0})}
+                        value={rationBox.boxes || ''}
+                        onChange={(e) => {
+                          const boxes = parseInt(e.target.value) || 0;
+                          const totalBulk = boxes < 1 ? 0 : boxes - 1;
+                          setRationBox({...rationBox, boxes, totalBulk});
+                        }}
                         className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
+                        placeholder="0"
                       />
                       <input
                         type="number"
                         min="0"
-                        value={rationBox.rations}
+                        value={rationBox.rations || ''}
                         onChange={(e) => setRationBox({...rationBox, rations: parseInt(e.target.value) || 0})}
                         className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
+                        placeholder="0"
                       />
                       <input
                         type="number"
                         min="0"
-                        value={rationBox.totalBulk}
-                        onChange={(e) => setRationBox({...rationBox, totalBulk: parseInt(e.target.value) || 0})}
-                        className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
+                        value={rationBox.totalBulk || ''}
+                        readOnly
+                        className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-not-allowed ${
+                          isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-300' : 'bg-gray-200 border-gray-400 text-gray-700'
                         }`}
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -5877,7 +6071,7 @@ export default function CharacterSheet() {
                   </div>
                 </div>
 
-                {/* 4. Waterskin Box (beneath Ration Box) */}
+                {/* 5. Waterskin Box (beneath Ration Box) */}
                 <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="space-y-2 pb-8">
                     <div className={`grid grid-cols-3 gap-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-center`}>
@@ -5889,29 +6083,36 @@ export default function CharacterSheet() {
                       <input
                         type="number"
                         min="0"
-                        value={waterskinBox.skins}
-                        onChange={(e) => setWaterskinBox({...waterskinBox, skins: parseInt(e.target.value) || 0})}
+                        value={waterskinBox.skins || ''}
+                        onChange={(e) => {
+                          const skins = parseInt(e.target.value) || 0;
+                          const totalBulk = skins < 1 ? 0 : skins - 1;
+                          setWaterskinBox({...waterskinBox, skins, totalBulk});
+                        }}
                         className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
+                        placeholder="0"
                       />
                       <input
                         type="number"
                         min="0"
-                        value={waterskinBox.rations}
+                        value={waterskinBox.rations || ''}
                         onChange={(e) => setWaterskinBox({...waterskinBox, rations: parseInt(e.target.value) || 0})}
                         className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
+                        placeholder="0"
                       />
                       <input
                         type="number"
                         min="0"
-                        value={waterskinBox.totalBulk}
-                        onChange={(e) => setWaterskinBox({...waterskinBox, totalBulk: parseInt(e.target.value) || 0})}
-                        className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
+                        value={waterskinBox.totalBulk || ''}
+                        readOnly
+                        className={`w-full text-center text-xs border rounded px-1 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-not-allowed ${
+                          isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-300' : 'bg-gray-200 border-gray-400 text-gray-700'
                         }`}
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -5921,7 +6122,7 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
-              {/* 5. Magical Containers Box */}
+              {/* 6. Magical Containers Box */}
               <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
@@ -6009,7 +6210,7 @@ export default function CharacterSheet() {
                 </div>
               </div>
 
-              {/* 6. Purchase Calculator Box */}
+              {/* 7. Purchase Calculator Box */}
               <div className={`p-4 rounded-lg border relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
@@ -6028,7 +6229,7 @@ export default function CharacterSheet() {
                             <input
                               type="number"
                               min="0"
-                              value={data.purchase}
+                              value={data.purchase || ''}
                               onChange={(e) => setPurchaseCalculator({
                                 ...purchaseCalculator,
                                 [coinType]: { ...data, purchase: parseInt(e.target.value) || 0 }
@@ -6036,6 +6237,7 @@ export default function CharacterSheet() {
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
+                              placeholder="0"
                             />
                           </td>
                           <td className="py-1 text-center text-gray-300">{data.after}</td>
@@ -6169,7 +6371,7 @@ export default function CharacterSheet() {
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                value={equippedItem.valueSP}
+                                value={equippedItem.valueSP || ''}
                                 onChange={(e) => {
                                   const newItems = [...equippedItems];
                                   newItems[index].valueSP = parseFloat(e.target.value) || 0;
@@ -6178,6 +6380,7 @@ export default function CharacterSheet() {
                                 className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                   isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
+                                placeholder="0"
                               />
                             </td>
                             <td className="py-1">
@@ -6185,7 +6388,7 @@ export default function CharacterSheet() {
                                 type="number"
                                 min="0"
                                 step="0.1"
-                                value={equippedItem.bulk}
+                                value={equippedItem.bulk || ''}
                                 onChange={(e) => {
                                   const newItems = [...equippedItems];
                                   newItems[index].bulk = parseFloat(e.target.value) || 0;
@@ -6194,6 +6397,7 @@ export default function CharacterSheet() {
                                 className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                   isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
+                                placeholder="0"
                               />
                             </td>
                             <td className="py-1 text-center">
@@ -6273,7 +6477,7 @@ export default function CharacterSheet() {
                                 type="number"
                                 min="0"
                                 step="0.1"
-                                value={storageItem.bulk}
+                                value={storageItem.bulk || ''}
                                 onChange={(e) => {
                                   const newItems = [...externalStorage];
                                   newItems[index].bulk = parseFloat(e.target.value) || 0;
@@ -6282,6 +6486,7 @@ export default function CharacterSheet() {
                                 className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                   isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                                 }`}
+                                placeholder="0"
                               />
                             </td>
                             <td className="py-1">
@@ -6462,7 +6667,7 @@ export default function CharacterSheet() {
                             <input
                               type="number"
                               min="0"
-                              value={inventoryItem.amount}
+                              value={inventoryItem.amount || ''}
                               onChange={(e) => {
                                 const newItems = [...inventoryItems];
                                 newItems[index].amount = parseInt(e.target.value) || 0;
@@ -6480,7 +6685,7 @@ export default function CharacterSheet() {
                               type="number"
                               min="0"
                               step="0.01"
-                              value={inventoryItem.valueSP}
+                              value={inventoryItem.valueSP || ''}
                               onChange={(e) => {
                                 const newItems = [...inventoryItems];
                                 newItems[index].valueSP = parseFloat(e.target.value) || 0;
@@ -6489,6 +6694,7 @@ export default function CharacterSheet() {
                               className={`w-12 text-center text-xs border rounded px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                 isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                               }`}
+                              placeholder="0"
                             />
                           </td>
                           <td className="py-1">
@@ -6496,7 +6702,7 @@ export default function CharacterSheet() {
                               type="number"
                               min="0"
                               step="0.1"
-                              value={inventoryItem.bulk}
+                              value={inventoryItem.bulk || ''}
                               onChange={(e) => {
                                 const newItems = [...inventoryItems];
                                 newItems[index].bulk = parseFloat(e.target.value) || 0;
@@ -7188,8 +7394,8 @@ export default function CharacterSheet() {
                 <div className={`p-4 rounded-lg border h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <h3 className="text-lg font-semibold text-orange-400 mb-2">Vibe Effects</h3>
                   <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-3`}>Select an ambiance effect for your adventure.</p>
-                  <div className="space-y-2 mb-4">
-                    {['none', 'rain', 'snow', 'stars', 'magic', 'leaves', 'embers', 'ash'].map((effect) => (
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {['none', 'rain', 'snow', 'stars', 'magic', 'leaves', 'embers', 'ash', 'desert'].map((effect) => (
                       <label key={effect} className="flex items-center cursor-pointer">
                         <input
                           type="radio"
