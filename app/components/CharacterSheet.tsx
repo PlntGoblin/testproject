@@ -566,6 +566,17 @@ export default function CharacterSheet() {
     return Math.max(1, totalHP); // Minimum 1 HP
   };
 
+  // Get effective max HP accounting for exhaustion
+  const getEffectiveMaxHP = (): number => {
+    const baseMaxHP = calculateMaxHP();
+    const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+
+    if (totalExhaustion >= 4) {
+      return Math.floor(baseMaxHP / 2);
+    }
+    return baseMaxHP;
+  };
+
   // Automatically assign skills based on race and class
   const assignAutomaticSkills = () => {
     const newSkills = { ...character.skills };
@@ -2954,12 +2965,18 @@ export default function CharacterSheet() {
                           'Intelligence': 'INT', 'Wisdom': 'WIS', 'Charisma': 'CHA'
                         };
                         const modifier = getSaveModifier(save, abilityMap[save]);
+                        const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                        const hasDisadvantage = totalExhaustion >= 3;
                         return (
                           <div key={save} className={`flex items-center justify-between px-2 py-1 rounded-full border-2 transform transition-all duration-200 hover:scale-105 ${
-                            proficient
-                              ? 'bg-green-500/20 border-green-400'
-                              : isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-400'
-                          }`}>
+                            hasDisadvantage
+                              ? 'bg-orange-500/20 border-orange-400'
+                              : proficient
+                                ? 'bg-green-500/20 border-green-400'
+                                : isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-400'
+                          }`}
+                          title={hasDisadvantage ? "Exhaustion Level 3+: Disadvantage on Saving Throws" : ""}
+                          >
                             <div className="flex items-center gap-1">
                               <input
                                 id={`saving-throw-${save}`}
@@ -3111,14 +3128,29 @@ export default function CharacterSheet() {
                     </div>
                     <div className="text-center relative">
                       <div className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>Speed</div>
-                      <input
-                        type="number"
-                        value={character.speed}
-                        onChange={(e) => updateCharacter({ speed: parseInt(e.target.value) || 0 })}
-                        className={`w-full text-center border rounded px-2 py-1 transition-all duration-200 text-xl font-semibold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
+                      <div
+                        className={`w-full text-center border rounded px-2 py-1 transition-all duration-200 text-xl font-semibold cursor-help ${
+                          (() => {
+                            const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                            if (totalExhaustion >= 5) return isDarkMode ? 'bg-red-800 border-red-500 text-red-100' : 'bg-red-100 border-red-400 text-red-900';
+                            if (totalExhaustion >= 2) return isDarkMode ? 'bg-yellow-700 border-yellow-500 text-yellow-100' : 'bg-yellow-100 border-yellow-400 text-yellow-900';
+                            return isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900';
+                          })()
                         }`}
-                      />
+                        title={(() => {
+                          const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                          if (totalExhaustion >= 5) return `Base Speed: ${character.speed}\nExhaustion Level 5: Speed reduced to 0`;
+                          if (totalExhaustion >= 2) return `Base Speed: ${character.speed}\nExhaustion Level 2+: Speed halved`;
+                          return `Speed: ${character.speed}`;
+                        })()}
+                      >
+                        {(() => {
+                          const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                          if (totalExhaustion >= 5) return 0;
+                          if (totalExhaustion >= 2) return Math.floor(character.speed / 2);
+                          return character.speed;
+                        })()}
+                      </div>
                     </div>
                     <div className="text-center">
                       <div className={`text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>Prof Bonus</div>
@@ -3149,11 +3181,11 @@ export default function CharacterSheet() {
                       <div
                         className="h-full transition-all duration-500 rounded-lg absolute left-0"
                         style={{
-                          width: `${Math.min(100, Math.max(0, (character.hitPoints.current / calculateMaxHP()) * 100))}%`,
+                          width: `${Math.min(100, Math.max(0, (character.hitPoints.current / getEffectiveMaxHP()) * 100))}%`,
                           backgroundColor:
-                            character.hitPoints.current <= calculateMaxHP() * 0.25 ? '#ef4444' :
-                            character.hitPoints.current <= calculateMaxHP() * 0.5 ? '#f59e0b' :
-                            character.hitPoints.current <= calculateMaxHP() * 0.75 ? '#eab308' :
+                            character.hitPoints.current <= getEffectiveMaxHP() * 0.25 ? '#ef4444' :
+                            character.hitPoints.current <= getEffectiveMaxHP() * 0.5 ? '#f59e0b' :
+                            character.hitPoints.current <= getEffectiveMaxHP() * 0.75 ? '#eab308' :
                             '#10b981'
                         }}
                       ></div>
@@ -3162,15 +3194,15 @@ export default function CharacterSheet() {
                         <div
                           className="h-full transition-all duration-500 rounded-lg absolute"
                           style={{
-                            left: `${Math.min(100, Math.max(0, (character.hitPoints.current / calculateMaxHP()) * 100))}%`,
-                            width: `${Math.min(100 - Math.min(100, (character.hitPoints.current / calculateMaxHP()) * 100), ((character.hitPoints.temporary || 0) / calculateMaxHP()) * 100)}%`,
+                            left: `${Math.min(100, Math.max(0, (character.hitPoints.current / getEffectiveMaxHP()) * 100))}%`,
+                            width: `${Math.min(100 - Math.min(100, (character.hitPoints.current / getEffectiveMaxHP()) * 100), ((character.hitPoints.temporary || 0) / getEffectiveMaxHP()) * 100)}%`,
                             backgroundColor: '#06b6d4'
                           }}
                         ></div>
                       )}
                       <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                        {Math.round((character.hitPoints.current / calculateMaxHP()) * 100)}%
-                        {(character.hitPoints.temporary || 0) > 0 && `+${Math.round(((character.hitPoints.temporary || 0) / calculateMaxHP()) * 100)}%`}
+                        {Math.round((character.hitPoints.current / getEffectiveMaxHP()) * 100)}%
+                        {(character.hitPoints.temporary || 0) > 0 && `+${Math.round(((character.hitPoints.temporary || 0) / getEffectiveMaxHP()) * 100)}%`}
                       </div>
                     </div>
                   </div>
@@ -3196,11 +3228,23 @@ export default function CharacterSheet() {
                         <div className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Max HP</div>
                         <div
                           className={`w-full text-center border rounded px-2 py-1 transition-all duration-200 font-bold cursor-help ${
-                            isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-300' : 'bg-gray-100 border-gray-300 text-gray-600'
+                            (() => {
+                              const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                              if (totalExhaustion >= 4) {
+                                return isDarkMode ? 'bg-orange-800 border-orange-500 text-orange-100' : 'bg-orange-100 border-orange-400 text-orange-900';
+                              }
+                              return isDarkMode ? 'bg-slate-600 border-slate-500 text-gray-300' : 'bg-gray-100 border-gray-300 text-gray-600';
+                            })()
                           }`}
-                          title="Auto-calculated from HP rolls in Data tab"
+                          title={(() => {
+                            const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                            if (totalExhaustion >= 4) {
+                              return `Base Max HP: ${calculateMaxHP()}\nExhaustion Level 4+: HP maximum halved`;
+                            }
+                            return "Auto-calculated from HP rolls in Data tab";
+                          })()}
                         >
-                          {calculateMaxHP()}
+                          {getEffectiveMaxHP()}
                         </div>
 
                         {/* Hover tooltip for HP calculation breakdown */}
@@ -3212,7 +3256,14 @@ export default function CharacterSheet() {
                             {hasToughness && <div className="text-purple-400">Toughness: +{character.level * 2}</div>}
                             {isPHBHillDwarf && <div className="text-green-400">Hill Dwarf: +{character.level}</div>}
                             {additionalHPBonuses > 0 && <div className="text-yellow-400">Additional: +{additionalHPBonuses}</div>}
-                            <div className="text-orange-400 border-t border-slate-600 pt-1 font-bold">Total: {calculateMaxHP()}</div>
+                            <div className="text-orange-400 border-t border-slate-600 pt-1 font-bold">Base Total: {calculateMaxHP()}</div>
+                            {(() => {
+                              const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                              if (totalExhaustion >= 4) {
+                                return <div className="text-red-400 font-bold">Exhaustion Penalty: ÷2 = {getEffectiveMaxHP()}</div>;
+                              }
+                              return null;
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -3377,9 +3428,15 @@ export default function CharacterSheet() {
                     const profBonus = skillData.proficient ? character.proficiencyBonus : 0;
                     const expBonus = skillData.expertise ? character.proficiencyBonus : 0;
                     const abilityMod = getModifier(getFinalAbilityScore(ability));
+                    const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                    const hasDisadvantage = totalExhaustion >= 1;
 
                     return (
-                      <div key={skill} className="group flex items-center gap-2 hover:bg-gray-600/20 rounded px-1 py-0 relative">
+                      <div key={skill} className={`group flex items-center gap-2 hover:bg-gray-600/20 rounded px-1 py-0 relative ${
+                        hasDisadvantage ? 'bg-yellow-500/10' : ''
+                      }`}
+                      title={hasDisadvantage ? "Exhaustion Level 1+: Disadvantage on Ability Checks" : ""}
+                      >
                         {/* Proficiency Checkbox */}
                         <div
                           onClick={() => {
@@ -3660,13 +3717,14 @@ export default function CharacterSheet() {
                     <div className="text-center">
                       <input
                         type="number"
-                        value={character.survivalConditions.additionalExhaustion}
+                        value={character.survivalConditions.additionalExhaustion || ''}
                         onChange={(e) => updateCharacter({
                           survivalConditions: {
                             ...character.survivalConditions,
                             additionalExhaustion: parseInt(e.target.value) || 0
                           }
                         })}
+                        placeholder="0"
                         className={`w-4/5 text-xs text-center border rounded px-1 py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                           isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
@@ -3675,7 +3733,29 @@ export default function CharacterSheet() {
                   </div>
                   
                   {/* Total Exhaustion */}
-                  <div className="grid gap-1 text-xs border-t border-slate-600 pt-1 rounded px-1 py-0.5" style={{gridTemplateColumns: "0.8fr 1.4fr 0.6fr"}}>
+                  <div
+                    className={`grid gap-1 text-xs border-t border-slate-600 pt-1 rounded px-1 py-0.5 transition-all duration-300 cursor-help ${
+                      (() => {
+                        const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                        if (totalExhaustion >= 6) return 'bg-red-900/40 shadow-[0_0_20px_rgba(239,68,68,0.8)] animate-pulse';
+                        if (totalExhaustion >= 5) return 'bg-red-800/30 shadow-[0_0_15px_rgba(239,68,68,0.6)]';
+                        if (totalExhaustion >= 3) return 'bg-orange-700/25 shadow-[0_0_10px_rgba(249,115,22,0.5)]';
+                        if (totalExhaustion >= 1) return 'bg-yellow-600/20 shadow-[0_0_8px_rgba(234,179,8,0.4)]';
+                        return '';
+                      })()
+                    }`}
+                    style={{gridTemplateColumns: "0.8fr 1.4fr 0.6fr"}}
+                    title={(() => {
+                      const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                      if (totalExhaustion >= 6) return 'Level 6: Death';
+                      if (totalExhaustion >= 5) return 'Level 5: Speed reduced to 0\nLevel 4: Hit Point maximum halved\nLevel 3: Disadvantage on Attack Rolls and Saving Throws\nLevel 2: Speed halved\nLevel 1: Disadvantage on Ability Checks';
+                      if (totalExhaustion >= 4) return 'Level 4: Hit Point maximum halved\nLevel 3: Disadvantage on Attack Rolls and Saving Throws\nLevel 2: Speed halved\nLevel 1: Disadvantage on Ability Checks';
+                      if (totalExhaustion >= 3) return 'Level 3: Disadvantage on Attack Rolls and Saving Throws\nLevel 2: Speed halved\nLevel 1: Disadvantage on Ability Checks';
+                      if (totalExhaustion >= 2) return 'Level 2: Speed halved\nLevel 1: Disadvantage on Ability Checks';
+                      if (totalExhaustion >= 1) return 'Level 1: Disadvantage on Ability Checks';
+                      return 'No Exhaustion';
+                    })()}
+                  >
                     <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-semibold text-xs`}>Total</div>
                     <div></div>
                     <div className="text-center">
@@ -3683,8 +3763,15 @@ export default function CharacterSheet() {
                         type="number"
                         value={character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion}
                         readOnly
-                        className={`w-full text-xs text-center border rounded px-1 py-0.5 font-semibold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-600 border-slate-500 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
+                        className={`w-full text-xs text-center border rounded px-1 py-0.5 font-semibold transition-all duration-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          (() => {
+                            const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
+                            if (totalExhaustion >= 6) return isDarkMode ? 'bg-red-900 border-red-600 text-red-100 font-bold' : 'bg-red-200 border-red-500 text-red-900 font-bold';
+                            if (totalExhaustion >= 5) return isDarkMode ? 'bg-red-800 border-red-500 text-red-100' : 'bg-red-100 border-red-400 text-red-900';
+                            if (totalExhaustion >= 3) return isDarkMode ? 'bg-orange-800 border-orange-500 text-orange-100' : 'bg-orange-100 border-orange-400 text-orange-900';
+                            if (totalExhaustion >= 1) return isDarkMode ? 'bg-yellow-700 border-yellow-500 text-yellow-100' : 'bg-yellow-100 border-yellow-400 text-yellow-900';
+                            return isDarkMode ? 'bg-slate-600 border-slate-500 text-white' : 'bg-gray-100 border-gray-300 text-gray-900';
+                          })()
                         }`}
                       />
                     </div>
