@@ -1368,6 +1368,12 @@ export default function CharacterSheet() {
       }
     }
 
+    // Load quick notes from localStorage
+    const savedQuickNotes = localStorage.getItem('dnd-quick-notes');
+    if (savedQuickNotes) {
+      setQuickNotes(savedQuickNotes);
+    }
+
     // Generate random particles for visual effects (client-side only)
     const generateParticles = (count: number, config: { colors?: string[] } = {}) => {
       const particles = [];
@@ -2181,6 +2187,8 @@ export default function CharacterSheet() {
     quiverOfEhlonna: { owned: '', slots: 9 }
   });
 
+  const [quickNotes, setQuickNotes] = useState('');
+
   const [purchaseCalculator, setPurchaseCalculator] = useState({
     iron: { purchase: 0, after: 0 },
     copper: { purchase: 0, after: 0 },
@@ -2317,6 +2325,15 @@ export default function CharacterSheet() {
       console.warn('Failed to save waterskin box to localStorage:', error);
     }
   }, [waterskinBox]);
+
+  // Save quick notes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('dnd-quick-notes', quickNotes);
+    } catch (error) {
+      console.warn('Failed to save quick notes to localStorage:', error);
+    }
+  }, [quickNotes]);
 
   // Save speeds to localStorage
   useEffect(() => {
@@ -3787,6 +3804,8 @@ export default function CharacterSheet() {
               <div className={`p-4 rounded-lg border shadow-xl relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                 <div className="pb-8">
                   <textarea
+                    value={quickNotes}
+                    onChange={(e) => setQuickNotes(e.target.value)}
                     placeholder="Quick notes..."
                     rows={2}
                     className={`w-full text-sm border rounded px-2 py-2 resize-none transition-all duration-200 ${
