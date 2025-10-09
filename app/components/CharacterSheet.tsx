@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // D&D 5e Player's Handbook Classes
 const DND_CLASSES = [
@@ -470,7 +470,7 @@ export default function CharacterSheet() {
       ideals: 'Knowledge is power, and the key to all other forms of power.',
       bonds: 'The library where I learned to read was my sanctuary. I must protect it.',
       flaws: 'I overlook obvious solutions in favor of complicated ones.',
-      backstoryText: 'Elara was raised in the shadowed halls of Candlekeep, where dust-laden tomes whispered secrets of forgotten ages. Surrounded by the endless hush of parchment and ink, she fed her restless hunger for knowledge until the arcane bent willingly to her will. The library became less a sanctuary and more a crucible, shaping her mind into a weapon of runes and power.\n\nNow she wanders the world, a silhouette against storm and moonlight, chasing the echoes of spells long buried. Her journey is not for riches nor fame, but for the shards of magic the world itself has tried to forget. Wherever she walks, shadows stir—and those who cross her path learn that knowledge, once unearthed, can be as dangerous as any blade.',
+      backstoryText: 'Born to an elven scholar and a human merchant, Elara grew up between two worlds—never quite belonging to either. She found solace in the grand libraries of her mother\'s homeland, where ancient tomes whispered secrets of the arcane. Her insatiable curiosity led her to master the art of wizardry, studying under the tutelage of an eccentric mage who recognized her potential.\n\nWhen her mentor vanished without a trace, leaving only cryptic notes about a "rising darkness," Elara set out to uncover the truth. Armed with her spellbook and her wit, she now travels the realm seeking forgotten knowledge and investigating strange magical phenomena. Though she prefers dusty archives to dangerous dungeons, her sense of duty compels her to use her magic to protect the innocent and preserve the balance between worlds.\n\nShe carries her mentor\'s final words close to her heart: "Knowledge without compassion is tyranny; magic without wisdom is destruction."',
     },
     trueName: 'Marcille Donato',
     age: '50 years old',
@@ -532,11 +532,12 @@ export default function CharacterSheet() {
     return totalBonus;
   };
 
-  // Get final ability score including ASI bonuses
+  // Get final ability score including racial and ASI bonuses
   const getFinalAbilityScore = (ability: string): number => {
     const baseScore = character.abilityScores[ability as keyof typeof character.abilityScores] || 0;
+    const racialBonus = getRacialBonus(ability, character.race);
     const asiBonus = getAsiBonus(ability);
-    return baseScore + asiBonus;
+    return baseScore + racialBonus + asiBonus;
   };
 
   // Calculate maximum HP based on HP rolls and bonuses
@@ -1138,6 +1139,12 @@ export default function CharacterSheet() {
     color?: string;
   }>>([]);
 
+  // Track if component has mounted (to prevent saving on initial render)
+  const hasMountedRef = useRef(false);
+  // Track the previous race and class to detect actual changes (not just initial load)
+  const prevRaceRef = useRef(character.race);
+  const prevClassRef = useRef(character.class);
+
   // Load character data from localStorage on component mount
   useEffect(() => {
     const savedCharacter = localStorage.getItem('dnd-character-data');
@@ -1374,6 +1381,98 @@ export default function CharacterSheet() {
       setQuickNotes(savedQuickNotes);
     }
 
+    // Load inventory items from localStorage
+    const savedEquippedItems = localStorage.getItem('dnd-equipped-items');
+    if (savedEquippedItems) {
+      try {
+        setEquippedItems(JSON.parse(savedEquippedItems));
+      } catch (error) {
+        console.warn('Failed to load equipped items from localStorage:', error);
+      }
+    }
+
+    const savedAttunedItems = localStorage.getItem('dnd-attuned-items');
+    if (savedAttunedItems) {
+      try {
+        setAttunedItems(JSON.parse(savedAttunedItems));
+      } catch (error) {
+        console.warn('Failed to load attuned items from localStorage:', error);
+      }
+    }
+
+    const savedInventoryItems = localStorage.getItem('dnd-inventory-items');
+    if (savedInventoryItems) {
+      try {
+        setInventoryItems(JSON.parse(savedInventoryItems));
+      } catch (error) {
+        console.warn('Failed to load inventory items from localStorage:', error);
+      }
+    }
+
+    const savedExternalStorage = localStorage.getItem('dnd-external-storage');
+    if (savedExternalStorage) {
+      try {
+        setExternalStorage(JSON.parse(savedExternalStorage));
+      } catch (error) {
+        console.warn('Failed to load external storage from localStorage:', error);
+      }
+    }
+
+    const savedAmmunition = localStorage.getItem('dnd-ammunition');
+    if (savedAmmunition) {
+      try {
+        setAmmunition(JSON.parse(savedAmmunition));
+      } catch (error) {
+        console.warn('Failed to load ammunition from localStorage:', error);
+      }
+    }
+
+    const savedArmor = localStorage.getItem('dnd-armor');
+    if (savedArmor) {
+      try {
+        setArmor(JSON.parse(savedArmor));
+      } catch (error) {
+        console.warn('Failed to load armor from localStorage:', error);
+      }
+    }
+
+    // Load resource tracking data from localStorage
+    const savedPurse = localStorage.getItem('dnd-purse');
+    if (savedPurse) {
+      try {
+        setPurse(JSON.parse(savedPurse));
+      } catch (error) {
+        console.warn('Failed to load purse from localStorage:', error);
+      }
+    }
+
+    const savedRationBox = localStorage.getItem('dnd-ration-box');
+    if (savedRationBox) {
+      try {
+        setRationBox(JSON.parse(savedRationBox));
+      } catch (error) {
+        console.warn('Failed to load ration box from localStorage:', error);
+      }
+    }
+
+    const savedWaterskinBox = localStorage.getItem('dnd-waterskin-box');
+    if (savedWaterskinBox) {
+      try {
+        setWaterskinBox(JSON.parse(savedWaterskinBox));
+      } catch (error) {
+        console.warn('Failed to load waterskin box from localStorage:', error);
+      }
+    }
+
+    const savedSpeeds = localStorage.getItem('dnd-speeds');
+    if (savedSpeeds) {
+      try {
+        setSpeeds(JSON.parse(savedSpeeds));
+      } catch (error) {
+        console.warn('Failed to load speeds from localStorage:', error);
+      }
+    }
+
     // Generate random particles for visual effects (client-side only)
     const generateParticles = (count: number, config: { colors?: string[] } = {}) => {
       const particles = [];
@@ -1393,35 +1492,47 @@ export default function CharacterSheet() {
     };
 
     setEffectParticles(generateParticles(100, { colors: ['#a855f7', '#ec4899', '#3b82f6', '#10b981'] }));
+
+    // Mark that initial mount is complete AFTER all effects have run
+    // Use setTimeout to ensure this happens after the current effect cycle
+    setTimeout(() => {
+      hasMountedRef.current = true;
+    }, 0);
   }, []);
 
-  // Save character data to localStorage whenever it changes
+  // Save character data to localStorage whenever it changes (but not on initial mount)
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     localStorage.setItem('dnd-character-data', JSON.stringify(character));
   }, [character]);
 
   // Save active tab to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     localStorage.setItem('dnd-active-tab', activeTab);
   }, [activeTab]);
 
   // Save dark mode preference to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     localStorage.setItem('dnd-dark-mode', JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
   // Save current weather to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     localStorage.setItem('dnd-weather', JSON.stringify(currentWeather));
   }, [currentWeather]);
 
   // Save ASI choices to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     localStorage.setItem('dnd-asi-choices', JSON.stringify(asiChoices));
   }, [asiChoices]);
 
   // Save known spells to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-known-spells', JSON.stringify([...knownSpells]));
     } catch (error) {
@@ -1431,6 +1542,7 @@ export default function CharacterSheet() {
 
   // Save spell slots to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-spell-slots', JSON.stringify(spellSlots));
     } catch (error) {
@@ -1440,6 +1552,7 @@ export default function CharacterSheet() {
 
   // Save known spells override to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       if (knownSpellsOverride !== null) {
         localStorage.setItem('dnd-known-spells-override', knownSpellsOverride.toString());
@@ -1453,6 +1566,7 @@ export default function CharacterSheet() {
 
   // Save manual feats to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-manual-feats', JSON.stringify(manualFeats));
     } catch (error) {
@@ -1462,6 +1576,7 @@ export default function CharacterSheet() {
 
   // Save custom spells to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-custom-spells', JSON.stringify(customSpells));
     } catch (error) {
@@ -1471,6 +1586,7 @@ export default function CharacterSheet() {
 
   // Save death saves to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-death-saves', JSON.stringify(deathSaves));
     } catch (error) {
@@ -1480,6 +1596,7 @@ export default function CharacterSheet() {
 
   // Save vibe effects to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-vibe-effects', JSON.stringify({ effect: vibeEffects, opacity: vibeOpacity }));
     } catch (error) {
@@ -1487,9 +1604,19 @@ export default function CharacterSheet() {
     }
   }, [vibeEffects, vibeOpacity]);
 
-  // Auto-assign skills when race or class changes
+  // Auto-assign skills when race or class changes (but not on initial load)
   useEffect(() => {
-    assignAutomaticSkills();
+    // Check if race or class actually changed (not just initial load)
+    const raceChanged = prevRaceRef.current !== character.race;
+    const classChanged = prevClassRef.current !== character.class;
+
+    if (raceChanged || classChanged) {
+      assignAutomaticSkills();
+
+      // Update the previous values
+      prevRaceRef.current = character.race;
+      prevClassRef.current = character.class;
+    }
   }, [character.race, character.class]);
 
   // Fantasy Calendar System
@@ -1715,23 +1842,18 @@ export default function CharacterSheet() {
 
   // Helper function to get known spells for a specific level
   const getKnownSpellsForLevel = (level: number) => {
-    const sortedSpells = masterSpellList.sort((a, b) => {
-      // Handle invalid levels by treating them as level 0
-      const levelA = isNaN(parseFloat(a.Level !== undefined ? a.Level : a.level)) ? 0 : parseFloat(a.Level !== undefined ? a.Level : a.level);
-      const levelB = isNaN(parseFloat(b.Level !== undefined ? b.Level : b.level)) ? 0 : parseFloat(b.Level !== undefined ? b.Level : b.level);
-      if (levelA !== levelB) return levelA - levelB;
-      const nameA = a.Name || a.name || 'Unknown Spell';
-      const nameB = b.Name || b.name || 'Unknown Spell';
-      return nameA.localeCompare(nameB);
-    });
-
-    return sortedSpells
+    return masterSpellList
       .map((spell, index) => ({ spell, originalIndex: index }))
       .filter(({ spell, originalIndex }) => {
         const spellLevel = isNaN(parseFloat(spell.Level !== undefined ? spell.Level : spell.level)) ? 0 : parseFloat(spell.Level !== undefined ? spell.Level : spell.level);
         return spellLevel === level && knownSpells.has(originalIndex);
       })
-      .map(({ spell }) => spell);
+      .map(({ spell }) => spell)
+      .sort((a, b) => {
+        const nameA = a.Name || a.name || 'Unknown Spell';
+        const nameB = b.Name || b.name || 'Unknown Spell';
+        return nameA.localeCompare(nameB);
+      });
   };
 
   // Filter spells based on search term, class, and levels
@@ -2246,6 +2368,7 @@ export default function CharacterSheet() {
 
   // Save inventory data to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-equipped-items', JSON.stringify(equippedItems));
     } catch (error) {
@@ -2254,6 +2377,7 @@ export default function CharacterSheet() {
   }, [equippedItems]);
 
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-attuned-items', JSON.stringify(attunedItems));
     } catch (error) {
@@ -2262,6 +2386,7 @@ export default function CharacterSheet() {
   }, [attunedItems]);
 
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-inventory-items', JSON.stringify(inventoryItems));
     } catch (error) {
@@ -2270,6 +2395,7 @@ export default function CharacterSheet() {
   }, [inventoryItems]);
 
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-external-storage', JSON.stringify(externalStorage));
     } catch (error) {
@@ -2278,6 +2404,7 @@ export default function CharacterSheet() {
   }, [externalStorage]);
 
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-ammunition', JSON.stringify(ammunition));
     } catch (error) {
@@ -2286,6 +2413,7 @@ export default function CharacterSheet() {
   }, [ammunition]);
 
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-armor', JSON.stringify(armor));
     } catch (error) {
@@ -2294,6 +2422,7 @@ export default function CharacterSheet() {
   }, [armor]);
 
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-proficiencies', JSON.stringify(proficiencies));
     } catch (error) {
@@ -2303,6 +2432,7 @@ export default function CharacterSheet() {
 
   // Save resource tracking data to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-purse', JSON.stringify(purse));
     } catch (error) {
@@ -2311,6 +2441,7 @@ export default function CharacterSheet() {
   }, [purse]);
 
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-ration-box', JSON.stringify(rationBox));
     } catch (error) {
@@ -2319,6 +2450,7 @@ export default function CharacterSheet() {
   }, [rationBox]);
 
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-waterskin-box', JSON.stringify(waterskinBox));
     } catch (error) {
@@ -2328,6 +2460,7 @@ export default function CharacterSheet() {
 
   // Save quick notes to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-quick-notes', quickNotes);
     } catch (error) {
@@ -2337,6 +2470,7 @@ export default function CharacterSheet() {
 
   // Save speeds to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-speeds', JSON.stringify(speeds));
     } catch (error) {
@@ -2346,6 +2480,7 @@ export default function CharacterSheet() {
 
   // Save skill bonuses to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-skill-bonuses', JSON.stringify(skillBonuses));
     } catch (error) {
@@ -2355,6 +2490,7 @@ export default function CharacterSheet() {
 
   // Save images to localStorage with error handling
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     const images = {
       statsImage,
       backgroundImage,
@@ -2387,6 +2523,7 @@ export default function CharacterSheet() {
 
   // Save HP-related data to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       localStorage.setItem('dnd-hit-point-rolls', JSON.stringify(hitPointRolls));
     } catch (error) {
@@ -2395,6 +2532,7 @@ export default function CharacterSheet() {
   }, [hitPointRolls]);
 
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     try {
       const hpData = {
         additionalHPBonuses,
@@ -2548,6 +2686,7 @@ export default function CharacterSheet() {
 
   // Save initiative modifiers to localStorage
   useEffect(() => {
+    if (!hasMountedRef.current) return;
     if (initiativeModifiers) {
       localStorage.setItem('dnd-initiative-modifiers', JSON.stringify(initiativeModifiers));
     }
@@ -2899,7 +3038,9 @@ export default function CharacterSheet() {
                 <div className="flex items-center justify-end gap-2 h-32">
                   {Object.entries(character.abilityScores).map(([ability, score], index) => {
                     const finalScore = getFinalAbilityScore(ability);
+                    const racialBonus = getRacialBonus(ability, character.race);
                     const asiBonus = getAsiBonus(ability);
+                    const hasAnyBonus = racialBonus > 0 || asiBonus > 0;
                     const borderColors = [
                       'border-red-400',     // STR
                       'border-emerald-400', // DEX
@@ -2920,21 +3061,20 @@ export default function CharacterSheet() {
                       <div
                         key={ability}
                         className={`${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'} ${borderColors[index]} rounded-xl border-2 px-2 py-1 text-center shadow-lg transform transition-transform hover:scale-105 min-w-16 relative group`}
-                        title={asiBonus > 0 ? `Base: ${score} + ASI: ${asiBonus} = Total: ${finalScore}` : `Score: ${score}`}
                       >
                         <div className={`text-xs font-bold ${textColors[index]} mb-1`}>{ability.slice(0, 3).toUpperCase()}</div>
                         <input
                           type="number"
-                          value={asiBonus > 0 ? finalScore : score}
+                          value={hasAnyBonus ? finalScore : score}
                           onChange={(e) => {
                             const newValue = parseInt(e.target.value) || 0;
-                            if (asiBonus > 0) {
-                              // If there's an ASI bonus, update the base score by subtracting the ASI bonus
+                            if (hasAnyBonus) {
+                              // If there's any bonus, update the base score by subtracting both bonuses
                               updateCharacter({
-                                abilityScores: { ...character.abilityScores, [ability]: newValue - asiBonus }
+                                abilityScores: { ...character.abilityScores, [ability]: newValue - racialBonus - asiBonus }
                               });
                             } else {
-                              // No ASI bonus, update directly
+                              // No bonuses, update directly
                               updateCharacter({
                                 abilityScores: { ...character.abilityScores, [ability]: newValue }
                               });
@@ -2946,12 +3086,13 @@ export default function CharacterSheet() {
                           {getModifier(finalScore) >= 0 ? '+' : ''}{getModifier(finalScore)}
                         </div>
 
-                        {/* Hover tooltip for ASI breakdown */}
-                        {asiBonus > 0 && (
+                        {/* Hover tooltip for ability score breakdown */}
+                        {hasAnyBonus && (
                           <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
                             <div className="bg-slate-800 border border-orange-500 rounded px-2 py-1 text-xs whitespace-nowrap">
                               <div className="text-white">Base: {score}</div>
-                              <div className="text-green-400">ASI: +{asiBonus}</div>
+                              {racialBonus > 0 && <div className="text-cyan-400">Racial: +{racialBonus}</div>}
+                              {asiBonus > 0 && <div className="text-green-400">ASI: +{asiBonus}</div>}
                               <div className="text-orange-400 border-t border-slate-600 pt-1">Total: {finalScore}</div>
                             </div>
                           </div>
@@ -2984,15 +3125,16 @@ export default function CharacterSheet() {
                         const modifier = getSaveModifier(save, abilityMap[save]);
                         const totalExhaustion = character.survivalConditions.hunger.effect + character.survivalConditions.thirst.effect + character.survivalConditions.fatigue.effect + character.survivalConditions.additionalExhaustion;
                         const hasDisadvantage = totalExhaustion >= 3;
+                        const finalScore = getFinalAbilityScore(abilityMap[save]);
+                        const abilityModifier = getModifier(finalScore);
                         return (
-                          <div key={save} className={`flex items-center justify-between px-2 py-1 rounded-full border-2 transform transition-all duration-200 hover:scale-105 ${
+                          <div key={save} className={`flex items-center justify-between px-2 py-1 rounded-full border-2 transform transition-all duration-200 hover:scale-105 relative group ${
                             hasDisadvantage
                               ? 'bg-orange-500/20 border-orange-400'
                               : proficient
                                 ? 'bg-green-500/20 border-green-400'
                                 : isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-400'
                           }`}
-                          title={hasDisadvantage ? "Exhaustion Level 3+: Disadvantage on Saving Throws" : ""}
                           >
                             <div className="flex items-center gap-1">
                               <input
@@ -3007,6 +3149,17 @@ export default function CharacterSheet() {
                               <span className={`text-xs font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{abbreviations[save]}</span>
                             </div>
                             <span className={`font-mono text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{modifier >= 0 ? '+' : ''}{modifier}</span>
+
+                            {/* Hover tooltip for saving throw breakdown */}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                              <div className="bg-slate-800 border border-green-500 rounded px-2 py-1 text-xs whitespace-nowrap">
+                                <div className="text-white font-semibold mb-1">{save}</div>
+                                <div className="text-blue-400">{abbreviations[save]} Modifier: {abilityModifier >= 0 ? '+' : ''}{abilityModifier}</div>
+                                {proficient && <div className="text-green-400">Proficiency: +{character.proficiencyBonus}</div>}
+                                {hasDisadvantage && <div className="text-orange-400">⚠️ Disadvantage (Exhaustion)</div>}
+                                <div className="text-orange-400 border-t border-slate-600 pt-1">Total: {modifier >= 0 ? '+' : ''}{modifier}</div>
+                              </div>
+                            </div>
                           </div>
                         );
                       })}
@@ -3497,7 +3650,7 @@ export default function CharacterSheet() {
                                   ...skillData,
                                   expertise: !skillData.expertise,
                                   source: skillData.source === 'race' || skillData.source === 'class' ? skillData.source : 'manual' as const,
-                                  manualOverride: skillData.source === 'race' || skillData.source === 'class' ? skillData.manualOverride : true
+                                  manualOverride: true  // Always set to true when clicking expertise
                                 }
                               };
                               updateCharacter({ skills: newSkills });
@@ -3826,20 +3979,19 @@ export default function CharacterSheet() {
                 <div className={`p-4 rounded-lg border shadow-xl relative ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <div className="space-y-3 pb-8">
                     {/* Column Headers */}
-                    <div className="grid gap-1 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600" style={{gridTemplateColumns: "1.8fr 0.8fr 0.5fr 0.5fr 0.4fr 0.8fr 0.7fr 1fr 0.5fr"}}>
+                    <div className="grid gap-1 text-xs font-semibold text-gray-400 pb-2 border-b border-slate-600" style={{gridTemplateColumns: "1.8fr 0.8fr 0.5fr 0.5fr 0.4fr 0.7fr 1.6fr 0.5fr"}}>
                       <div className="text-center">Name</div>
                       <div className="text-center">Type</div>
                       <div className="text-center">Finesse</div>
                       <div className="text-center">Prof</div>
                       <div className="text-center cursor-help" title="Item Bonus">+</div>
-                      <div className="text-center">Ability</div>
                       <div className="text-center">ATK Bon</div>
                       <div className="text-center">Damage</div>
                       <div className="text-center">Notch</div>
                     </div>
 
                     {character.weapons.map((weapon, index) => (
-                      <div key={index} className="grid gap-1 items-center text-sm" style={{gridTemplateColumns: "1.8fr 0.8fr 0.5fr 0.5fr 0.4fr 0.8fr 0.7fr 1fr 0.5fr"}}>
+                      <div key={index} className="grid gap-1 items-center text-sm" style={{gridTemplateColumns: "1.8fr 0.8fr 0.5fr 0.5fr 0.4fr 0.7fr 1.6fr 0.5fr"}}>
                         {/* Name */}
                         <div>
                           <input
@@ -3940,28 +4092,6 @@ export default function CharacterSheet() {
                             }`}
                             placeholder="+0"
                           />
-                        </div>
-
-                        {/* Ability */}
-                        <div>
-                          <select
-                            value={weapon.ability || 'STR'}
-                            onChange={(e) => {
-                              const newWeapons = [...character.weapons];
-                              newWeapons[index] = { ...weapon, ability: e.target.value };
-                              updateCharacter({ weapons: newWeapons });
-                            }}
-                            className={`w-full border rounded px-1 py-1 transition-all duration-200 text-xs text-center appearance-none ${
-                              isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-1 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
-                            }`}
-                          >
-                            <option value="STR">STR</option>
-                            <option value="DEX">DEX</option>
-                            <option value="CON">CON</option>
-                            <option value="INT">INT</option>
-                            <option value="WIS">WIS</option>
-                            <option value="CHA">CHA</option>
-                          </select>
                         </div>
 
                         {/* ATK Bonus - Auto-calculated but editable */}
@@ -6188,7 +6318,19 @@ export default function CharacterSheet() {
                         value={rationBox.boxes || ''}
                         onChange={(e) => {
                           const boxes = parseInt(e.target.value) || 0;
-                          const totalBulk = Math.max(boxes, rationBox.rations);
+                          const rations = rationBox.rations;
+                          let totalBulk = 0;
+
+                          if (boxes < 1) {
+                            totalBulk = 0;
+                          } else if (rations * 0.2 < 1) {
+                            totalBulk = Math.floor(boxes - 1);
+                          } else if (rations * 0.2 > boxes) {
+                            totalBulk = boxes > 0 ? Math.floor(rations * 0.2 - 1) : Math.floor(boxes - 1);
+                          } else {
+                            totalBulk = Math.floor(boxes - 1);
+                          }
+
                           setRationBox({...rationBox, boxes, totalBulk});
                         }}
                         className={`w-full text-center text-xs border rounded px-1 transition-all duration-200 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
@@ -6202,13 +6344,28 @@ export default function CharacterSheet() {
                         value={rationBox.rations || ''}
                         onChange={(e) => {
                           const rations = parseInt(e.target.value) || 0;
-                          const totalBulk = Math.max(rationBox.boxes, rations);
+                          const boxes = rationBox.boxes;
+                          let totalBulk = 0;
+
+                          if (boxes < 1) {
+                            totalBulk = 0;
+                          } else if (rations * 0.2 < 1) {
+                            totalBulk = Math.floor(boxes - 1);
+                          } else if (rations * 0.2 > boxes) {
+                            totalBulk = boxes > 0 ? Math.floor(rations * 0.2 - 1) : Math.floor(boxes - 1);
+                          } else {
+                            totalBulk = Math.floor(boxes - 1);
+                          }
+
                           setRationBox({...rationBox, rations, totalBulk});
                         }}
-                        className={`w-full text-center text-xs border rounded px-1 transition-all duration-200 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
+                        className={`w-full text-center text-xs border-2 rounded px-1 transition-all duration-200 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          rationBox.rations > rationBox.boxes * 5
+                            ? 'bg-red-900/20 border-red-500 text-red-300 focus:outline-none focus:ring-2 focus:ring-red-500'
+                            : isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="0"
+                        title={rationBox.rations > rationBox.boxes * 5 ? `⚠️ Exceeds capacity! Max: ${rationBox.boxes * 5}` : ''}
                       />
                       <input
                         type="number"
@@ -6242,7 +6399,19 @@ export default function CharacterSheet() {
                         value={waterskinBox.skins || ''}
                         onChange={(e) => {
                           const skins = parseInt(e.target.value) || 0;
-                          const totalBulk = Math.max(skins, waterskinBox.rations);
+                          const rations = waterskinBox.rations;
+                          let totalBulk = 0;
+
+                          if (skins < 1) {
+                            totalBulk = 0;
+                          } else if (rations * 0.2 < 1) {
+                            totalBulk = Math.floor(skins - 1);
+                          } else if (rations * 0.2 > skins) {
+                            totalBulk = skins > 0 ? Math.floor(rations * 0.2 - 1) : Math.floor(skins - 1);
+                          } else {
+                            totalBulk = Math.floor(skins - 1);
+                          }
+
                           setWaterskinBox({...waterskinBox, skins, totalBulk});
                         }}
                         className={`w-full text-center text-xs border rounded px-1 transition-all duration-200 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
@@ -6256,13 +6425,28 @@ export default function CharacterSheet() {
                         value={waterskinBox.rations || ''}
                         onChange={(e) => {
                           const rations = parseInt(e.target.value) || 0;
-                          const totalBulk = Math.max(waterskinBox.skins, rations);
+                          const skins = waterskinBox.skins;
+                          let totalBulk = 0;
+
+                          if (skins < 1) {
+                            totalBulk = 0;
+                          } else if (rations * 0.2 < 1) {
+                            totalBulk = Math.floor(skins - 1);
+                          } else if (rations * 0.2 > skins) {
+                            totalBulk = skins > 0 ? Math.floor(rations * 0.2 - 1) : Math.floor(skins - 1);
+                          } else {
+                            totalBulk = Math.floor(skins - 1);
+                          }
+
                           setWaterskinBox({...waterskinBox, rations, totalBulk});
                         }}
-                        className={`w-full text-center text-xs border rounded px-1 transition-all duration-200 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
+                        className={`w-full text-center text-xs border-2 rounded px-1 transition-all duration-200 py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          waterskinBox.rations > waterskinBox.skins * 5
+                            ? 'bg-red-900/20 border-red-500 text-red-300 focus:outline-none focus:ring-2 focus:ring-red-500'
+                            : isDarkMode ? 'bg-slate-700 border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-orange-500' : 'bg-gray-100 border-gray-300 text-gray-900'
                         }`}
                         placeholder="0"
+                        title={waterskinBox.rations > waterskinBox.skins * 5 ? `⚠️ Exceeds capacity! Max: ${waterskinBox.skins * 5}` : ''}
                       />
                       <input
                         type="number"
