@@ -6046,31 +6046,61 @@ export default function CharacterSheet() {
 
                   {/* Table Rows */}
                   <div className="space-y-1 max-h-[72rem] overflow-y-auto">
-                    {getFilteredSpells()
+                    {masterSpellList
+                      .map((spell, originalIndex) => ({ spell, originalIndex }))
+                      .filter(({ spell }) => {
+                        // Search term filter
+                        const searchMatch = spellSearchTerm === '' ||
+                          (spell.Name || spell.name || '').toLowerCase().includes(spellSearchTerm.toLowerCase()) ||
+                          (spell.School || spell.school || '').toLowerCase().includes(spellSearchTerm.toLowerCase()) ||
+                          (spell.Effect || spell.description || spell.effect || '').toLowerCase().includes(spellSearchTerm.toLowerCase());
+
+                        // Level filter
+                        const spellLevel = isNaN(parseFloat(spell.Level !== undefined ? spell.Level : spell.level)) ? 0 : parseFloat(spell.Level !== undefined ? spell.Level : spell.level);
+                        const levelMatch = selectedSpellLevels.has(spellLevel);
+
+                        // Class filter (simplified - would need actual spell class data)
+                        let classMatch = selectedSpellClass === 'All Classes' ||
+                          (spell.Classes && spell.Classes.includes(selectedSpellClass)) ||
+                          (spell.classes && spell.classes.includes(selectedSpellClass)) ||
+                          selectedSpellClass === 'All Classes';
+
+                        // Laserllama Alternate Ranger gets access to Ranger spells + expanded spell list
+                        if (selectedSpellClass === 'Ranger') {
+                          classMatch = classMatch ||
+                            (spell.Classes && spell.Classes.includes('Ranger')) ||
+                            (spell.classes && spell.classes.includes('Ranger')) ||
+                            // Additional utility and nature spells commonly added to Laserllama Ranger
+                            (spell.Name && ['Mending', 'Guidance', 'Resistance', 'Thaumaturgy', 'Create or Destroy Water', 'Purify Food and Drink', 'Detect Poison and Disease', 'Lesser Restoration', 'Zone of Truth', 'Water Breathing', 'Water Walk', 'Dispel Magic', 'Remove Curse'].includes(spell.Name)) ||
+                            (spell.name && ['Mending', 'Guidance', 'Resistance', 'Thaumaturgy', 'Create or Destroy Water', 'Purify Food and Drink', 'Detect Poison and Disease', 'Lesser Restoration', 'Zone of Truth', 'Water Breathing', 'Water Walk', 'Dispel Magic', 'Remove Curse'].includes(spell.name));
+                        }
+
+                        return searchMatch && levelMatch && classMatch;
+                      })
                       .sort((a, b) => {
                         // Sort by level first, then by name - handle invalid levels
-                        const levelA = isNaN(parseFloat(a.Level !== undefined ? a.Level : a.level)) ? 0 : parseFloat(a.Level !== undefined ? a.Level : a.level);
-                        const levelB = isNaN(parseFloat(b.Level !== undefined ? b.Level : b.level)) ? 0 : parseFloat(b.Level !== undefined ? b.Level : b.level);
+                        const levelA = isNaN(parseFloat(a.spell.Level !== undefined ? a.spell.Level : a.spell.level)) ? 0 : parseFloat(a.spell.Level !== undefined ? a.spell.Level : a.spell.level);
+                        const levelB = isNaN(parseFloat(b.spell.Level !== undefined ? b.spell.Level : b.spell.level)) ? 0 : parseFloat(b.spell.Level !== undefined ? b.spell.Level : b.spell.level);
                         if (levelA !== levelB) return levelA - levelB;
-                        const nameA = a.Name || a.name || 'Unknown Spell';
-                        const nameB = b.Name || b.name || 'Unknown Spell';
+                        const nameA = a.spell.Name || a.spell.name || 'Unknown Spell';
+                        const nameB = b.spell.Name || b.spell.name || 'Unknown Spell';
                         return nameA.localeCompare(nameB);
                       })
-                      .map((spell, index) => (
-                        <div key={index} className={`grid text-xs py-2 border-b border-slate-700 hover:bg-slate-700/50 ${
+                      .map(({ spell, originalIndex }) => (
+                        <div key={originalIndex} className={`grid text-xs py-2 border-b border-slate-700 hover:bg-slate-700/50 ${
                           isDarkMode ? 'text-gray-300' : 'text-gray-700'
                         }`} style={{ gridTemplateColumns: '5fr 5fr 20fr 8fr 8fr 8fr 12fr 25fr 8fr 8fr' }}>
                           <div className="text-center">
                             <input
-                              id={`known-spell-${index}`}
+                              id={`known-spell-${originalIndex}`}
                               type="checkbox"
-                              checked={knownSpells.has(index)}
+                              checked={knownSpells.has(originalIndex)}
                               onChange={(e) => {
                                 const newKnownSpells = new Set(knownSpells);
                                 if (e.target.checked) {
-                                  newKnownSpells.add(index);
+                                  newKnownSpells.add(originalIndex);
                                 } else {
-                                  newKnownSpells.delete(index);
+                                  newKnownSpells.delete(originalIndex);
                                 }
                                 setKnownSpells(newKnownSpells);
                               }}
