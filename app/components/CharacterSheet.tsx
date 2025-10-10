@@ -1648,6 +1648,16 @@ export default function CharacterSheet() {
     }
   }, [quarryUsesRemaining]);
 
+  // Auto-resize all feat description textareas on mount and when manualFeats change
+  useEffect(() => {
+    const textareas = document.querySelectorAll('textarea[placeholder="Feat description..."]');
+    textareas.forEach((textarea) => {
+      const element = textarea as HTMLTextAreaElement;
+      element.style.height = 'auto';
+      element.style.height = element.scrollHeight + 'px';
+    });
+  }, [manualFeats]);
+
   // Auto-assign skills when race or class changes (but not on initial load)
   useEffect(() => {
     // Check if race or class actually changed (not just initial load)
@@ -4663,10 +4673,20 @@ export default function CharacterSheet() {
                           const newFeats = [...manualFeats];
                           newFeats[index + Math.ceil(manualFeats.length / 2)] = { ...newFeats[index + Math.ceil(manualFeats.length / 2)], description: e.target.value };
                           setManualFeats(newFeats);
+                          // Auto-resize textarea
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
                         }}
-                        className={`bg-transparent text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} border-none outline-none w-full resize-none`}
+                        onInput={(e) => {
+                          // Auto-resize on input
+                          const target = e.target as HTMLTextAreaElement;
+                          target.style.height = 'auto';
+                          target.style.height = target.scrollHeight + 'px';
+                        }}
+                        className={`bg-transparent text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} border-none outline-none w-full resize-none overflow-hidden`}
                         placeholder="Feat description..."
                         rows={2}
+                        style={{ minHeight: '2.5rem' }}
                       />
                     </div>
                   ))}
@@ -4728,10 +4748,20 @@ export default function CharacterSheet() {
                           const newFeats = [...manualFeats];
                           newFeats[index] = { ...newFeats[index], description: e.target.value };
                           setManualFeats(newFeats);
+                          // Auto-resize textarea
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
                         }}
-                        className={`bg-transparent text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} border-none outline-none w-full resize-none`}
+                        onInput={(e) => {
+                          // Auto-resize on input
+                          const target = e.target as HTMLTextAreaElement;
+                          target.style.height = 'auto';
+                          target.style.height = target.scrollHeight + 'px';
+                        }}
+                        className={`bg-transparent text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} border-none outline-none w-full resize-none overflow-hidden`}
                         placeholder="Feat description..."
                         rows={2}
+                        style={{ minHeight: '2.5rem' }}
                       />
                     </div>
                   ))}
