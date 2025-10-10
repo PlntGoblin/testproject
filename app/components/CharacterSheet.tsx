@@ -326,6 +326,8 @@ interface Character {
     bonds: string;
     flaws: string;
     backstoryText: string;
+    roleplayNotes?: string;
+    arcHooks?: string;
   };
   weapons: Array<{
     name: string;
@@ -471,6 +473,8 @@ export default function CharacterSheet() {
       bonds: 'The library where I learned to read was my sanctuary. I must protect it.',
       flaws: 'I overlook obvious solutions in favor of complicated ones.',
       backstoryText: 'Born to an elven scholar and a human merchant, Elara grew up between two worlds—never quite belonging to either. She found solace in the grand libraries of her mother\'s homeland, where ancient tomes whispered secrets of the arcane. Her insatiable curiosity led her to master the art of wizardry, studying under the tutelage of an eccentric mage who recognized her potential.\n\nWhen her mentor vanished without a trace, leaving only cryptic notes about a "rising darkness," Elara set out to uncover the truth. Armed with her spellbook and her wit, she now travels the realm seeking forgotten knowledge and investigating strange magical phenomena. Though she prefers dusty archives to dangerous dungeons, her sense of duty compels her to use her magic to protect the innocent and preserve the balance between worlds.\n\nShe carries her mentor\'s final words close to her heart: "Knowledge without compassion is tyranny; magic without wisdom is destruction."',
+      roleplayNotes: '',
+      arcHooks: '',
     },
     trueName: 'Marcille Donato',
     age: '50 years old',
@@ -576,6 +580,22 @@ export default function CharacterSheet() {
       return Math.floor(baseMaxHP / 2);
     }
     return baseMaxHP;
+  };
+
+  // Ranger's Quarry: Calculate quarry die size based on level
+  const getQuarryDie = (): string => {
+    if (character.level >= 18) return 'd12';
+    if (character.level >= 14) return 'd10';
+    if (character.level >= 10) return 'd8';
+    if (character.level >= 6) return 'd6';
+    if (character.level >= 2) return 'd4';
+    return 'd4'; // Default
+  };
+
+  // Ranger's Quarry: Calculate max uses based on Wisdom modifier (minimum 1)
+  const getMaxQuarryUses = (): number => {
+    const wisdomModifier = getModifier(getFinalAbilityScore('wisdom'));
+    return Math.max(1, wisdomModifier);
   };
 
   // Automatically assign skills based on race and class
@@ -970,6 +990,9 @@ export default function CharacterSheet() {
     { name: '', weapon: '', amount: '' }
   ]);
 
+  // Ranger's Quarry state
+  const [quarryUsesRemaining, setQuarryUsesRemaining] = useState(0);
+
   // Armor state
   const [armor, setArmor] = useState({
     armorType: { item: 'Studded Leather', karuta: 'Armor Item', plus: '', notches: '' },
@@ -1160,6 +1183,7 @@ export default function CharacterSheet() {
     const savedCustomSpells = localStorage.getItem('dnd-custom-spells');
     const savedDeathSaves = localStorage.getItem('dnd-death-saves');
     const savedVibeEffects = localStorage.getItem('dnd-vibe-effects');
+    const savedQuarryUses = localStorage.getItem('dnd-quarry-uses');
 
     if (savedCharacter) {
       try {
@@ -1289,6 +1313,16 @@ export default function CharacterSheet() {
         setVibeOpacity(vibeData.opacity || 50);
       } catch (error) {
         console.warn('Failed to load vibe effects from localStorage:', error);
+      }
+    }
+
+    // Load Ranger's Quarry uses from localStorage
+    if (savedQuarryUses) {
+      try {
+        const quarryUses = parseInt(savedQuarryUses);
+        setQuarryUsesRemaining(isNaN(quarryUses) ? 0 : quarryUses);
+      } catch (error) {
+        console.warn('Failed to load quarry uses from localStorage:', error);
       }
     }
 
@@ -1603,6 +1637,16 @@ export default function CharacterSheet() {
       console.warn('Failed to save vibe effects to localStorage:', error);
     }
   }, [vibeEffects, vibeOpacity]);
+
+  // Save Ranger's Quarry uses to localStorage
+  useEffect(() => {
+    if (!hasMountedRef.current) return;
+    try {
+      localStorage.setItem('dnd-quarry-uses', quarryUsesRemaining.toString());
+    } catch (error) {
+      console.warn('Failed to save quarry uses to localStorage:', error);
+    }
+  }, [quarryUsesRemaining]);
 
   // Auto-assign skills when race or class changes (but not on initial load)
   useEffect(() => {
@@ -4464,8 +4508,95 @@ export default function CharacterSheet() {
                   </div>
               </div>
 
-              {/* Box 2: Class Features */}
-              {characterFeats.filter(feat => feat.source === 'class').length > 0 && (
+              {/* Box 2: Class Features OR Ranger's Quarry */}
+              {character.class === 'Ranger' && character.level >= 2 ? (
+                /* Ranger's Quarry for Rangers */
+                <div className={`p-4 rounded-lg border shadow-xl h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
+                  <h4 className="text-base font-semibold text-green-400 mb-3">Ranger's Quarry</h4>
+
+                  {/* 2-Column Layout */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Left: Bonus Damage Display */}
+                    <div className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 ${isDarkMode ? 'bg-slate-700 border-green-500' : 'bg-gray-200 border-green-400'}`}>
+                      <span className={`text-[10px] font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Bonus Damage:</span>
+                      <span className="text-xl font-bold text-green-400">+1{getQuarryDie()}</span>
+                    </div>
+
+                    {/* Right: Uses Tracker */}
+                    <div className="space-y-2">
+                      <div className={`text-xs text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Uses Remaining
+                      </div>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => setQuarryUsesRemaining(Math.max(0, quarryUsesRemaining - 1))}
+                          className={`px-1.5 py-0.5 text-sm rounded border font-bold transition-colors ${
+                            isDarkMode
+                              ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500'
+                              : 'bg-gray-300 border-gray-400 text-gray-900 hover:bg-gray-400'
+                          }`}
+                        >
+                          −
+                        </button>
+                        <div className={`text-lg font-bold min-w-[45px] text-center ${
+                          quarryUsesRemaining === 0 ? 'text-red-400' : 'text-green-400'
+                        }`}>
+                          {quarryUsesRemaining} / {getMaxQuarryUses()}
+                        </div>
+                        <button
+                          onClick={() => setQuarryUsesRemaining(Math.min(getMaxQuarryUses(), quarryUsesRemaining + 1))}
+                          className={`px-1.5 py-0.5 text-sm rounded border font-bold transition-colors ${
+                            isDarkMode
+                              ? 'bg-slate-600 border-slate-500 text-white hover:bg-slate-500'
+                              : 'bg-gray-300 border-gray-400 text-gray-900 hover:bg-gray-400'
+                          }`}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Description Box with Tooltip */}
+                  <div className="mt-3 relative group">
+                    <div className={`text-xs text-center py-2 px-3 rounded border cursor-help ${isDarkMode ? 'bg-slate-700 border-slate-600 text-gray-400' : 'bg-gray-200 border-gray-400 text-gray-600'}`}>
+                      Description ⓘ
+                    </div>
+
+                    {/* Hover Tooltip */}
+                    <div className="absolute left-0 right-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                      <div className={`p-3 rounded-lg border text-xs ${isDarkMode ? 'bg-slate-800 border-green-500 text-gray-300' : 'bg-white border-green-400 text-gray-700'} shadow-xl`}>
+                        <p className="mb-2">
+                          Use a <span className="font-semibold text-green-400">bonus action</span> to mark one creature you can see as your Quarry, gaining:
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 mb-2">
+                          <li>Deal bonus damage equal to 1{getQuarryDie()} when you damage it with an attack</li>
+                          <li>Add 1{getQuarryDie()} to ability checks to track or locate it</li>
+                        </ul>
+                        <p className="mb-2">
+                          Benefits last <span className="font-semibold text-green-400">1 hour</span> or until your Quarry is slain or you mark another creature.
+                        </p>
+                        <p className="text-xs italic">
+                          Uses: {getMaxQuarryUses()} per long rest (Wisdom modifier, minimum 1). Can expend a spell slot when out of uses.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Long Rest Button */}
+                  <button
+                    onClick={() => setQuarryUsesRemaining(getMaxQuarryUses())}
+                    className={`w-full mt-3 px-3 py-1 text-xs rounded border transition-colors ${
+                      isDarkMode
+                        ? 'bg-green-700 border-green-600 text-white hover:bg-green-600'
+                        : 'bg-green-200 border-green-400 text-green-900 hover:bg-green-300'
+                    }`}
+                  >
+                    Long Rest (Restore All)
+                  </button>
+                </div>
+              ) : characterFeats.filter(feat => feat.source === 'class').length > 0 ? (
+                /* Class Features for other classes */
                 <div className={`p-4 rounded-lg border shadow-xl h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
                   <h4 className="text-base font-semibold text-purple-400 mb-3">Class Features</h4>
                     <div className="space-y-2">
@@ -4483,7 +4614,7 @@ export default function CharacterSheet() {
                       ))}
                     </div>
                 </div>
-              )}
+              ) : null}
 
               {/* Box 3: Feats */}
               <div className={`p-4 rounded-lg border shadow-xl h-fit ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-300'}`}>
@@ -4687,6 +4818,45 @@ export default function CharacterSheet() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Roleplay Notes Section */}
+            <div className="grid grid-cols-2 gap-6 mb-12">
+              {/* Left: Your Nature */}
+              <div className={`relative p-4 rounded-lg border shadow-xl ${isDarkMode ? 'bg-slate-800 border-slate-600' : 'bg-gray-100 border-stone-300'}`}>
+                <textarea
+                  value={character.backstory.roleplayNotes || ''}
+                  onChange={(e) => updateCharacter({
+                    backstory: { ...character.backstory, roleplayNotes: e.target.value }
+                  })}
+                  className={`w-full bg-transparent border rounded px-4 py-3 pb-10 resize-none leading-relaxed text-sm ${
+                    isDarkMode ? 'bg-slate-700 border-slate-600 text-stone-200' : 'bg-white border-stone-300 text-stone-800'
+                  } focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-stone-400`}
+                  placeholder="• Silent, observant, strikes from shadows&#10;• Uncomfortable around crowds of people&#10;• Protective of natural places and creatures&#10;• Struggles with the rage that led to the village massacre&#10;• Seeking redemption through control and purpose&#10;• The sickle is both weapon and reminder: 'Burn, or grow'"
+                  rows={6}
+                />
+                <div className="absolute bottom-6 left-0 right-0 text-center">
+                  <span className="text-sm font-bold text-gray-400">Your Nature:</span>
+                </div>
+              </div>
+
+              {/* Right: Character Arc Hooks */}
+              <div className={`relative p-4 rounded-lg border shadow-xl ${isDarkMode ? 'bg-slate-800 border-slate-600' : 'bg-gray-100 border-stone-300'}`}>
+                <textarea
+                  value={character.backstory.arcHooks || ''}
+                  onChange={(e) => updateCharacter({
+                    backstory: { ...character.backstory, arcHooks: e.target.value }
+                  })}
+                  className={`w-full bg-transparent border rounded px-4 py-3 pb-10 resize-none leading-relaxed text-sm ${
+                    isDarkMode ? 'bg-slate-700 border-slate-600 text-stone-200' : 'bg-white border-stone-300 text-stone-800'
+                  } focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder-stone-400`}
+                  placeholder="• War is coming - must learn to fight alongside humans&#10;• Runa is out there somewhere with the survivors&#10;• The vision showed him fighting beside three strangers&#10;• Elariel's words: 'Learn their steps, their hungers, their griefs'"
+                  rows={6}
+                />
+                <div className="absolute bottom-6 left-0 right-0 text-center">
+                  <span className="text-sm font-bold text-gray-400">Character Arc Hooks:</span>
+                </div>
               </div>
             </div>
 
