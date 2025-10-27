@@ -864,7 +864,7 @@ export default function CharacterSheet() {
     let totalAC = armorData.ac;
 
     // Add DEX modifier (with armor type limits)
-    const dexMod = getModifier(character.abilityScores.dexterity);
+    const dexMod = getModifier(getFinalAbilityScore('dexterity'));
     if (armorData.type === 'Light' || armorData.type === 'None') {
       totalAC += dexMod; // Full DEX mod
     } else if (armorData.type === 'Medium') {
@@ -1557,6 +1557,16 @@ export default function CharacterSheet() {
     if (!hasMountedRef.current) return;
     localStorage.setItem('dnd-weather', JSON.stringify(currentWeather));
   }, [currentWeather]);
+
+  // Save current date to localStorage
+  useEffect(() => {
+    if (!hasMountedRef.current) return;
+    localStorage.setItem('dnd-calendar', JSON.stringify({
+      currentSeason: currentDate.season,
+      currentDay: currentDate.day,
+      currentYear: currentDate.year
+    }));
+  }, [currentDate]);
 
   // Save ASI choices to localStorage
   useEffect(() => {
@@ -3332,7 +3342,7 @@ export default function CharacterSheet() {
                           ? "Manual AC override - clear to use auto-calculation"
                           : `Auto-calculated AC: ${calculateTotalAC()}\n\nBreakdown:\n• Armor: ${ARMOR_DATA[armor.armorType.item || 'None']?.ac || 10}\n• DEX Mod: ${(() => {
                             const armorData = ARMOR_DATA[armor.armorType.item || 'None'];
-                            const dexMod = getModifier(character.abilityScores.dexterity);
+                            const dexMod = getModifier(getFinalAbilityScore('dexterity'));
                             if (armorData?.type === 'Light' || armorData?.type === 'None') return dexMod;
                             if (armorData?.type === 'Medium') return Math.min(dexMod, armorData.maxDex || 2);
                             return 0;
@@ -4789,8 +4799,8 @@ export default function CharacterSheet() {
               {/* Left Column: Header + Bio */}
               <div className="md:col-span-2 space-y-8">
                 {/* Decorative Header */}
-                <div className={`text-center border-b-2 border-t-2 py-6 ${isDarkMode ? 'border-orange-400' : 'border-stone-400'}`}>
-                  <div className="mb-3">
+                <div className={`text-center border-b-2 border-t-2 py-3 ${isDarkMode ? 'border-orange-400' : 'border-stone-400'}`}>
+                  <div className="mb-1">
                     <textarea
                       value={character.backstory.personalityTraits || "I am eager to learn new things and ask many questions. I speak in metaphors and parables."}
                       onChange={(e) => updateCharacter({
@@ -4801,7 +4811,7 @@ export default function CharacterSheet() {
                       rows={2}
                     />
                   </div>
-                  <h1 className="text-6xl font-extrabold tracking-wider mb-4 font-serif">
+                  <h1 className="text-4xl font-extrabold tracking-wider mb-2 font-serif">
                     {character.trueName?.toUpperCase() || 'CHARACTER NAME'}
                   </h1>
                   <div className={`py-1 px-3 inline-block rounded shadow-lg ${isDarkMode ? 'bg-orange-600 text-white' : 'bg-red-700 text-white'}`}>
